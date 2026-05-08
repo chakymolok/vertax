@@ -979,8 +979,7 @@
         backupStatusHtml() +
         restoreChoiceHtml() +
         '<div class="laiso-stack" style="margin-top:14px;">' +
-        '<button class="laiso-btn laiso-btn-block" data-action="backup-share-telegram">Скачать в Telegram</button>' +
-        '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-download">Скачать на телефон/компьютер</button>' +
+        '<button class="laiso-btn laiso-btn-block" data-action="backup-download">Сохранить копию коллекции</button>' +
         '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-restore-pick">Восстановить из файла</button>' +
         '</div>' +
         '</div>' +
@@ -1039,27 +1038,6 @@
       a.click();
       a.remove();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 1200);
-    }
-    async function shareBackupToTelegram(){
-      var bundle = await buildBackupBundle();
-      if (!bundle) return;
-      if (canShareFile(bundle.file)) {
-        try {
-          await navigator.share({
-            files: [bundle.file],
-            title: 'Резервная копия VERTAX',
-            text: 'Выберите Telegram и отправьте файл себе.'
-          });
-          await saveBackupMeta(bundle);
-          toast('Резервная копия создана');
-          return;
-        } catch(e) {
-          if (e && e.name === 'AbortError') return;
-        }
-      }
-      triggerFileDownload(bundle);
-      await saveBackupMeta(bundle);
-      toast('Файл создан. Если Telegram не открылся, прикрепите его вручную.');
     }
     async function downloadBackup(){
       var bundle = await buildBackupBundle();
@@ -1305,7 +1283,6 @@
       if (typeof oldBack === 'function') return oldBack.apply(this, arguments);
     });
     on('goto-backup', function(){ openBackup(); });
-    on('backup-share-telegram', function(){ shareBackupToTelegram(); });
     on('backup-download', function(){ downloadBackup(); });
     on('backup-restore-pick', function(){ pickRestoreFile(); });
     on('backup-restore-replace', function(){ replaceFromBackup(); });
