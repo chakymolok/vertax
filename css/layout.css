@@ -1,0 +1,308 @@
+/* style block 9 */
+/* RUNT-01 patch: не обрезать выпадающее меню в треклисте */
+#laiso-app .laiso-panel { overflow: visible !important;
+}
+#laiso-app .laiso-menu { position: relative !important; z-index: 50 !important;
+}
+#laiso-app .laiso-menu.open { z-index: 9999 !important;
+}
+#laiso-app .laiso-menu-list { z-index: 99999 !important; min-width: 230px !important; right: 0 !important; top: calc(100% + 8px) !important; border-radius: 14px !important; background: #fff !important; box-shadow: 0 22px 60px rgba(20,16,10,.22) !important;
+}
+#laiso-app .laiso-track { overflow: visible !important;
+}
+#laiso-app .laiso-track:last-child .laiso-menu-list,
+#laiso-app .laiso-track:nth-last-child(2) .laiso-menu-list { top: auto !important; bottom: calc(100% + 8px) !important;
+}
+
+/* style block 10 */
+/* RUNT-01 patch 7: compact set cards + mobile tracklist fix */
+#laiso-app .laiso-track-title{ word-break:normal!important; overflow-wrap:anywhere!important; min-width:0!important;
+}
+@media(max-width:520px){ #laiso-app .laiso-track{ grid-template-columns:40px minmax(0,1fr) 54px 42px 28px!important; gap:7px!important; padding:12px 10px!important; align-items:center!important; } #laiso-app .laiso-track-title{ font-size:16px!important; line-height:1.18!important; } #laiso-app .laiso-track-bpm, #laiso-app .laiso-track-key{ font-size:13px!important; }
+}
+/* Compact set list */
+#laiso-app .runt-set-list{ display:flex; flex-direction:column; gap:10px;
+}
+#laiso-app .runt-set-card{ position:relative; display:grid; grid-template-columns:96px minmax(0,1fr); gap:14px; align-items:start; padding:14px 46px 14px 14px; background:#fffdf7; border:1px solid var(--runt-line, #e2d9cd); border-radius:18px; box-shadow:0 8px 24px rgba(20,16,10,.045);
+}
+#laiso-app .runt-set-card[draggable="true"]{ cursor:grab;
+}
+#laiso-app .runt-set-card.runt-dragging{ opacity:.55; cursor:grabbing;
+}
+#laiso-app .runt-set-order{ position:absolute; top:14px; right:16px; font-family:var(--font-mono); font-size:13px; color:var(--text-tertiary); letter-spacing:.05em;
+}
+#laiso-app .runt-set-left{ display:flex; flex-direction:column; gap:7px; min-width:0;
+}
+#laiso-app .runt-metric{ display:flex; align-items:center; justify-content:center; height:42px; border-radius:14px; font-family:var(--font-mono); font-weight:700; letter-spacing:.04em; line-height:1; white-space:nowrap;
+}
+#laiso-app .runt-metric-bpm{ background:#0b0b0a; color:var(--runt-accent, #C4F542); font-size:21px; text-shadow:0 0 8px rgba(196,245,66,.3);
+}
+#laiso-app .runt-metric-cam{ background:var(--runt-accent, #C4F542); color:#111; font-size:22px;
+}
+#laiso-app .runt-set-main{ min-width:0; padding-right:8px;
+}
+#laiso-app .runt-set-title{ margin:0 0 7px; font-family:var(--font-sans); font-size:24px; line-height:1.05; font-weight:750; letter-spacing:-.045em; color:#111; overflow-wrap:anywhere; word-break:normal;
+}
+#laiso-app .runt-set-release{ margin:0 0 10px; font-family:var(--font-mono); font-size:11px; line-height:1.35; letter-spacing:.14em; text-transform:uppercase; color:var(--text-tertiary); overflow-wrap:anywhere;
+}
+#laiso-app .runt-set-actions{ display:flex; align-items:center; flex-wrap:wrap; gap:7px;
+}
+#laiso-app .runt-chip{ display:inline-flex; align-items:center; justify-content:center; min-height:30px; padding:7px 11px; border-radius:999px; font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border:1px solid transparent; white-space:nowrap;
+}
+#laiso-app .runt-chip-pos,
+#laiso-app .runt-chip-bpm{ background:#0b0b0a; color:var(--runt-accent, #C4F542);
+}
+#laiso-app .runt-chip-light{ background:#f1ece3; color:#111;
+}
+#laiso-app .runt-chip-delta{ color:var(--runt-accent, #C4F542); margin-left:5px;
+}
+#laiso-app .runt-set-btn{ min-height:30px!important; padding:6px 11px!important; border-radius:999px!important; font-size:11px!important; letter-spacing:.04em!important;
+}
+#laiso-app .runt-drag-hint{ font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-tertiary); margin-top:3px;
+}
+@media(max-width:520px){ #laiso-app .runt-set-card{ grid-template-columns:74px minmax(0,1fr); gap:12px; padding:13px 38px 13px 12px; border-radius:18px; } #laiso-app .runt-set-order{ top:14px; right:13px; font-size:12px; } #laiso-app .runt-metric{ height:34px; border-radius:12px; } #laiso-app .runt-metric-bpm{ font-size:18px; } #laiso-app .runt-metric-cam{ font-size:19px; } #laiso-app .runt-set-title{ font-size:21px; line-height:1.08; margin-right:6px; } #laiso-app .runt-set-release{ font-size:10px; letter-spacing:.13em; line-height:1.3; margin-bottom:9px; } #laiso-app .runt-chip{ min-height:28px; padding:6px 9px; font-size:10px; } #laiso-app .runt-set-btn{ min-height:28px!important; padding:5px 9px!important; font-size:10px!important; }
+}
+
+/* style block 11 */
+/* RUNT-01 patch 8: manual metadata must look confirmed on fetching screen */
+#laiso-app .laiso-fetch-ok-manual,
+#laiso-app .laiso-data-ok-manual{ color: var(--runt-accent-dark, #8FB918) !important;
+}
+
+/* style block 12 */
+/* RUNT-01 patch 11: fetching rows remain editable after manual input */
+#laiso-app .runt-fetch-progress{ width:100%; height:8px; background:#E9E1D5; border-radius:999px; overflow:hidden;
+}
+#laiso-app .runt-fetch-progress > div{ height:100%; background:var(--runt-accent, #C4F542); transition:width .25s ease;
+}
+#laiso-app .runt-fetch-note{ margin-top:14px; padding:12px 14px; border-radius:14px; background:#FFF0E8; color:var(--warning, #E66A2C); font-family:var(--font-mono); font-size:10px; line-height:1.55; letter-spacing:.08em; text-transform:uppercase;
+}
+#laiso-app .runt-fetch-panel{ padding:0 !important; overflow:visible !important;
+}
+#laiso-app .runt-fetch-row{ display:grid; grid-template-columns:28px minmax(0,1fr) auto; grid-template-areas: "icon main status" "icon main actions"; gap:8px 14px; align-items:center; padding:16px 18px; border-bottom:1px solid var(--runt-line, #E2D9CD);
+}
+#laiso-app .runt-fetch-row:last-child{ border-bottom:0;
+}
+#laiso-app .runt-fetch-icon{ grid-area:icon; font-family:var(--font-mono); font-size:18px; font-weight:700; text-align:center;
+}
+#laiso-app .runt-fetch-main{ grid-area:main; min-width:0;
+}
+#laiso-app .runt-fetch-title{ font-size:17px; font-weight:700; line-height:1.15; word-break:normal; overflow-wrap:anywhere;
+}
+#laiso-app .runt-fetch-artist{ margin-top:5px; font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-tertiary);
+}
+#laiso-app .runt-fetch-status{ grid-area:status; text-align:right; min-width:180px;
+}
+#laiso-app .runt-fetch-actions{ grid-area:actions; display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;
+}
+#laiso-app .runt-fetch-values{ display:flex; justify-content:flex-end; gap:6px; flex-wrap:wrap;
+}
+#laiso-app .runt-fetch-pill{ display:inline-flex; align-items:center; min-height:28px; padding:6px 10px; border-radius:999px; font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; background:#F0ECE3; color:#111;
+}
+#laiso-app .runt-fetch-bpm{ background:#101010; color:var(--runt-accent, #C4F542);
+}
+#laiso-app .runt-fetch-cam{ background:var(--runt-accent, #C4F542); color:#111;
+}
+#laiso-app .runt-fetch-source{ margin-top:6px; font-family:var(--font-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+}
+@media(max-width:640px){ #laiso-app .runt-fetch-row{ grid-template-columns:22px minmax(0,1fr); grid-template-areas: "icon main" "icon status" "icon actions"; gap:8px 10px; padding:14px 12px; } #laiso-app .runt-fetch-status{ text-align:left; min-width:0; } #laiso-app .runt-fetch-values{ justify-content:flex-start; } #laiso-app .runt-fetch-actions{ justify-content:flex-start; }
+}
+
+/* style block 13 */
+#laiso-app .runt18c-bpm-panel{ display:grid; grid-template-columns:1fr; gap:8px; margin:10px 0 14px;
+}
+#laiso-app .runt18c-bpm-line{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:#fff; border:1px solid var(--border,#E2D9CD); border-radius:14px; font-family:var(--font-mono,monospace); box-shadow:0 8px 22px rgba(20,16,10,.035);
+}
+#laiso-app .runt18c-bpm-line span{ font-size:10px; text-transform:uppercase; letter-spacing:.18em; color:var(--text-tertiary,#8A847B); min-width:42px;
+}
+#laiso-app .runt18c-bpm-line strong{ font-size:13px; letter-spacing:.08em; color:#111; white-space:nowrap;
+}
+#laiso-app .runt18c-bpm-line em{ font-style:normal; font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-tertiary,#8A847B); text-align:right;
+}
+#laiso-app .runt18c-set-modal{ max-width:720px!important;
+}
+#laiso-app .runt18c-pick-list{ display:grid; gap:8px; max-height:42vh; overflow:auto; padding-right:2px;
+}
+#laiso-app .runt18c-pick-card{ display:grid; grid-template-columns:54px 1fr 34px; gap:10px; align-items:center; width:100%; text-align:left; background:#fff; border:1px solid var(--border,#E2D9CD); border-radius:14px; padding:10px; cursor:pointer; color:var(--text-primary,#111); font-family:var(--font-sans,system-ui);
+}
+#laiso-app .runt18c-pick-card.is-selected{ border-color:var(--accent-lime,#C4F542); box-shadow:0 0 0 3px rgba(196,245,66,.22);
+}
+#laiso-app .runt18c-pick-cover{ width:54px; height:54px; border-radius:10px; overflow:hidden; background:#111; display:block;
+}
+#laiso-app .runt18c-pick-cover img{ width:100%; height:100%; object-fit:cover; display:block;
+}
+#laiso-app .runt18c-pick-info{min-width:0;display:block}
+#laiso-app .runt18c-pick-info strong{ display:block; font-size:14px; line-height:1.15; font-weight:700; word-break:break-word;
+}
+#laiso-app .runt18c-pick-info em{ display:block; font-style:normal; margin-top:3px; color:var(--text-secondary,#6D675F); font-size:13px;
+}
+#laiso-app .runt18c-pick-info small{ display:block; margin-top:4px; color:var(--text-tertiary,#8A847B); font-family:var(--font-mono,monospace); font-size:10px; text-transform:uppercase; letter-spacing:.08em;
+}
+#laiso-app .runt18c-pick-check{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#EEE9DF; color:#111; font-family:var(--font-mono,monospace); font-weight:700;
+}
+#laiso-app .runt18c-pick-card.is-selected .runt18c-pick-check{ background:var(--accent-lime,#C4F542);
+}
+@media(max-width:520px){ #laiso-app .runt18c-bpm-line{ display:grid; grid-template-columns:auto 1fr; align-items:start; } #laiso-app .runt18c-bpm-line strong{text-align:right} #laiso-app .runt18c-bpm-line em{ grid-column:1/-1; text-align:left; }
+}
+
+/* style block 14 */
+/* PATCH-19: hide bad BPM range pool panels */
+#laiso-app .runt18c-bpm-panel,
+#laiso-app .runt18d-bpm-panel,
+#laiso-app .runt18d-bpm-line { display:none!important;
+}
+/* PATCH-19: Play Set button */
+#laiso-app .runt19-play-btn-wrap{ margin-top:14px;
+}
+#laiso-app .runt19-play-btn{ width:100%; min-height:58px!important; font-size:13px!important; letter-spacing:.16em!important;
+}
+/* PATCH-19: live screen */
+#laiso-app .runt19-live-top{ display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:18px;
+}
+#laiso-app .runt19-live-status{ background:#101010; color:var(--accent-lime,#C4F542); border-radius:18px; padding:18px 16px; text-align:center; font-family:var(--font-mono); box-shadow:inset 0 0 20px rgba(0,0,0,.85);
+}
+#laiso-app .runt19-live-status small{ display:block; font-size:10px; letter-spacing:.18em; text-transform:uppercase; opacity:.65; margin-bottom:8px;
+}
+#laiso-app .runt19-live-status strong{ display:block; font-size:30px; line-height:1; letter-spacing:.03em;
+}
+#laiso-app .runt19-live-controls{ display:grid; grid-template-columns:1fr 1fr; gap:10px;
+}
+#laiso-app .runt19-wakelock-on{ background:var(--accent-lime,#C4F542)!important; color:#111!important; border-color:var(--accent-lime,#C4F542)!important;
+}
+#laiso-app .runt19-live-hint{ font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; line-height:1.45; color:var(--text-tertiary,#8A847B); text-transform:uppercase; margin:8px 2px 16px;
+}
+#laiso-app .runt19-live-list{ display:flex; flex-direction:column; gap:12px;
+}
+#laiso-app .runt19-live-card{ position:relative; display:grid; grid-template-columns:112px 1fr; gap:18px; align-items:center; background:#FFFDF7; border:1px solid var(--border,#E2D9CD); border-radius:24px; padding:18px; box-shadow:0 10px 35px rgba(20,16,10,.055); cursor:pointer; transition:opacity .12s ease, transform .08s ease, background .12s ease;
+}
+#laiso-app .runt19-live-card:active{ transform:scale(.995);
+}
+#laiso-app .runt19-live-card.is-played{ background:#EEE9DF; opacity:.58;
+}
+#laiso-app .runt19-live-card.is-played .runt19-live-done{ display:flex;
+}
+#laiso-app .runt19-live-left{ display:flex; flex-direction:column; gap:8px;
+}
+#laiso-app .runt19-live-bpm{ background:#101010; color:var(--accent-lime,#C4F542); border-radius:16px; min-height:62px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:34px; font-weight:700; line-height:1; box-shadow:inset 0 0 16px rgba(0,0,0,.85);
+}
+#laiso-app .runt19-live-cam{ background:var(--accent-lime,#C4F542); color:#111; border-radius:16px; min-height:52px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:28px; font-weight:700; line-height:1;
+}
+#laiso-app .runt19-live-main{ min-width:0;
+}
+#laiso-app .runt19-live-num{ position:absolute; top:18px; right:20px; font-family:var(--font-mono); font-size:16px; color:var(--text-tertiary,#8A847B);
+}
+#laiso-app .runt19-live-title{ font-family:var(--font-sans); font-size:30px; line-height:1.05; font-weight:750; letter-spacing:-.04em; margin:0 42px 10px 0; color:#111;
+}
+#laiso-app .runt19-live-release{ font-family:var(--font-mono); font-size:13px; line-height:1.45; letter-spacing:.16em; text-transform:uppercase; color:var(--text-tertiary,#8A847B); margin-bottom:14px;
+}
+#laiso-app .runt19-live-pills{ display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+}
+#laiso-app .runt19-live-pill{ display:inline-flex; align-items:center; justify-content:center; min-height:32px; padding:7px 12px; border-radius:999px; background:#101010; color:var(--accent-lime,#C4F542); font-family:var(--font-mono); font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+}
+#laiso-app .runt19-live-pill.soft{ background:#F0ECE3; color:#111;
+}
+#laiso-app .runt19-live-done{ display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:rgba(238,233,223,.58); border-radius:24px; font-family:var(--font-mono); font-size:22px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:#111;
+}
+#laiso-app .runt19-now-card{ border:2px solid var(--accent-lime,#C4F542);
+}
+#laiso-app .runt19-empty{ background:#FFFDF7; border:1px dashed var(--border,#E2D9CD); border-radius:22px; padding:28px; text-align:center; font-size:14px; color:var(--text-secondary,#666);
+}
+/* More compact on mobile */
+@media(max-width:620px){ #laiso-app .runt19-live-controls{ grid-template-columns:1fr; } #laiso-app .runt19-live-card{ grid-template-columns:86px 1fr; gap:12px; padding:14px; border-radius:20px; } #laiso-app .runt19-live-bpm{ min-height:50px; font-size:27px; border-radius:14px; } #laiso-app .runt19-live-cam{ min-height:44px; font-size:23px; border-radius:14px; } #laiso-app .runt19-live-title{ font-size:23px; margin-right:34px; } #laiso-app .runt19-live-release{ font-size:11px; letter-spacing:.13em; } #laiso-app .runt19-live-pill{ min-height:28px; font-size:11px; padding:6px 10px; }
+}
+
+/* style block 15 */
+/* PATCH-20: orange CTA system */
+#laiso-app{ --runt-orange-cta:#F26B2F; --runt-orange-cta-dark:#D9541D; --runt-orange-cta-soft:rgba(242,107,47,.18);
+}
+/* main CTA buttons */
+#laiso-app .laiso-btn[data-action="set-generate"],
+#laiso-app .laiso-btn[data-action="set-save"],
+#laiso-app .laiso-btn[data-action="set-export"],
+#laiso-app .laiso-btn[data-action="fetching-done"],
+#laiso-app .laiso-btn[data-action="done-add"],
+#laiso-app .laiso-btn[data-action="confirm-tracklist"],
+#laiso-app .laiso-btn[data-action="runt19-play-set"],
+#laiso-app .runt19-play-btn{ background:linear-gradient(180deg,var(--runt-orange-cta) 0%,var(--runt-orange-cta-dark) 100%)!important; color:#fff!important; border-color:#111!important; box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 10px 24px var(--runt-orange-cta-soft)!important; text-shadow:none!important;
+}
+/* hover */
+#laiso-app .laiso-btn[data-action="set-generate"]:hover,
+#laiso-app .laiso-btn[data-action="set-save"]:hover,
+#laiso-app .laiso-btn[data-action="set-export"]:hover,
+#laiso-app .laiso-btn[data-action="fetching-done"]:hover,
+#laiso-app .laiso-btn[data-action="done-add"]:hover,
+#laiso-app .laiso-btn[data-action="confirm-tracklist"]:hover,
+#laiso-app .laiso-btn[data-action="runt19-play-set"]:hover,
+#laiso-app .runt19-play-btn:hover{ filter:brightness(1.04);
+}
+/* keep utility/manual buttons neutral */
+#laiso-app .laiso-btn-secondary,
+#laiso-app .laiso-btn[data-action="toggle-data-panel"],
+#laiso-app .laiso-btn[data-action="track-manual-meta"],
+#laiso-app .laiso-btn[data-action="track-toggle-exclude"],
+#laiso-app .laiso-btn[data-action="runt19-reset-played"],
+#laiso-app .laiso-btn[data-action="runt19-back-to-set"]{ background:#fff!important; color:#111!important; border-color:var(--border,#E2D9CD)!important; box-shadow:inset 0 1px 0 rgba(255,255,255,.7)!important;
+}
+/* live mode active stays lime because it is a state, not CTA */
+#laiso-app .runt19-wakelock-on{ background:var(--accent-lime,#C4F542)!important; color:#111!important; border-color:var(--accent-lime,#C4F542)!important;
+}
+/* PATCH-20: small label for longer target */
+#laiso-app .runt20-set-target-note{ margin:8px 2px 14px; font-family:var(--font-mono); font-size:10px; line-height:1.45; letter-spacing:.12em; text-transform:uppercase; color:var(--text-tertiary,#8A847B);
+}
+
+/* style block 16 */
+/* ============================================================ PATCH-21: scrollable modals / popups ============================================================ */
+#laiso-app .laiso-modal-bg{ position:fixed!important; inset:0!important; z-index:99999!important; display:flex!important; align-items:flex-start!important; justify-content:center!important; padding:22px 14px!important; overflow-y:auto!important; -webkit-overflow-scrolling:touch!important; overscroll-behavior:contain!important;
+}
+#laiso-app .laiso-modal{ width:min(760px, 100%)!important; max-width:min(760px, calc(100vw - 28px))!important; max-height:none!important; min-height:0!important; overflow:visible!important; margin:auto 0!important; border-radius:24px!important;
+}
+#laiso-app .laiso-modal[data-stop],
+#laiso-app .laiso-modal *{ -webkit-overflow-scrolling:touch;
+}
+/* Special internal scrolling if a modal has long lists */
+#laiso-app .runt21-modal-scroll{ max-height:58vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-right:2px;
+}
+/* Mobile: give modals more room */
+@media(max-width:620px){ #laiso-app .laiso-modal-bg{ padding:12px 10px 96px!important; align-items:flex-start!important; } #laiso-app .laiso-modal{ max-width:calc(100vw - 20px)!important; border-radius:22px!important; } #laiso-app .runt21-modal-scroll{ max-height:56vh; }
+}
+/* ============================================================ PATCH-21: stronger PLAYED state in live mode ============================================================ */
+#laiso-app .runt19-live-card.is-played{ opacity:1!important; background:#FFF7F1!important; border:2px solid var(--runt-orange-cta,#F26B2F)!important; box-shadow: 0 0 0 4px rgba(242,107,47,.10), 0 12px 34px rgba(242,107,47,.10)!important;
+}
+#laiso-app .runt19-live-card.is-played .runt19-live-main,
+#laiso-app .runt19-live-card.is-played .runt19-live-left{ opacity:.36!important; filter:saturate(.35);
+}
+#laiso-app .runt19-live-card.is-played .runt19-live-done{ display:flex!important; position:absolute!important; inset:0!important; align-items:center!important; justify-content:center!important; border-radius:22px!important; background:rgba(255,247,241,.72)!important; color:var(--runt-orange-cta,#F26B2F)!important; font-family:var(--font-mono)!important; font-size:26px!important; font-weight:800!important; letter-spacing:.22em!important; text-transform:uppercase!important; text-shadow:none!important; pointer-events:none!important;
+}
+#laiso-app .runt19-live-card.is-played::after{ content:""; position:absolute; right:18px; top:18px; width:16px; height:16px; border-radius:50%; background:var(--runt-orange-cta,#F26B2F); box-shadow:0 0 0 5px rgba(242,107,47,.15);
+}
+/* ============================================================ PATCH-21: live add tracks UI ============================================================ */
+#laiso-app .runt21-live-actions{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:14px 0 18px;
+}
+#laiso-app .runt21-live-actions .laiso-btn{ min-height:48px!important;
+}
+@media(max-width:620px){ #laiso-app .runt21-live-actions{ grid-template-columns:1fr; }
+}
+#laiso-app .runt21-suggest-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px;
+}
+#laiso-app .runt21-suggest-title{ font-family:var(--font-mono); font-size:20px; line-height:1.1; letter-spacing:.14em; text-transform:uppercase; font-weight:800;
+}
+#laiso-app .runt21-suggest-note{ margin-top:8px; font-size:14px; line-height:1.45; color:var(--text-secondary,#666158);
+}
+#laiso-app .runt21-suggest-row{ display:grid; grid-template-columns:64px 1fr auto; gap:12px; align-items:center; padding:12px; background:#FFFDF7; border:1px solid var(--border,#E2D9CD); border-radius:18px; margin-bottom:10px;
+}
+#laiso-app .runt21-suggest-meters{ display:flex; flex-direction:column; gap:6px;
+}
+#laiso-app .runt21-suggest-bpm{ background:#101010; color:var(--accent-lime,#C4F542); font-family:var(--font-mono); font-size:18px; font-weight:800; line-height:1; text-align:center; border-radius:12px; padding:9px 6px;
+}
+#laiso-app .runt21-suggest-cam{ background:var(--accent-lime,#C4F542); color:#111; font-family:var(--font-mono); font-size:16px; font-weight:800; line-height:1; text-align:center; border-radius:12px; padding:8px 6px;
+}
+#laiso-app .runt21-suggest-name{ font-size:18px; line-height:1.12; font-weight:750; letter-spacing:-.025em; margin-bottom:5px;
+}
+#laiso-app .runt21-suggest-meta{ font-family:var(--font-mono); font-size:11px; line-height:1.45; letter-spacing:.12em; text-transform:uppercase; color:var(--text-tertiary,#8A847B);
+}
+#laiso-app .runt21-suggest-score{ display:inline-flex; margin-top:8px; padding:4px 8px; border-radius:999px; background:#F0ECE3; font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#111;
+}
+#laiso-app .runt21-suggest-empty{ padding:22px; border:1px dashed var(--border,#E2D9CD); border-radius:18px; color:var(--text-secondary,#666158); text-align:center;
+}
+@media(max-width:620px){ #laiso-app .runt21-suggest-row{ grid-template-columns:54px 1fr; } #laiso-app .runt21-suggest-row .laiso-btn{ grid-column:1 / -1; width:100%; } #laiso-app .runt21-suggest-name{ font-size:16px; }
+}
