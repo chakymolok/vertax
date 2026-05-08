@@ -812,5 +812,482 @@
 (function(){ 'use strict'; function boot(){ if (!window.laisoBuck || !window.laisoBuck.state || !window.laisoBuck.render) { setTimeout(boot, 200); return; } var state = window.laisoBuck.state; function renderApp(){ try { if (window.laisoBuck && typeof window.laisoBuck.render === 'function') window.laisoBuck.render(); else if (typeof window.render === 'function') window.render(); } catch(e) { console.warn('PATCH-32 render error', e); } } function toast(msg){ if (typeof showToast === 'function') showToast(msg); else console.log(msg); } function trackSignature(t){ return [ String(t.title || '').trim().toLowerCase(), String(t.vinylArtist || '').trim().toLowerCase(), String(t.recordId || '').trim().toLowerCase(), String(t.position || t.displayPosition || '').trim().toLowerCase() ].join('|'); } function sameTrack(a, b){ if (!a || !b) return false; if (a.id && b.id && String(a.id) === String(b.id)) return true; return trackSignature(a) === trackSignature(b); } function canFollowTempo(prev, cand, tempoRange){ if (!cand || !cand.bpm) return false; if (!prev) return true; if (!prev.bpm) return false; /* No same exact track. */if (sameTrack(prev, cand)) return false; /* No same vinyl directly after previous. */if (prev.recordId && cand.recordId && String(prev.recordId) === String(cand.recordId)) return false; var diff = cand.bpm - prev.bpm; /* Главная логика режима "По темпу": только вверх или ровно. */if (diff < 0) return false; /* Шаг вверх не больше выбранного диапазона. */if (diff > tempoRange) return false; return true; } function generateAscendingTempoSet(allTracks, opts, length){ opts = opts || {}; var tempoRange = opts.tempoRange || 4; length = length || 16; var tracks = (allTracks || []) .filter(function(t){ return t && t.bpm; }) .slice() .sort(function(a,b){ if (a.bpm !== b.bpm) return a.bpm - b.bpm; return String(a.camelot || '').localeCompare(String(b.camelot || '')) || String(a.title || '').localeCompare(String(b.title || '')); }); if (tracks.length < 2) return tracks; var best = []; var t0 = Date.now(); var TIMEOUT = 1800; function score(prev, cand){ if (!prev) return 0; var s = 0; var diff = cand.bpm - prev.bpm; /* Prefer smooth upward movement: +0 to +2 is best. */if (diff === 0) s += 6; else if (diff === 1) s += 8; else if (diff === 2) s += 7; else s += Math.max(0, 6 - diff); /* Camelot compatibility as bonus, not hard rule. */try { if (prev.camelot && cand.camelot && typeof camelotNeighbors === 'function') { if (prev.camelot === cand.camelot) s += 4; else if (camelotNeighbors(prev.camelot).indexOf(cand.camelot) >= 0) s += 2; } } catch(_){} /* Prefer not using same artist too often, lightly. */if (prev.vinylArtist && cand.vinylArtist && prev.vinylArtist === cand.vinylArtist) s -= 0.5; return s; } function backtrack(cur, usedIds, usedSig){ if (Date.now() - t0 > TIMEOUT) return; if (cur.length > best.length) best = cur.slice(); if (cur.length >= length) return; var prev = cur[cur.length - 1]; var cands = tracks.filter(function(t){ var id = String(t.id || ''); var sig = trackSignature(t); if (id && usedIds[id]) return false; if (usedSig[sig]) return false; return canFollowTempo(prev, t, tempoRange); }); cands.sort(function(a,b){ var sb = score(prev,b); var sa = score(prev,a); if (sb !== sa) return sb - sa; return a.bpm - b.bpm; }); for (var i = 0; i < Math.min(cands.length, 10); i++) { var c = cands[i]; var id = String(c.id || ''); var sig = trackSignature(c); if (id) usedIds[id] = true; usedSig[sig] = true; cur.push(c); backtrack(cur, usedIds, usedSig); if (best.length >= length) return; cur.pop(); if (id) usedIds[id] = false; usedSig[sig] = false; } } /* Try starts from lower BPM first, but not only absolute minimum. */var starts = tracks.slice(0, Math.min(tracks.length, 30)); for (var i = 0; i < starts.length; i++) { if (Date.now() - t0 > TIMEOUT) break; if (best.length >= length) break; var st = starts[i]; var usedIds = {}; var usedSig = {}; if (st.id) usedIds[String(st.id)] = true; usedSig[trackSignature(st)] = true; backtrack([st], usedIds, usedSig); } return best; } function currentPoolTracks(){ /* Берём текущий пул так же, как базовое приложение: через getAllSessionTracks, *//* потому что в него уже могли попасть выбранные пластинки из последних патчей. */try { if (typeof getAllSessionTracks === 'function') return getAllSessionTracks(); } catch(_){} return []; } function generateTempoAscendingNow(){ var tracks = currentPoolTracks().filter(function(t){ return t && t.bpm; }); if (tracks.length < 2) { toast('Мало треков с BPM для режима по темпу'); return; } var result = generateAscendingTempoSet( tracks, state.ui && state.ui.setOptions || { tempoRange:4 }, 16 ); if (!result || result.length < 2) { toast('Не удалось собрать по возрастанию темпа'); return; } state.ui.generatedSet = result; toast('Собрано по возрастанию BPM: ' + result.length + ' трек.'); renderApp(); } /* Patch base algorithm for direct calls. */try { if (typeof generateSetAlgo === 'function' && !window.__runt32OriginalGenerateSetAlgo) { window.__runt32OriginalGenerateSetAlgo = generateSetAlgo; generateSetAlgo = function(allTracks, mode, opts, length){ if (mode === 'tempo-safe') { return generateAscendingTempoSet(allTracks, opts, length || 16); } return window.__runt32OriginalGenerateSetAlgo(allTracks, mode, opts, length); }; } } catch(e) { console.warn('PATCH-32 could not patch generateSetAlgo', e); } /* Patch handler if available. */try { if (typeof handlers !== 'undefined' && handlers && !window.__runt32OriginalSetGenerateHandler) { window.__runt32OriginalSetGenerateHandler = handlers['set-generate']; handlers['set-generate'] = function(){ if (state.ui && state.ui.setMode === 'tempo-safe') { generateTempoAscendingNow(); return; } if (typeof window.__runt32OriginalSetGenerateHandler === 'function') { return window.__runt32OriginalSetGenerateHandler.apply(this, arguments); } }; } } catch(e) { console.warn('PATCH-32 could not patch set-generate handler', e); } /* Capture fallback for the orange generate/rebuild button. */document.addEventListener('click', function(e){ var app = document.getElementById('laiso-app'); if (!app || !e.target.closest || !e.target.closest('#laiso-app')) return; if (!state.ui || state.ui.setMode !== 'tempo-safe' || state.view !== 'set') return; var btn = e.target.closest('button, .laiso-btn, [data-action]'); if (!btn) return; var text = (btn.textContent || '').replace(/\s+/g,' ').trim().toLowerCase(); var action = btn.dataset && btn.dataset.action; var isGenerate = action === 'set-generate' || text.indexOf('сгенерировать') >= 0 || text.indexOf('пересобрать') >= 0; if (!isGenerate) return; e.preventDefault(); e.stopPropagation(); if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation(); generateTempoAscendingNow(); }, true); /* Add small hint text for tempo mode. */function patchTempoHint(){ var root = document.getElementById('laiso-root'); if (!root || state.view !== 'set' || !state.ui || state.ui.setMode !== 'tempo-safe') return; var existing = root.querySelector('.runt32-tempo-hint'); if (existing) return; var panels = root.querySelectorAll('.laiso-panel'); var target = null; panels.forEach(function(p){ var txt = (p.textContent || '').toLowerCase(); if (txt.indexOf('диапазон темпа') >= 0) target = p; }); if (target) { var div = document.createElement('div'); div.className = 'runt32-tempo-hint'; div.style.cssText = 'margin-top:10px;font-family:var(--font-mono,monospace);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-tertiary,#8A847B);'; div.textContent = 'режим по темпу: сет строится от меньшего BPM к большему'; target.appendChild(div); } } if (!window.__runt32RenderWrapped) { var old = window.laisoBuck.render; window.laisoBuck.render = function(){ old(); setTimeout(patchTempoHint, 80); }; window.__runt32RenderWrapped = true; } try { if (typeof render === 'function' && !window.__runt32GlobalRenderWrapped) { var oldGlobal = render; render = function(){ oldGlobal(); setTimeout(patchTempoHint, 80); }; window.__runt32GlobalRenderWrapped = true; } } catch(_){} setTimeout(function(){ patchTempoHint(); console.log('RUNT-01 PATCH-32 loaded: tempo-safe mode is now ascending BPM'); }, 300); } boot();
 })();
 </script> <!-- nominify end --> </div> </div> </div> </div> </div> <!--allrecords-->
-</div></div></body>
+</div></div>
+<script>
+(function(){
+  'use strict';
+
+  function boot(){
+    if (!window.laisoBuck || !window.laisoBuck.state || !window.laisoBuck.render || typeof on !== 'function') {
+      setTimeout(boot, 160);
+      return;
+    }
+    if (window.__vertaxBackupPatchInstalled) return;
+    window.__vertaxBackupPatchInstalled = true;
+
+    window.STORE_VINYLS = window.STORE_VINYLS || 'vinyls';
+    window.STORE_SETS = window.STORE_SETS || 'sets';
+    window.STORE_SETTINGS = window.STORE_SETTINGS || 'settings';
+    if (typeof window.dbDel !== 'function' && typeof dbDelete === 'function') window.dbDel = dbDelete;
+    if (typeof window.dbClear !== 'function') {
+      window.dbClear = function(storeName){
+        return new Promise(function(resolve, reject){
+          try {
+            var tx = dbInstance.transaction(storeName, 'readwrite');
+            tx.objectStore(storeName).clear();
+            tx.oncomplete = function(){ resolve(); };
+            tx.onerror = function(){ reject(tx.error); };
+          } catch(e) {
+            reject(e);
+          }
+        });
+      };
+    }
+
+    var state = window.laisoBuck.state;
+
+    function safeEsc(s){
+      if (typeof esc === 'function') return esc(s);
+      if (s == null) return '';
+      return String(s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    }
+    function renderApp(){
+      try {
+        if (window.laisoBuck && typeof window.laisoBuck.render === 'function') window.laisoBuck.render();
+        else if (typeof render === 'function') render();
+      } catch(e) {
+        console.warn('VERTAX backup render error', e);
+      }
+    }
+    function toast(msg, ms){
+      if (typeof showToast === 'function') showToast(msg, ms);
+      else console.log(msg);
+    }
+    function storeVinyls(){ return window.STORE_VINYLS || 'vinyls'; }
+    function storeSets(){ return window.STORE_SETS || 'sets'; }
+    function storeSettings(){ return window.STORE_SETTINGS || 'settings'; }
+    function pad(n){ return n < 10 ? '0' + n : String(n); }
+    function formatDateTime(ts){
+      if (!ts) return '';
+      var d = new Date(Number(ts));
+      if (isNaN(d.getTime())) return '';
+      return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+    function formatFileStamp(ts){
+      var d = new Date(ts || Date.now());
+      return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + '-' + pad(d.getHours()) + '-' + pad(d.getMinutes());
+    }
+    function norm(s){
+      return String(s == null ? '' : s).toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+    function settingValue(settings, key){
+      var rec = (settings || []).find(function(x){ return x && x.key === key; });
+      return rec ? rec.value : null;
+    }
+    async function loadSettings(){
+      var settings = [];
+      try { settings = await dbGetAll(storeSettings()); } catch(_) {}
+      state.ui = state.ui || {};
+      state.ui.backupSettings = settings || [];
+      return state.ui.backupSettings;
+    }
+    async function putSetting(key, value){
+      try { await dbPut(storeSettings(), { key:key, value:value }); } catch(e) { console.warn('backup setting error', e); }
+      state.ui = state.ui || {};
+      var arr = state.ui.backupSettings || [];
+      var rec = arr.find(function(x){ return x && x.key === key; });
+      if (rec) rec.value = value;
+      else arr.push({ key:key, value:value });
+      state.ui.backupSettings = arr;
+    }
+    async function openBackup(){
+      state.ui = state.ui || {};
+      state.ui.backupRestoreData = null;
+      state.ui.backupRestoreError = null;
+      await loadSettings();
+      state.view = 'backup';
+      state.modal = null;
+      renderApp();
+      setTimeout(function(){ try { window.scrollTo({ top:0, behavior:'smooth' }); } catch(_){} }, 60);
+    }
+    function uniqueById(list){
+      var out = [], seen = {};
+      (list || []).forEach(function(item){
+        if (!item || !item.id || seen[item.id]) return;
+        seen[item.id] = true;
+        out.push(item);
+      });
+      return out;
+    }
+    function currentVinylCount(){
+      return uniqueById((state.collection || [])).length;
+    }
+    function backupStatusHtml(){
+      var settings = state.ui && state.ui.backupSettings || [];
+      var lastAt = settingValue(settings, 'lastBackupAt');
+      var lastCount = Number(settingValue(settings, 'lastBackupVinylCount') || 0);
+      var currentCount = currentVinylCount();
+      var added = lastAt ? Math.max(0, currentCount - lastCount) : 0;
+      var status = lastAt ?
+        '<strong>Последняя копия: ' + safeEsc(formatDateTime(lastAt)) + '</strong><span>Пластинок в той копии: ' + safeEsc(lastCount) + '</span>' :
+        '<strong>Резервная копия: не создавалась</strong>';
+      var warning = added > 0 ?
+        '<div class="vertax-backup-warn">С последней копии добавлено: ' + safeEsc(added) + ' пластинок.<br>Рекомендуем сохранить новую копию.</div>' : '';
+      return '<div class="vertax-backup-status">' + status + '</div>' + warning;
+    }
+    function shouldShowOnboarding(){
+      var settings = state.ui && state.ui.backupSettings || [];
+      return !settingValue(settings, 'lastBackupAt') && !settingValue(settings, 'backupOnboardingSeen');
+    }
+    function onboardingHtml(){
+      if (!shouldShowOnboarding()) return '';
+      return '<div class="vertax-backup-onboarding">' +
+        '<div class="vertax-backup-lock">🔒</div>' +
+        '<h2>Ваши данные — только ваши</h2>' +
+        '<p>VERTAX не собирает и не хранит вашу коллекцию на серверах. Мы не знаем кто вы и что у вас в коллекции — и не хотим знать.</p>' +
+        '<p>Обратная сторона: если браузер очистит данные или вы смените телефон — коллекция пропадёт.</p>' +
+        '<p>Поэтому мы сделали резервную копию. Это файл который вы сохраняете сами — в Telegram себе, в заметки, в облако. Вы полностью контролируете где он хранится.</p>' +
+        '<p><strong>Честно. Просто. Надёжно.</strong></p>' +
+        '<button class="laiso-btn laiso-btn-block" data-action="backup-onboarding-done">Понятно, сохраню копию</button>' +
+      '</div>';
+    }
+    function restoreChoiceHtml(){
+      var data = state.ui && state.ui.backupRestoreData;
+      if (!data) return '';
+      var date = data.createdAt ? formatDateTime(data.createdAt).split(',')[0] : 'неизвестной даты';
+      var count = Array.isArray(data.vinyls) ? data.vinyls.length : 0;
+      return '<div class="vertax-backup-restore">' +
+        '<strong>Найдена копия от ' + safeEsc(date) + '</strong>' +
+        '<span>Пластинок в файле: ' + safeEsc(count) + '</span>' +
+        '<p>Как восстановить коллекцию?</p>' +
+        '<button class="laiso-btn laiso-btn-block" data-action="backup-restore-replace">Заменить текущую коллекцию</button>' +
+        '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-restore-merge">Объединить с текущей</button>' +
+        '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-restore-cancel">Отмена</button>' +
+      '</div>';
+    }
+    function viewBackup(){
+      return renderHeader('Резервная копия') +
+        '<div class="vertax-backup-page">' +
+        '<div class="laiso-panel vertax-backup-intro">' +
+        '<p>Ваши пластинки хранятся в этом браузере. Если сменить телефон, очистить браузер или переустановить приложение — данные пропадут.</p>' +
+        '<p>Резервная копия — это файл с вашей коллекцией. Сохраните его в Telegram себе, в заметки, в iCloud или Google Drive.</p>' +
+        '<p>Каждая копия содержит всю коллекцию целиком. Делайте новую копию после каждого пополнения.</p>' +
+        '</div>' +
+        onboardingHtml() +
+        backupStatusHtml() +
+        restoreChoiceHtml() +
+        '<div class="laiso-stack" style="margin-top:14px;">' +
+        '<button class="laiso-btn laiso-btn-block" data-action="backup-download">Скачать копию коллекции</button>' +
+        '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-restore-pick">Восстановить из файла</button>' +
+        '</div>' +
+        '</div>' +
+        renderFooter();
+    }
+    async function downloadBackup(){
+      var vinyls = [];
+      var sets = [];
+      var settings = [];
+      try {
+        vinyls = await dbGetAll(storeVinyls());
+        sets = await dbGetAll(storeSets());
+        settings = await dbGetAll(storeSettings());
+      } catch(e) {
+        toast('Не удалось создать резервную копию');
+        return;
+      }
+      var now = Date.now();
+      var data = {
+        app: 'VERTAX-01 / RUNT-01',
+        backupVersion: 1,
+        createdAt: now,
+        vinylCount: (vinyls || []).length,
+        vinyls: vinyls || [],
+        sets: sets || [],
+        settings: settings || []
+      };
+      var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'vertax-backup-' + formatFileStamp(now) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 250);
+      await putSetting('lastBackupAt', now);
+      await putSetting('lastBackupVinylCount', data.vinylCount);
+      state.ui.backupRestoreData = null;
+      toast('Резервная копия создана');
+      renderApp();
+    }
+    function validateBackup(data){
+      if (!data || data.backupVersion == null) return false;
+      if (!Array.isArray(data.vinyls)) return false;
+      var appName = String(data.app || '');
+      return appName.indexOf('VERTAX') >= 0 || appName.indexOf('RUNT') >= 0;
+    }
+    function pickRestoreFile(){
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = function(e){
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        var fr = new FileReader();
+        fr.onload = function(){
+          try {
+            var data = JSON.parse(String(fr.result || ''));
+            if (!validateBackup(data)) {
+              toast('Это не похоже на резервную копию VERTAX');
+              return;
+            }
+            state.ui.backupRestoreData = data;
+            renderApp();
+          } catch(_) {
+            toast('Это не похоже на резервную копию VERTAX');
+          }
+        };
+        fr.readAsText(file);
+      };
+      input.click();
+    }
+    async function replaceFromBackup(){
+      var data = state.ui && state.ui.backupRestoreData;
+      if (!validateBackup(data)) {
+        toast('Это не похоже на резервную копию VERTAX');
+        return;
+      }
+      try {
+        await dbClear(storeVinyls());
+        await dbClear(storeSets());
+        for (var i = 0; i < data.vinyls.length; i++) {
+          if (data.vinyls[i] && data.vinyls[i].id) await dbPut(storeVinyls(), data.vinyls[i]);
+        }
+        var backupSets = Array.isArray(data.sets) ? data.sets : [];
+        for (var j = 0; j < backupSets.length; j++) {
+          if (backupSets[j] && backupSets[j].id) await dbPut(storeSets(), backupSets[j]);
+        }
+        state.collection = data.vinyls.slice();
+        state.sets = backupSets.slice();
+        state.vinyls = [];
+        state.ui.backupRestoreData = null;
+        await putSetting('lastBackupAt', data.createdAt || Date.now());
+        await putSetting('lastBackupVinylCount', data.vinyls.length);
+        toast('Коллекция восстановлена из резервной копии');
+        state.view = 'collection';
+        renderApp();
+      } catch(e) {
+        console.warn('backup replace error', e);
+        toast('Не удалось восстановить коллекцию');
+      }
+    }
+    function isDuplicateVinyl(current, candidate){
+      for (var i = 0; i < current.length; i++) {
+        var v = current[i];
+        if (v && candidate && v.discogsId && candidate.discogsId && String(v.discogsId) === String(candidate.discogsId)) return true;
+      }
+      for (var j = 0; j < current.length; j++) {
+        var a = current[j];
+        if (a && candidate && norm(a.artist) === norm(candidate.artist) && norm(a.title) === norm(candidate.title) && String(a.year || '') === String(candidate.year || '')) return true;
+      }
+      for (var k = 0; k < current.length; k++) {
+        var b = current[k];
+        if (b && candidate && b.id && candidate.id && String(b.id) === String(candidate.id)) return true;
+      }
+      return false;
+    }
+    async function mergeFromBackup(){
+      var data = state.ui && state.ui.backupRestoreData;
+      if (!validateBackup(data)) {
+        toast('Это не похоже на резервную копию VERTAX');
+        return;
+      }
+      try {
+        var current = await dbGetAll(storeVinyls());
+        var currentSets = await dbGetAll(storeSets());
+        var added = 0;
+        var skipped = 0;
+        for (var i = 0; i < data.vinyls.length; i++) {
+          var v = data.vinyls[i];
+          if (!v || !v.id) continue;
+          if (isDuplicateVinyl(current, v)) {
+            skipped++;
+          } else {
+            current.push(v);
+            await dbPut(storeVinyls(), v);
+            added++;
+          }
+        }
+        var setMap = {};
+        (currentSets || []).forEach(function(s){ if (s && s.id) setMap[String(s.id)] = true; });
+        var incomingSets = Array.isArray(data.sets) ? data.sets : [];
+        for (var j = 0; j < incomingSets.length; j++) {
+          var set = incomingSets[j];
+          if (!set || !set.id || setMap[String(set.id)]) continue;
+          setMap[String(set.id)] = true;
+          currentSets.push(set);
+          await dbPut(storeSets(), set);
+        }
+        state.collection = await dbGetAll(storeVinyls());
+        state.sets = await dbGetAll(storeSets());
+        state.vinyls = [];
+        state.ui.backupRestoreData = null;
+        toast('Добавлено: ' + added + ' пластинок. Пропущено дублей: ' + skipped + '.');
+        state.view = 'collection';
+        renderApp();
+      } catch(e) {
+        console.warn('backup merge error', e);
+        toast('Не удалось восстановить коллекцию');
+      }
+    }
+    function cancelRestore(){
+      state.ui.backupRestoreData = null;
+      renderApp();
+    }
+    function showBackupHint(){
+      if (!state || state.view === 'backup') return;
+      var settings = state.ui && state.ui.backupSettings || [];
+      var lastAt = settingValue(settings, 'lastBackupAt');
+      var lastCount = Number(settingValue(settings, 'lastBackupVinylCount') || 0);
+      var current = currentVinylCount();
+      var missing = lastAt ? Math.max(0, current - lastCount) : current;
+      if (current <= 0 || (lastAt && missing <= 0)) return;
+      var msg = !lastAt ? '💾 Сохраните резервную копию коллекции' :
+        (missing === 1 ? '💾 1 пластинка без резервной копии' : '💾 ' + missing + ' пластинок без резервной копии');
+      var old = document.querySelector('.vertax-backup-toast');
+      if (old) old.remove();
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'laiso-toast vertax-backup-toast';
+      el.setAttribute('data-action', 'goto-backup');
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(function(){ if (el && el.parentNode) el.parentNode.removeChild(el); }, 5200);
+    }
+    function scheduleBackupHint(){
+      clearTimeout(window.__vertaxBackupHintTimer);
+      window.__vertaxBackupHintTimer = setTimeout(function(){
+        loadSettings().then(showBackupHint);
+      }, 3000);
+    }
+
+    state.ui = state.ui || {};
+    state.ui.__backupKnownCollectionCount = currentVinylCount();
+    if (typeof persistVinyl === 'function' && !window.__vertaxBackupPersistWrapped) {
+      var originalPersistVinyl = persistVinyl;
+      persistVinyl = window.persistVinyl = async function(v){
+        var before = state.ui.__backupKnownCollectionCount || 0;
+        var result = await originalPersistVinyl.apply(this, arguments);
+        var after = currentVinylCount();
+        if (after > before && state.view !== 'backup') scheduleBackupHint();
+        state.ui.__backupKnownCollectionCount = after;
+        return result;
+      };
+      window.__vertaxBackupPersistWrapped = true;
+    }
+
+    if (typeof window.viewHome === 'function' && !window.__vertaxBackupHomeWrapped) {
+      var oldHome = window.viewHome;
+      window.viewHome = viewHome = function(){
+        var html = oldHome();
+        var backupBtn = '<button class="laiso-btn laiso-btn-secondary" data-action="goto-backup">🗂 Резервная копия</button>';
+        if (html.indexOf('data-action="goto-backup"') >= 0) return html;
+        if (html.indexOf('</div><div class="laiso-home-stickers"') >= 0) {
+          return html.replace('</div><div class="laiso-home-stickers"', backupBtn + '</div><div class="laiso-home-stickers"');
+        }
+        return html.replace('</div><div class="laiso-home-metrics"', backupBtn + '</div><div class="laiso-home-metrics"');
+      };
+      window.__vertaxBackupHomeWrapped = true;
+    }
+    if (typeof window.viewCollection === 'function' && !window.__vertaxBackupCollectionWrapped) {
+      var oldCollection = window.viewCollection;
+      window.viewCollection = viewCollection = function(){
+        var html = oldCollection();
+        if (html.indexOf('data-action="goto-backup"') >= 0) return html;
+        var btn = '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="goto-backup">🗂 Резервная копия</button>';
+        var marker = '<button class="laiso-btn laiso-btn-warning laiso-btn-block" data-action="confirm-clear">';
+        if (html.indexOf(marker) >= 0) return html.replace(marker, btn + marker);
+        return html;
+      };
+      window.__vertaxBackupCollectionWrapped = true;
+    }
+
+    function renderBackupOrBase(baseRender){
+      if (state.view === 'backup') {
+        var root = document.getElementById('laiso-root');
+        if (root) root.innerHTML = viewBackup();
+        return;
+      }
+      return baseRender();
+    }
+    if (!window.__vertaxBackupRenderWrapped) {
+      var oldBuckRender = window.laisoBuck.render;
+      window.laisoBuck.render = function(){ return renderBackupOrBase(oldBuckRender); };
+      window.__vertaxBackupRenderWrapped = true;
+    }
+    try {
+      if (typeof render === 'function' && !window.__vertaxBackupGlobalRenderWrapped) {
+        var oldGlobalRender = render;
+        render = function(){ return renderBackupOrBase(oldGlobalRender); };
+        window.__vertaxBackupGlobalRenderWrapped = true;
+      }
+    } catch(_) {}
+
+    var oldBack = handlers && handlers.back;
+    on('back', function(){
+      if (state.view === 'backup') {
+        state.view = 'home';
+        renderApp();
+        return;
+      }
+      if (typeof oldBack === 'function') return oldBack.apply(this, arguments);
+    });
+    on('goto-backup', function(){ openBackup(); });
+    on('backup-download', function(){ downloadBackup(); });
+    on('backup-restore-pick', function(){ pickRestoreFile(); });
+    on('backup-restore-replace', function(){ replaceFromBackup(); });
+    on('backup-restore-merge', function(){ mergeFromBackup(); });
+    on('backup-restore-cancel', function(){ cancelRestore(); });
+    on('backup-onboarding-done', async function(){
+      await putSetting('backupOnboardingSeen', true);
+      await downloadBackup();
+    });
+
+    document.addEventListener('click', function(e){
+      var t = e.target && e.target.closest && e.target.closest('.vertax-backup-toast[data-action="goto-backup"]');
+      if (!t) return;
+      e.preventDefault();
+      if (t.parentNode) t.parentNode.removeChild(t);
+      openBackup();
+    }, true);
+
+    var style = document.createElement('style');
+    style.textContent = [
+      '#laiso-app .vertax-backup-page p{font-size:14px;line-height:1.55;color:var(--text-secondary,#666158);margin:0 0 10px;}',
+      '#laiso-app .vertax-backup-status{display:flex;flex-direction:column;gap:6px;background:#101010;color:var(--accent-lime,#C4F542);border-radius:16px;padding:15px 16px;font-family:var(--font-mono,monospace);box-shadow:inset 0 0 20px rgba(0,0,0,.85);}',
+      '#laiso-app .vertax-backup-status strong{font-size:13px;letter-spacing:.04em;}',
+      '#laiso-app .vertax-backup-status span{font-size:11px;color:rgba(196,245,66,.72);}',
+      '#laiso-app .vertax-backup-warn{margin-top:10px;padding:14px 16px;border-radius:16px;background:#FFF0E8;color:var(--warning,#E66A2C);border:1px solid rgba(230,106,44,.35);font-weight:650;line-height:1.45;}',
+      '#laiso-app .vertax-backup-onboarding,.vertax-backup-restore{margin:14px 0;padding:18px;border:1px solid #111;border-radius:20px;background:#FFFDF7;box-shadow:0 14px 40px rgba(20,16,10,.08);}',
+      '#laiso-app .vertax-backup-onboarding{background:linear-gradient(180deg,#FBFFF0 0%,#FFFDF7 100%);}',
+      '#laiso-app .vertax-backup-lock{font-size:28px;margin-bottom:8px;}',
+      '#laiso-app .vertax-backup-onboarding h2{font-size:22px;line-height:1.08;margin:0 0 12px;letter-spacing:-.02em;}',
+      '#laiso-app .vertax-backup-onboarding p{font-size:15px;color:#111;}',
+      '#laiso-app .vertax-backup-restore{display:flex;flex-direction:column;gap:10px;}',
+      '#laiso-app .vertax-backup-restore strong{font-size:17px;}',
+      '#laiso-app .vertax-backup-restore span{font-family:var(--font-mono,monospace);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-tertiary,#8A847B);}',
+      '.vertax-backup-toast{border:0;cursor:pointer;}'
+    ].join('\n');
+    document.head.appendChild(style);
+
+    loadSettings().then(function(){ renderApp(); });
+    console.log('VERTAX backup patch loaded');
+  }
+
+  boot();
+})();
+</script>
+</body>
 </html>
