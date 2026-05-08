@@ -979,13 +979,14 @@
         backupStatusHtml() +
         restoreChoiceHtml() +
         '<div class="laiso-stack" style="margin-top:14px;">' +
-        '<button class="laiso-btn laiso-btn-block" data-action="backup-download">Скачать копию коллекции</button>' +
+        '<button class="laiso-btn laiso-btn-block" data-action="backup-share-telegram">Скачать в Telegram</button>' +
+        '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-download">Скачать на телефон/компьютер</button>' +
         '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="backup-restore-pick">Восстановить из файла</button>' +
         '</div>' +
         '</div>' +
         renderFooter();
     }
-    async function downloadBackup(){
+    async function buildBackupBundle(){
       var vinyls = [];
       var sets = [];
       var settings = [];
@@ -995,7 +996,7 @@
         settings = await dbGetAll(storeSettings());
       } catch(e) {
         toast('Не удалось создать резервную копию');
-        return;
+        return null;
       }
       var now = Date.now();
       var data = {
@@ -1007,20 +1008,79 @@
         sets: sets || [],
         settings: settings || []
       };
-      var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-      var url = URL.createObjectURL(blob);
+      var filename = 'vertax-backup-' + formatFileStamp(now) + '.json';
+      var text = JSON.stringify(data, null, 2);
+      var blob = new Blob([text], {type: 'application/octet-stream'});
+      var file = null;
+      try { file = new File([text], filename, {type: 'application/json'}); } catch(_) {}
+      return { data:data, filename:filename, blob:blob, file:file };
+    }
+    async function saveBackupMeta(bundle){
+      if (!bundle || !bundle.data) return;
+      await putSetting('lastBackupAt', bundle.data.createdAt);
+      await putSetting('lastBackupVinylCount', bundle.data.vinylCount);
+      state.ui.backupRestoreData = null;
+      renderApp();
+    }
+    function canShareFile(file){
+      try {
+        return !!(file && navigator.share && navigator.canShare && navigator.canShare({ files:[file] }));
+      } catch(_) {
+        return false;
+      }
+    }
+    function triggerFileDownload(bundle){
+      var url = URL.createObjectURL(bundle.blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = 'vertax-backup-' + formatFileStamp(now) + '.json';
+      a.download = bundle.filename;
+      a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(function(){ URL.revokeObjectURL(url); }, 250);
-      await putSetting('lastBackupAt', now);
-      await putSetting('lastBackupVinylCount', data.vinylCount);
-      state.ui.backupRestoreData = null;
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1200);
+    }
+    async function shareBackupToTelegram(){
+      var bundle = await buildBackupBundle();
+      if (!bundle) return;
+      if (canShareFile(bundle.file)) {
+        try {
+          await navigator.share({
+            files: [bundle.file],
+            title: 'Резервная копия VERTAX',
+            text: 'Выберите Telegram и отправьте файл себе.'
+          });
+          await saveBackupMeta(bundle);
+          toast('Резервная копия создана');
+          return;
+        } catch(e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+      triggerFileDownload(bundle);
+      await saveBackupMeta(bundle);
+      toast('Файл создан. Если Telegram не открылся, прикрепите его вручную.');
+    }
+    async function downloadBackup(){
+      var bundle = await buildBackupBundle();
+      if (!bundle) return;
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '') && canShareFile(bundle.file)) {
+        try {
+          await navigator.share({
+            files: [bundle.file],
+            title: 'Резервная копия VERTAX',
+            text: 'Сохраните файл в удобное место.'
+          });
+          await saveBackupMeta(bundle);
+          toast('Резервная копия создана');
+          return;
+        } catch(e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+      triggerFileDownload(bundle);
+      await saveBackupMeta(bundle);
       toast('Резервная копия создана');
-      renderApp();
     }
     function validateBackup(data){
       if (!data || data.backupVersion == null) return false;
@@ -1245,6 +1305,7 @@
       if (typeof oldBack === 'function') return oldBack.apply(this, arguments);
     });
     on('goto-backup', function(){ openBackup(); });
+    on('backup-share-telegram', function(){ shareBackupToTelegram(); });
     on('backup-download', function(){ downloadBackup(); });
     on('backup-restore-pick', function(){ pickRestoreFile(); });
     on('backup-restore-replace', function(){ replaceFromBackup(); });
