@@ -315,3 +315,13 @@ body.vertax-theme-dark #laiso-app .vertax-display { box-shadow: inset 0 2px 14px
   #laiso-app .vertax-theme-toggle.is-dark .vertax-theme-toggle-handle { left: calc(100% - 22px); }
   #laiso-app .vertax-theme-toggle-icon { font-size: 7px; }
 }
+
+/* Hide our in-app back button when Telegram chrome provides one,
+   or on small screens where the messenger or browser back gesture covers it.
+   Header grid simplifies from 3 cols (back / title / spacer) to 2. */
+body.vertax-has-tg-back #laiso-app .laiso-back { display: none !important; }
+body.vertax-has-tg-back #laiso-app .laiso-header { grid-template-columns: 1fr 52px !important; }
+@media (max-width: 600px) {
+  #laiso-app .laiso-back { display: none !important; }
+  #laiso-app .laiso-header { grid-template-columns: 1fr 52px !important; }
+}

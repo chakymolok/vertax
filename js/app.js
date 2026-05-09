@@ -111,6 +111,7 @@ function syncTelegramChrome(){
   if (!tg) return;
   try {
     if (tg.BackButton) {
+      if (document.body) document.body.classList.add('vertax-has-tg-back');
       if (canTelegramGoBack()) tg.BackButton.show();
       else tg.BackButton.hide();
     }
