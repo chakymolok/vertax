@@ -184,3 +184,95 @@
 /* Keep selection counter visible and cleaner */
 #laiso-app .runt26-source-page .laiso-meta{ margin:4px 2px 10px!important;
 }
+
+/* VERTAX fixes: source picker tools/search, compact header, stable CTA hover */
+#laiso-app .runt26-source-page .runt26-tools{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+  margin:0 0 10px!important;
+}
+#laiso-app .runt26-search-panel{
+  padding:10px!important;
+  margin:0 0 8px!important;
+}
+#laiso-app .laiso-tabs-modes{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+}
+#laiso-app .laiso-tabs-modes .laiso-tab{
+  min-width:0!important;
+  padding-left:4px!important;
+  padding-right:4px!important;
+  letter-spacing:.04em!important;
+}
+#laiso-app .laiso-chassis-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+}
+#laiso-app .laiso-brand-wrap{
+  min-width:0!important;
+  max-width:100%!important;
+}
+#laiso-app .laiso-brand{
+  font-size:30px!important;
+  line-height:1!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+#laiso-app .laiso-brand small{
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+#laiso-app .laiso-chassis-side{
+  min-width:max-content!important;
+}
+#laiso-app .laiso-btn-main:hover,
+#laiso-app .laiso-btn[data-action="discogs-search"]:hover,
+#laiso-app .laiso-btn[data-action="set-generate"]:hover,
+#laiso-app .laiso-btn[data-action="set-save"]:hover,
+#laiso-app .laiso-btn[data-action="set-export"]:hover,
+#laiso-app .laiso-btn[data-action="fetching-done"]:hover,
+#laiso-app .laiso-btn[data-action="done-add"]:hover,
+#laiso-app .laiso-btn[data-action="confirm-tracklist"]:hover,
+#laiso-app .laiso-btn[data-action="runt19-play-set"]:hover,
+#laiso-app .runt19-play-btn:hover{
+  color:#fff!important;
+  background:linear-gradient(180deg,var(--runt-orange-cta,#F26B2F) 0%,var(--runt-orange-cta-dark,#D84F1D) 100%)!important;
+  border-color:#111!important;
+}
+#laiso-app .runt19-wakelock-on:hover,
+#laiso-app .runt26-card.is-selected:hover .runt26-check{
+  color:#111!important;
+  background:var(--accent-lime,#C4F542)!important;
+  border-color:var(--accent-lime,#C4F542)!important;
+}
+#laiso-app .laiso-btn-main:hover,
+#laiso-app .laiso-btn[data-action="discogs-search"]:hover{
+  color:#111!important;
+  background:var(--VERTAX-accent,var(--accent-lime,#C4F542))!important;
+  border-color:var(--VERTAX-accent,var(--accent-lime,#C4F542))!important;
+}
+#laiso-app input,
+#laiso-app textarea,
+#laiso-app [contenteditable="true"]{
+  caret-color:var(--text-primary,#111)!important;
+}
+@media(max-width:620px){
+  #laiso-app .runt26-source-page .runt26-tools{
+    grid-template-columns:1fr!important;
+  }
+  #laiso-app .laiso-brand{
+    font-size:22px!important;
+    letter-spacing:.04em!important;
+  }
+  #laiso-app .laiso-brand small{
+    font-size:8px!important;
+  }
+  #laiso-app .laiso-lcd-mini,
+  #laiso-app .laiso-counter{
+    font-size:10px!important;
+    padding:5px 7px 4px!important;
+  }
+}
