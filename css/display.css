@@ -94,10 +94,10 @@ body,
   pointer-events: none;
   transition: opacity .25s ease, color .25s ease;
 }
-#laiso-app .vertax-theme-icon-ice  { left: 9px; color: var(--runt-accent, #C8FF2E); opacity: .95; }
-#laiso-app .vertax-theme-icon-night{ right: 9px; color: var(--runt-accent, #C8FF2E); opacity: .95; }
-#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-icon-ice  { opacity: .7; color: var(--runt-accent, #C8FF2E); }
-#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-icon-night{ opacity: 1; color: var(--runt-accent, #C8FF2E); }
+#laiso-app .vertax-theme-icon-ice  { left: 9px; color: var(--runt-accent, #C8FF2E); opacity: 1; }
+#laiso-app .vertax-theme-icon-night{ right: 9px; color: rgba(200,255,46,.24); opacity: 1; }
+#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-icon-ice  { color: rgba(200,255,46,.24); opacity: 1; }
+#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-icon-night{ color: var(--runt-accent, #C8FF2E); opacity: 1; }
 
 #laiso-app .vertax-theme-toggle-handle {
   position: absolute;
