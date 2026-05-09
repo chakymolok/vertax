@@ -672,6 +672,65 @@ body.vertax-theme-light > .vertax-backup-toast {
   }
 }
 
+/* Revised pad layout: 2x2 main actions, then 3 service pads. */
+#laiso-app .vertax-display {
+  height: 154px !important;
+  min-height: 154px !important;
+}
+
+#laiso-app .vertax-display-title,
+#laiso-app .vertax-boot-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#laiso-app .vertax-boot-full {
+  min-height: 104px !important;
+  max-height: 104px !important;
+  overflow: hidden !important;
+}
+
+#laiso-app .vertax-boot-line,
+#laiso-app .vertax-boot-row {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#laiso-app .laiso-home-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#laiso-app .laiso-home-stickers {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+#laiso-app .laiso-home-grid .laiso-btn {
+  aspect-ratio: 1 / 1 !important;
+  font-size: 12px !important;
+}
+
+#laiso-app .laiso-home-stickers .laiso-sticker {
+  aspect-ratio: 1 / 1 !important;
+  min-height: 0 !important;
+}
+
+#laiso-app .laiso-home-stickers .laiso-sticker strong {
+  font-size: 10px !important;
+  letter-spacing: .11em !important;
+}
+
+@media (max-width: 380px) {
+  #laiso-app .laiso-home-grid .laiso-btn {
+    font-size: 11px !important;
+  }
+  #laiso-app .laiso-home-stickers .laiso-sticker strong {
+    font-size: 9px !important;
+    letter-spacing: .08em !important;
+  }
+}
+
 /* Final green-button contrast: lime surface always gets graphite text. */
 body #laiso-app .laiso-btn-main,
 body #laiso-app .laiso-btn-main:hover,

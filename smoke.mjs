@@ -101,7 +101,7 @@ await renderView('home');
 await page.getByRole('button', { name: 'Коллекция' }).click();
 await page.waitForFunction(() => window.laisoBuck.state.view === 'collection');
 await renderView('home');
-await page.getByRole('button', { name: '🗂 Резервная копия' }).click();
+await page.getByRole('button', { name: 'Резервная копия' }).click();
 await page.waitForFunction(() => window.laisoBuck.state.view === 'backup');
 
 const uncaught = errors.filter((line) => /Uncaught|ReferenceError|SyntaxError|TypeError/i.test(line));

@@ -410,6 +410,7 @@ function runVertaxBootSequence(display){
   display.dataset.vertaxBoot = 'running';
   var name = getVertaxUserName();
   var hello = 'HELLO, ' + name;
+  if (hello.length > 26) hello = hello.slice(0, 25) + '…';
   var finalItems = vertaxFinalDisplayMarkup();
   display.innerHTML =
     '<div class="vertax-boot vertax-boot-full">' +
