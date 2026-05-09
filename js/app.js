@@ -25,7 +25,6 @@ document.addEventListener("gesturestart",function(e){e.preventDefault();},{passi
   if (window.__runtAndVertaxExtensionsInstalled) return;
   window.__runtAndVertaxExtensionsInstalled = true;
   var installers = [
-    installRuntHomeView,
     installRuntPhysicalRecordKeys,
     installRuntFetchingMetadataFlow,
     installRuntBpmX2LiveToggle,

@@ -125,14 +125,10 @@ function installRuntAscendingTempoMode(){
 }
 
 function installVertaxBackupFeature(){
-(function(){
-  'use strict';
-
-  function boot(){
-    if (!window.laisoBuck || !window.laisoBuck.state || !window.laisoBuck.render || typeof on !== 'function') {
-      setTimeout(boot, 160);
-      return;
-    }
+  if (!window.laisoBuck || !window.laisoBuck.state || !window.laisoBuck.render || typeof on !== 'function') {
+    console.warn('VERTAX backup feature skipped: app is not ready');
+    return;
+  }
     if (window.__vertaxBackupPatchInstalled) return;
     window.__vertaxBackupPatchInstalled = true;
 
@@ -537,52 +533,7 @@ function installVertaxBackupFeature(){
       window.__vertaxBackupPersistWrapped = true;
     }
 
-    if (typeof window.viewHome === 'function' && !window.__vertaxBackupHomeWrapped) {
-      var oldHome = window.viewHome;
-      window.viewHome = viewHome = function(){
-        var html = oldHome();
-        var backupBtn = '<button class="laiso-btn laiso-btn-secondary" data-action="goto-backup">🗂 Резервная копия</button>';
-        if (html.indexOf('data-action="goto-backup"') >= 0) return html;
-        if (html.indexOf('</div><div class="laiso-home-stickers"') >= 0) {
-          return html.replace('</div><div class="laiso-home-stickers"', backupBtn + '</div><div class="laiso-home-stickers"');
-        }
-        return html.replace('</div><div class="laiso-home-metrics"', backupBtn + '</div><div class="laiso-home-metrics"');
-      };
-      window.__vertaxBackupHomeWrapped = true;
-    }
-    if (typeof window.viewCollection === 'function' && !window.__vertaxBackupCollectionWrapped) {
-      var oldCollection = window.viewCollection;
-      window.viewCollection = viewCollection = function(){
-        var html = oldCollection();
-        if (html.indexOf('data-action="goto-backup"') >= 0) return html;
-        var btn = '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="goto-backup">🗂 Резервная копия</button>';
-        var marker = '<button class="laiso-btn laiso-btn-warning laiso-btn-block" data-action="confirm-clear">';
-        if (html.indexOf(marker) >= 0) return html.replace(marker, btn + marker);
-        return html;
-      };
-      window.__vertaxBackupCollectionWrapped = true;
-    }
-
-    function renderBackupOrBase(baseRender){
-      if (state.view === 'backup') {
-        var root = document.getElementById('laiso-root');
-        if (root) root.innerHTML = viewBackup();
-        return;
-      }
-      return baseRender();
-    }
-    if (!window.__vertaxBackupRenderWrapped) {
-      var oldBuckRender = window.laisoBuck.render;
-      window.laisoBuck.render = function(){ return renderBackupOrBase(oldBuckRender); };
-      window.__vertaxBackupRenderWrapped = true;
-    }
-    try {
-      if (typeof render === 'function' && !window.__vertaxBackupGlobalRenderWrapped) {
-        var oldGlobalRender = render;
-        render = function(){ return renderBackupOrBase(oldGlobalRender); };
-        window.__vertaxBackupGlobalRenderWrapped = true;
-      }
-    } catch(_) {}
+    window.viewBackup = viewBackup;
 
     var oldBack = handlers && handlers.back;
     on('back', function(){
@@ -633,8 +584,4 @@ function installVertaxBackupFeature(){
 
     loadSettings().then(function(){ renderApp(); });
     console.log('VERTAX backup patch loaded');
-  }
-
-  boot();
-})();
 }
