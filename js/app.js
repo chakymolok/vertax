@@ -493,6 +493,15 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     var now = Date.now();
     if (now - lastSpotifyMissToastAt < 7000) return;
     lastSpotifyMissToastAt = now;
+    var data = window.__vertaxSpotifyLastLookup && window.__vertaxSpotifyLastLookup.data;
+    if (data && data.reason === 'audio-features-unavailable') {
+      showToast('Spotify нашёл трек, но не отдал BPM/Key — пробую другие источники', 4200);
+      return;
+    }
+    if (data && data.reason === 'audio-features-empty') {
+      showToast('Spotify нашёл трек без BPM/Key — пробую другие источники', 3600);
+      return;
+    }
     showToast('Spotify не нашёл — пробую другие источники', 2800);
   }
 

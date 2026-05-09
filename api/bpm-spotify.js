@@ -118,18 +118,30 @@ async function spotifyFetch(url, token) {
     }
   });
 
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (_) {
+    data = null;
+  }
+
   if (response.status === 429) {
     const err = new Error('Spotify rate limit');
     err.statusCode = 429;
+    err.spotifyStatus = response.status;
+    err.spotifyBody = data || text;
     throw err;
   }
   if (!response.ok) {
     const err = new Error('Spotify API request failed');
-    err.statusCode = 500;
+    err.statusCode = response.status === 403 ? 403 : 500;
+    err.spotifyStatus = response.status;
+    err.spotifyBody = data || text;
     throw err;
   }
 
-  return response.json();
+  return data;
 }
 
 function cleanSearchPart(value) {
@@ -204,6 +216,17 @@ async function findSpotifyTrack(token, artist, title) {
   return fallback;
 }
 
+function serializeSpotifyTrack(track) {
+  if (!track) return null;
+  return {
+    id: track.id || null,
+    name: track.name || '',
+    artists: (track.artists || []).map((artist) => artist.name).filter(Boolean),
+    album: track.album && track.album.name ? track.album.name : '',
+    url: track.external_urls && track.external_urls.spotify ? track.external_urls.spotify : ''
+  };
+}
+
 module.exports = async function handler(req, res) {
   setCors(req, res);
 
@@ -236,10 +259,30 @@ module.exports = async function handler(req, res) {
     }
 
     const featuresUrl = `${SPOTIFY_API_BASE}/audio-features/${encodeURIComponent(track.id)}`;
-    const features = await spotifyFetch(featuresUrl, token);
+    let features = null;
+    try {
+      features = await spotifyFetch(featuresUrl, token);
+    } catch (err) {
+      if (err && err.spotifyStatus === 403) {
+        sendJson(res, 200, {
+          found: false,
+          trackFound: true,
+          reason: 'audio-features-unavailable',
+          message: 'Spotify found the track, but Audio Features are unavailable for this app',
+          track: serializeSpotifyTrack(track)
+        });
+        return;
+      }
+      throw err;
+    }
 
     if (!features || !features.tempo) {
-      sendJson(res, 200, { found: false });
+      sendJson(res, 200, {
+        found: false,
+        trackFound: true,
+        reason: 'audio-features-empty',
+        track: serializeSpotifyTrack(track)
+      });
       return;
     }
 
