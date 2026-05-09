@@ -30,7 +30,6 @@ document.addEventListener("gesturestart",function(e){e.preventDefault();},{passi
     installRuntSetDndAndAddTrackModal,
     installRuntCompactSetCards,
     installRuntManualMetadataHandlers,
-    installRuntTrackPositionHelpers,
     installRuntCollectionQuickActions,
     installRuntDiscogsDuplicatePicker,
     installRuntManualMetaValidation,
