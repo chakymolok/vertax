@@ -306,3 +306,19 @@
 }
 @media(max-width:620px){ #laiso-app .runt21-suggest-row{ grid-template-columns:54px 1fr; } #laiso-app .runt21-suggest-row .laiso-btn{ grid-column:1 / -1; width:100%; } #laiso-app .runt21-suggest-name{ font-size:16px; }
 }
+
+/* Smart-suggest block (set view, ≤3 tracks) */
+#laiso-app .vertax-suggest-list{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+#laiso-app .vertax-suggest-row{ display:grid; grid-template-columns:96px 1fr 36px; gap:12px; align-items:center; padding:12px 14px; background:var(--panel-light); border:1px solid var(--border); border-radius:14px; cursor:pointer; transition:background .15s,border-color .15s; }
+#laiso-app .vertax-suggest-row:hover{ background:var(--panel-metal); border-color:var(--border-active); }
+#laiso-app .vertax-suggest-meters{ display:flex; flex-direction:column; gap:4px; }
+#laiso-app .vertax-suggest-bpm{ display:inline-flex; align-items:center; justify-content:center; padding:4px 8px; background:var(--lcd-black); color:var(--lcd-text); font-family:var(--font-mono); font-size:11px; font-weight:600; border-radius:6px; letter-spacing:.04em; }
+#laiso-app .vertax-suggest-bpm em{ font-style:normal; opacity:.65; margin-left:6px; font-size:9px; }
+#laiso-app .vertax-suggest-cam{ display:inline-flex; align-items:center; justify-content:center; padding:3px 8px; background:var(--accent-lime); color:#111; font-family:var(--font-mono); font-size:11px; font-weight:700; border-radius:999px; letter-spacing:.05em; }
+#laiso-app .vertax-suggest-info{ min-width:0; }
+#laiso-app .vertax-suggest-title{ font-family:var(--font-sans); font-size:14px; font-weight:600; color:var(--text-primary); line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#laiso-app .vertax-suggest-meta{ margin-top:2px; font-family:var(--font-mono); font-size:10px; letter-spacing:.06em; color:var(--text-tertiary); text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#laiso-app .vertax-suggest-add{ display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; background:var(--accent-lime); color:#111; font-size:18px; font-weight:700; line-height:1; }
+@media(max-width:520px){ #laiso-app .vertax-suggest-row{ grid-template-columns:80px 1fr 28px; gap:8px; padding:10px 12px; } #laiso-app .vertax-suggest-add{ width:26px; height:26px; font-size:15px; } }
+body.vertax-dark #laiso-app .vertax-suggest-row{ background:var(--panel-light); border-color:var(--border-soft); }
+body.vertax-dark #laiso-app .vertax-suggest-row:hover{ background:var(--panel-metal); }

@@ -117,3 +117,26 @@ html, body { margin: 0; padding: 0; min-height: 100%; background: #EEE7DA; }
 }
 @media(max-width:520px){ #laiso-app .laiso-set-tools{ grid-template-columns:1fr; } #laiso-app .laiso-add-track-card{ grid-template-columns:44px 1fr; } #laiso-app .laiso-add-track-card .laiso-btn{ grid-column:1 / -1; }
 }
+
+/* Dark theme for Live mode (state.view === 'live-set') */
+body.vertax-dark { background:#0A0A09; }
+body.vertax-dark #laiso-app{
+  --bg-primary:#0A0A09;
+  --bg-secondary:#15140F;
+  --panel-light:#1A1814;
+  --panel-metal:#1F1D17;
+  --panel-recess:#0F0E0B;
+  --text-primary:#EEE7DA;
+  --text-secondary:#A8A39A;
+  --text-tertiary:#6E6A60;
+  --border-soft:#3A382F;
+  --border-faint:#2A2823;
+  --border-dark:#7A7466;
+  --bg-panel:#1A1814;
+  --border:#3A382F;
+  --border-active:#7A7466;
+  background: radial-gradient(120% 80% at 50% 0%, #1B1A14 0%, #100F0B 70%, #07060A 100%);
+  color: #EEE7DA;
+}
+body.vertax-dark #laiso-app a{ color: var(--accent-lime); }
+body.vertax-dark #laiso-app .laiso-toast{ background:#1A1814; color:#EEE7DA; border:1px solid #3A382F; }
