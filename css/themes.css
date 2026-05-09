@@ -115,13 +115,25 @@ body.vertax-theme-dark #laiso-app,
   border-bottom: 1px solid var(--runt-line) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  padding: 14px 2px 18px !important;
-  margin-bottom: 20px !important;
+  padding: 10px 2px 12px !important;
+  margin-bottom: 14px !important;
 }
 
 #laiso-app .laiso-chassis::before,
 #laiso-app .laiso-chassis::after {
   display: none !important;
+}
+
+#laiso-app .laiso-brand::after {
+  display: none !important;
+}
+
+#laiso-app .laiso-chassis-side {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  gap: 8px !important;
+  flex: 0 0 auto !important;
 }
 
 #laiso-app .laiso-panel,
@@ -384,6 +396,53 @@ body.vertax-theme-dark #laiso-app .laiso-dotmark {
 
 #laiso-app .laiso-modal-bg {
   background: rgba(5,6,5,.58) !important;
+}
+
+#laiso-app .vertax-theme-panel {
+  display: none !important;
+}
+
+#laiso-app .vertax-theme-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+#laiso-app .vertax-theme-dot {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--runt-line);
+  background: var(--runt-card);
+  box-shadow: 0 4px 12px var(--runt-shadow);
+  cursor: pointer;
+}
+
+#laiso-app .vertax-theme-dot-light {
+  background: #F8F9F7;
+  border-color: var(--runt-line);
+}
+
+#laiso-app .vertax-theme-dot-dark {
+  background: #10110F;
+  border-color: #10110F;
+}
+
+#laiso-app .vertax-theme-dot.is-active {
+  border-color: var(--runt-accent);
+  box-shadow: 0 0 0 3px var(--runt-accent-soft), 0 0 14px var(--runt-accent-soft);
+}
+
+body.vertax-theme-dark #laiso-app .vertax-theme-dot-light {
+  border-color: var(--runt-faint);
+}
+
+body.vertax-theme-dark #laiso-app .vertax-theme-dot-dark {
+  border-color: var(--runt-line);
 }
 
 #laiso-app .vertax-theme-panel {
