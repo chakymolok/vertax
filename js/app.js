@@ -446,21 +446,15 @@ function runVertaxBootSequence(display){
   typeChar(0, 0);
 }
 
-var VERTAX_BOOT_TTL_MS = 30000; /* show boot again if last shown >30s ago */
-
 function vertaxAfterRender(){
   if (typeof state === 'undefined') return;
   if (state.view !== 'home') return;
   var display = document.getElementById('vertax-display');
   if (!display) return;
-  if (!window.__vertaxBootStarted) {
+  if (!window.__vertaxBootDone && display.dataset.vertaxBoot !== 'running') {
     window.__vertaxBootStarted = true;
-    var lastShown = 0;
-    try { lastShown = parseInt(localStorage.getItem('vertaxBootLastShownAt'), 10) || 0; } catch(_){}
-    var now = Date.now();
-    if (!lastShown || (now - lastShown) > VERTAX_BOOT_TTL_MS) {
-      runVertaxBootSequence(display);
-    }
+    runVertaxBootSequence(display);
+    return;
   }
   if (!display.dataset.vertaxBoot) startVertaxClockTicker();
 }
@@ -504,6 +498,14 @@ window.startVertaxClockTicker = startVertaxClockTicker;
       .trim();
   }
 
+  function titleMatches(wantedTitle, trackTitle){
+    if (!wantedTitle || !trackTitle) return false;
+    if (wantedTitle === trackTitle) return true;
+    if (wantedTitle.length >= 6 && trackTitle.indexOf(wantedTitle) >= 0) return true;
+    if (trackTitle.length >= 6 && wantedTitle.indexOf(trackTitle) >= 0) return true;
+    return false;
+  }
+
   function trackScore(track, artist, title){
     if (!track) return 0;
     var wantedArtist = normalizeSearchText(leadArtist(artist));
@@ -512,8 +514,7 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     var trackTitle = normalizeSearchText(track.title || track.title_short);
     var score = 0;
     if (wantedArtist && trackArtist.indexOf(wantedArtist) >= 0) score += 2;
-    if (wantedTitle && trackTitle.indexOf(wantedTitle) >= 0) score += 3;
-    if (wantedTitle && wantedTitle.indexOf(trackTitle) >= 0) score += 1;
+    if (titleMatches(wantedTitle, trackTitle)) score += 3;
     return score;
   }
 
@@ -548,10 +549,11 @@ window.startVertaxClockTicker = startVertaxClockTicker;
 
   async function deezerRequest(url){
     try {
-      var response = await fetch(url);
-      if (response.ok) return await response.json();
+      return await deezerJsonp(url);
     } catch(_) {}
-    return deezerJsonp(url);
+    var response = await fetch(url);
+    if (!response.ok) return null;
+    return response.json();
   }
 
   function buildDeezerQueries(artist, title){
@@ -576,16 +578,21 @@ window.startVertaxClockTicker = startVertaxClockTicker;
   async function findDeezerTrack(artist, title){
     var queries = buildDeezerQueries(artist, title);
     var fallback = null;
+    var fallbackScore = 0;
     for (var i = 0; i < queries.length; i++) {
       var searchUrl = 'https://api.deezer.com/search?q=' + encodeURIComponent(queries[i]) + '&limit=5';
       var searchData = await deezerRequest(searchUrl);
       var tracks = searchData && Array.isArray(searchData.data) ? searchData.data : [];
       if (!tracks.length) continue;
-      if (!fallback) fallback = tracks[0];
       tracks.sort(function(a, b){ return trackScore(b, artist, title) - trackScore(a, artist, title); });
-      if (trackScore(tracks[0], artist, title) >= 4) return tracks[0];
+      var score = trackScore(tracks[0], artist, title);
+      if (score > fallbackScore) {
+        fallback = tracks[0];
+        fallbackScore = score;
+      }
+      if (score >= 4) return tracks[0];
     }
-    return fallback;
+    return fallbackScore >= 4 ? fallback : null;
   }
 
   async function fetchFromDeezer(artist, title) {
@@ -606,7 +613,10 @@ window.startVertaxClockTicker = startVertaxClockTicker;
         artist: trackData && trackData.artist && trackData.artist.name || track.artist && track.artist.name || '',
         bpm: trackData && trackData.bpm
       };
-      if (!trackData || !trackData.bpm || trackData.bpm === 0) return null;
+      if (!trackData || !trackData.bpm || trackData.bpm === 0) {
+        window.__vertaxDeezerLastLookup.status = 'no-bpm';
+        return null;
+      }
       return {
         bpm: Math.round(trackData.bpm),
         key: null,
@@ -629,6 +639,97 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     }
   }
   window.fetchFromDeezer = fetchFromDeezer;
+
+  function syncFetchingItem(track, meta){
+    try {
+      var fp = state && state.ui && state.ui.fetchProgress;
+      if (!fp || !Array.isArray(fp.items)) return;
+      fp.items.forEach(function(item){
+        if (!item || String(item.trackId) !== String(track.id)) return;
+        item.status = (track.bpm || track.key || track.camelot) ? 'ok' : 'notfound';
+        item.meta = (track.bpm || track.key || track.camelot) ? {
+          bpm: track.bpm || null,
+          key: track.key || null,
+          camelot: track.camelot || null,
+          source: sourceName(meta) || track.bpmSource || track.keySource || 'manual',
+          confidence: track.confidence || 'medium'
+        } : null;
+      });
+    } catch(_) {}
+  }
+
+  function applyLookupMetaToTrack(track, vinyl, meta){
+    if (!track || !vinyl || !meta) return false;
+    var changed = false;
+    var src = sourceName(meta);
+    if (!track.bpm && meta.bpm) {
+      track.bpm = meta.bpm;
+      track.bpmSource = meta.bpmSource || src || null;
+      track.originalBpm = meta.originalBpm || null;
+      track.halftimeCorrected = !!meta.halftimeCorrected;
+      changed = true;
+    }
+    if (!hasKey(track) && hasKey(meta)) {
+      track.key = meta.key || null;
+      track.camelot = meta.camelot || (meta.key && typeof KEY_TO_CAMELOT !== 'undefined' ? KEY_TO_CAMELOT[meta.key] : null);
+      track.keySource = meta.keySource || src || null;
+      changed = true;
+    }
+    if (!changed) return false;
+    track.conflict = null;
+    track.confidence = meta.confidence || (track.bpm && hasKey(track) ? 'medium' : 'manual');
+    syncFetchingItem(track, meta);
+    try { if (typeof persistVinyl === 'function') persistVinyl(vinyl); } catch(_) {}
+    return true;
+  }
+
+  function findTrackPairByActionEl(el){
+    var vid = el && el.dataset ? el.dataset.vid : null;
+    var tid = el && el.dataset ? el.dataset.tid : null;
+    var vinyl = typeof findVinyl === 'function' ? findVinyl(vid) : null;
+    var track = vinyl && typeof findTrack === 'function' ? findTrack(vinyl, tid) : null;
+    return { vinyl: vinyl, track: track };
+  }
+
+  function installManualLookupBridge(){
+    if (typeof handlers === 'undefined' || !handlers) return false;
+    if (window.__vertaxDeezerManualLookupBridgeInstalled) return true;
+    var oldManual = handlers['track-manual-meta'];
+    handlers['track-manual-meta'] = async function(e, el){
+      var pair = findTrackPairByActionEl(el);
+      if (!pair.track || !pair.vinyl) {
+        if (oldManual) return oldManual(e, el);
+        return;
+      }
+      var needsBpm = !pair.track.bpm;
+      var needsKey = !hasKey(pair.track);
+      if (!needsBpm && !needsKey) {
+        if (oldManual) return oldManual(e, el);
+        return;
+      }
+      installMetadataCascade();
+      if (typeof showToast === 'function') showToast('Ищу BPM/Key...', 900);
+      var meta = null;
+      try {
+        if (typeof fetchTrackMetadata === 'function') meta = await fetchTrackMetadata(pair.track, pair.vinyl);
+      } catch (err) {
+        console.warn('Metadata lookup before manual input failed', err);
+      }
+      if (applyLookupMetaToTrack(pair.track, pair.vinyl, meta)) {
+        if (typeof showToast === 'function') showToast('Нашлось: ' + String(sourceName(meta) || 'source').toUpperCase());
+        if (typeof render === 'function') render();
+        return;
+      }
+      var last = window.__vertaxDeezerLastLookup || {};
+      if (typeof showToast === 'function') {
+        if (last.status === 'no-bpm') showToast('Deezer нашёл трек, но BPM пустой', 1400);
+        else showToast('Автопоиск не нашёл. Введи вручную.', 1400);
+      }
+      if (oldManual) return oldManual(e, el);
+    };
+    window.__vertaxDeezerManualLookupBridgeInstalled = true;
+    return true;
+  }
 
   function isDnbVinyl(vinyl){
     var words = ['drum and bass', "drum 'n' bass", 'drum & bass', 'drum&bass', 'dnb', 'd&b', 'jungle'];
@@ -774,6 +875,7 @@ window.startVertaxClockTicker = startVertaxClockTicker;
 
   function afterRender(){
     installMetadataCascade();
+    installManualLookupBridge();
     injectDeezerBadges();
   }
 
