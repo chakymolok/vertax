@@ -391,59 +391,100 @@ function vertaxStandardDisplayInnerHtml(){
     '</div>';
 }
 
+function vertaxFinalDisplayMarkup(){
+  var n = (typeof state !== 'undefined' && state && state.collection) ? state.collection.length : 0;
+  var sets = (typeof state !== 'undefined' && state && state.sets) ? state.sets.length : 0;
+  function pad3(x){ var s = String(x || 0); while (s.length < 3) s = '0' + s; return s; }
+  return [
+    { cls: 'status', text: 'READY' },
+    { cls: 'clock', html: vertaxFormatTime(new Date()) },
+    { cls: 'title', text: 'DIG. PLAY. SHARE.' },
+    { cls: 'stat', strong: pad3(n), small: 'RECORDS' },
+    { cls: 'stat', strong: pad3(sets), small: 'SETS' },
+    { cls: 'stat', strong: 'LOCAL', small: 'DB' }
+  ];
+}
+
 function runVertaxBootSequence(display){
   if (!display || display.dataset.vertaxBoot === 'running') return;
   display.dataset.vertaxBoot = 'running';
   var name = getVertaxUserName();
-  var lines = ['HELLO, ' + name, 'DIG. PLAY. SHARE.'];
+  var hello = 'HELLO, ' + name;
+  var finalItems = vertaxFinalDisplayMarkup();
   display.innerHTML =
-    '<div class="vertax-display-top">' +
-      '<span class="vertax-display-status"><span class="vertax-display-led"></span>BOOT</span>' +
-      '<span class="vertax-display-clock"></span>' +
-    '</div>' +
-    '<div class="vertax-boot">' +
-      '<div class="vertax-boot-line"></div>' +
-      '<div class="vertax-boot-line"></div>' +
+    '<div class="vertax-boot vertax-boot-full">' +
+      '<div class="vertax-boot-line" id="vertax-boot-line"></div>' +
       '<span class="vertax-boot-caret"></span>' +
     '</div>';
-  var lineEls = display.querySelectorAll('.vertax-boot-line');
+  var boot = display.querySelector('.vertax-boot');
+  var lineEl = display.querySelector('#vertax-boot-line');
 
   function alive(){ return document.contains(display) && display.dataset.vertaxBoot === 'running'; }
 
-  function typeChar(idx, charIdx){
+  function typeInto(el, text, done, charIdx){
     if (!alive()) return;
-    var text = lines[idx];
-    var el = lineEls[idx];
     if (!el) return;
+    charIdx = charIdx || 0;
     if (charIdx <= text.length) {
       el.textContent = text.slice(0, charIdx);
       var nextDelay = 24 + Math.random() * 14;
-      setTimeout(function(){ typeChar(idx, charIdx + 1); }, nextDelay);
+      setTimeout(function(){ typeInto(el, text, done, charIdx + 1); }, nextDelay);
     } else {
-      setTimeout(function(){
-        if (!alive()) return;
-        if (idx + 1 < lines.length) typeChar(idx + 1, 0);
-        else finish();
-      }, 220);
+      setTimeout(function(){ if (alive() && done) done(); }, 220);
     }
   }
+
+  function erase(el, done){
+    if (!alive() || !el) return;
+    var text = el.textContent || '';
+    if (text.length) {
+      el.textContent = text.slice(0, -1);
+      setTimeout(function(){ erase(el, done); }, 14 + Math.random() * 10);
+    } else {
+      setTimeout(function(){ if (alive() && done) done(); }, 120);
+    }
+  }
+
+  function typeFinalItem(idx){
+    if (!alive()) return;
+    if (idx >= finalItems.length) return finish();
+    var item = finalItems[idx];
+    var row = document.createElement('div');
+    row.className = 'vertax-boot-row vertax-boot-row-' + item.cls;
+    var caret = boot.querySelector('.vertax-boot-caret');
+    if (item.cls === 'stat') {
+      row.innerHTML = '<strong></strong><small></small>';
+      boot.insertBefore(row, caret || null);
+      typeInto(row.querySelector('strong'), item.strong, function(){
+        typeInto(row.querySelector('small'), item.small, function(){ typeFinalItem(idx + 1); });
+      });
+    } else if (item.html) {
+      row.innerHTML = item.html;
+      boot.insertBefore(row, caret || null);
+      setTimeout(function(){ typeFinalItem(idx + 1); }, 190);
+    } else {
+      boot.insertBefore(row, caret || null);
+      typeInto(row, item.text, function(){ typeFinalItem(idx + 1); });
+    }
+  }
+
   function finish(){
     if (!alive()) return;
     setTimeout(function(){
       if (!alive()) return;
-      display.classList.add('is-boot-fading');
-      setTimeout(function(){
-        if (!document.contains(display)) return;
-        display.classList.remove('is-boot-fading');
-        delete display.dataset.vertaxBoot;
-        display.innerHTML = vertaxStandardDisplayInnerHtml();
-        window.__vertaxBootDone = true;
-        try { localStorage.setItem('vertaxBootLastShownAt', String(Date.now())); } catch(_){}
-        startVertaxClockTicker();
-      }, 350);
-    }, 1000);
+      delete display.dataset.vertaxBoot;
+      display.innerHTML = vertaxStandardDisplayInnerHtml();
+      window.__vertaxBootDone = true;
+      try { localStorage.setItem('vertaxBootLastShownAt', String(Date.now())); } catch(_){}
+      startVertaxClockTicker();
+    }, 520);
   }
-  typeChar(0, 0);
+  typeInto(lineEl, hello, function(){
+    erase(lineEl, function(){
+      if (boot) boot.innerHTML = '<span class="vertax-boot-caret"></span>';
+      typeFinalItem(0);
+    });
+  });
 }
 
 function vertaxAfterRender(){

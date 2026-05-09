@@ -285,10 +285,70 @@ body.vertax-theme-dark #laiso-app .vertax-display { box-shadow: inset 0 2px 14px
   min-height: 80px;
   padding-top: 4px;
 }
+#laiso-app .vertax-boot-full {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  min-height: 96px;
+  align-content: center;
+}
 #laiso-app .vertax-boot-line {
+  grid-column: 1 / -1;
   white-space: pre;
   min-height: 1.7em;
   text-transform: uppercase;
+}
+#laiso-app .vertax-boot-row {
+  min-height: 18px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+#laiso-app .vertax-boot-row-status {
+  display: inline-flex;
+  align-items: center;
+  grid-column: 1;
+  gap: 7px;
+}
+#laiso-app .vertax-boot-row-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--runt-accent, #C8FF2E);
+  box-shadow: 0 0 8px var(--runt-accent, #C8FF2E);
+}
+#laiso-app .vertax-boot-row-clock {
+  grid-column: 2;
+  text-align: right;
+  font-family: var(--font-display-digits);
+  font-size: 18px;
+}
+#laiso-app .vertax-boot-row-title {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.05;
+  margin: 2px 0 4px;
+}
+#laiso-app .vertax-boot-row-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+#laiso-app .vertax-boot-row-stat strong {
+  font-family: var(--font-display-digits);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
+#laiso-app .vertax-boot-row-stat small {
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: rgba(200,255,46,.55);
+  font-weight: 700;
 }
 #laiso-app .vertax-boot-caret {
   display: inline-block;
@@ -541,4 +601,148 @@ body.vertax-theme-light > .vertax-backup-toast {
   border-color: #D2D6D3 !important;
   color: #C8FF2E !important;
   -webkit-text-fill-color: #C8FF2E !important;
+}
+
+/* Main menu as hardware pads */
+#laiso-app .laiso-home-grid,
+#laiso-app .laiso-home-stickers {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+
+#laiso-app .laiso-home-grid .laiso-btn,
+#laiso-app .laiso-home-stickers .laiso-sticker {
+  aspect-ratio: 1 / 1 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  padding: 12px 8px !important;
+  border-radius: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  transform: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 10px 24px var(--runt-shadow, rgba(16,17,15,.055)) !important;
+}
+
+#laiso-app .laiso-home-grid .laiso-btn {
+  line-height: 1.22 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+}
+
+#laiso-app .laiso-home-stickers .laiso-sticker {
+  background: var(--runt-card) !important;
+  border: 1px solid var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  flex-direction: column !important;
+  text-decoration: none !important;
+}
+
+#laiso-app .laiso-home-stickers .laiso-sticker span,
+#laiso-app .laiso-home-stickers .laiso-sticker small,
+#laiso-app .laiso-home-stickers .laiso-sticker::after {
+  display: none !important;
+}
+
+#laiso-app .laiso-home-stickers .laiso-sticker strong {
+  margin: 0 !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 11px !important;
+  line-height: 1.22 !important;
+  letter-spacing: .14em !important;
+  text-transform: uppercase !important;
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-home-stickers .laiso-sticker-donate {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+}
+
+@media (max-width: 620px) {
+  #laiso-app .laiso-home-grid,
+  #laiso-app .laiso-home-stickers {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Final green-button contrast: lime surface always gets graphite text. */
+body #laiso-app .laiso-btn-main,
+body #laiso-app .laiso-btn-main:hover,
+body #laiso-app .laiso-btn[data-action="go-add"],
+body #laiso-app .laiso-btn[data-action="go-add"]:hover,
+body #laiso-app .laiso-btn[data-action="discogs-search"],
+body #laiso-app .laiso-btn[data-action="discogs-search"]:hover,
+body #laiso-app .laiso-btn[data-action="discogs-import-load"],
+body #laiso-app .laiso-btn[data-action="discogs-import-load"]:hover,
+body #laiso-app .laiso-btn[data-action="discogs-import-replace"],
+body #laiso-app .laiso-btn[data-action="discogs-import-replace"]:hover,
+body #laiso-app .laiso-btn[data-action="backup-download"],
+body #laiso-app .laiso-btn[data-action="backup-download"]:hover,
+body #laiso-app .laiso-btn[data-action="backup-onboarding-done"],
+body #laiso-app .laiso-btn[data-action="backup-onboarding-done"]:hover,
+body #laiso-app .laiso-btn[data-action="set-save"],
+body #laiso-app .laiso-btn[data-action="set-save"]:hover,
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"],
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+body #laiso-app .laiso-btn-main *,
+body #laiso-app .laiso-btn-main:hover *,
+body #laiso-app .laiso-btn[data-action="go-add"] *,
+body #laiso-app .laiso-btn[data-action="go-add"]:hover *,
+body #laiso-app .laiso-btn[data-action="discogs-search"] *,
+body #laiso-app .laiso-btn[data-action="discogs-search"]:hover *,
+body #laiso-app .laiso-btn[data-action="discogs-import-load"] *,
+body #laiso-app .laiso-btn[data-action="discogs-import-load"]:hover *,
+body #laiso-app .laiso-btn[data-action="discogs-import-replace"] *,
+body #laiso-app .laiso-btn[data-action="discogs-import-replace"]:hover *,
+body #laiso-app .laiso-btn[data-action="backup-download"] *,
+body #laiso-app .laiso-btn[data-action="backup-download"]:hover *,
+body #laiso-app .laiso-btn[data-action="backup-onboarding-done"] *,
+body #laiso-app .laiso-btn[data-action="backup-onboarding-done"]:hover *,
+body #laiso-app .laiso-btn[data-action="set-save"] *,
+body #laiso-app .laiso-btn[data-action="set-save"]:hover *,
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"] *,
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover * {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+body #laiso-app .laiso-btn[data-action="confirm-tracklist"]:hover,
+body #laiso-app .laiso-btn[data-action="done-add"]:hover,
+body #laiso-app .laiso-btn[data-action="fetching-done"]:hover {
+  background: linear-gradient(180deg, var(--runt-accent), var(--runt-accent-dark)) !important;
+  border-color: var(--runt-accent-dark) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+body #laiso-app .laiso-btn[data-action="confirm-tracklist"]:hover *,
+body #laiso-app .laiso-btn[data-action="done-add"]:hover *,
+body #laiso-app .laiso-btn[data-action="fetching-done"]:hover * {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+body.vertax-theme-dark #laiso-app .vertax-backup-onboarding,
+body.vertax-theme-dark #laiso-app .vertax-backup-onboarding h2,
+body.vertax-theme-dark #laiso-app .vertax-backup-onboarding p,
+body.vertax-theme-dark #laiso-app .vertax-backup-onboarding strong {
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .vertax-backup-onboarding {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line) !important;
 }
