@@ -318,3 +318,126 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
   wrapRenderForTelegramChrome();
   setTimeout(wrapRenderForTelegramChrome, 300);
 })();
+
+/* ============================================================
+   VERTAX CENTRAL DISPLAY: clock ticker + boot screen typewriter
+   ============================================================ */
+function getVertaxUserName(){
+  try {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (user && user.first_name) return String(user.first_name).toUpperCase();
+    if (user && user.username) return '@' + String(user.username).toUpperCase();
+  } catch(e) {}
+  return 'SELECTOR';
+}
+window.getVertaxUserName = getVertaxUserName;
+
+var __vertaxClockTimer = null;
+function vertaxFormatTime(d){
+  var hh = String(d.getHours()); if (hh.length < 2) hh = '0' + hh;
+  var mm = String(d.getMinutes()); if (mm.length < 2) mm = '0' + mm;
+  return hh + '<span class="vertax-display-colon">:</span>' + mm;
+}
+function startVertaxClockTicker(){
+  function tick(){
+    var el = document.getElementById('vertax-clock');
+    if (el) el.innerHTML = vertaxFormatTime(new Date());
+  }
+  tick();
+  if (__vertaxClockTimer) return;
+  __vertaxClockTimer = setInterval(function(){
+    var el = document.getElementById('vertax-clock');
+    if (!el) return;
+    el.innerHTML = vertaxFormatTime(new Date());
+  }, 30000);
+}
+
+function vertaxStandardDisplayInnerHtml(){
+  var n = (typeof state !== 'undefined' && state && state.collection) ? state.collection.length : 0;
+  var sets = (typeof state !== 'undefined' && state && state.sets) ? state.sets.length : 0;
+  function pad3(x){ var s = String(x || 0); while (s.length < 3) s = '0' + s; return s; }
+  return '<div class="vertax-display-top">' +
+    '<span class="vertax-display-status"><span class="vertax-display-led"></span>READY</span>' +
+    '<span class="vertax-display-clock" id="vertax-clock">--<span class="vertax-display-colon">:</span>--</span>' +
+    '</div>' +
+    '<div class="vertax-display-title">DIG. PLAY. SHARE.</div>' +
+    '<div class="vertax-display-stats">' +
+      '<span class="vertax-display-stat"><strong>' + pad3(n) + '</strong><small>RECORDS</small></span>' +
+      '<span class="vertax-display-stat"><strong>' + pad3(sets) + '</strong><small>SETS</small></span>' +
+      '<span class="vertax-display-stat"><strong>LOCAL</strong><small>DB</small></span>' +
+    '</div>';
+}
+
+function runVertaxBootSequence(display){
+  if (!display || display.dataset.vertaxBoot === 'running') return;
+  display.dataset.vertaxBoot = 'running';
+  var name = getVertaxUserName();
+  var lines = ['BOOTING VERTAX-01...', 'HI, ' + name, 'LOCAL DB ONLINE'];
+  display.innerHTML =
+    '<div class="vertax-display-top">' +
+      '<span class="vertax-display-status"><span class="vertax-display-led"></span>BOOT</span>' +
+      '<span class="vertax-display-clock"></span>' +
+    '</div>' +
+    '<div class="vertax-boot">' +
+      '<div class="vertax-boot-line"></div>' +
+      '<div class="vertax-boot-line"></div>' +
+      '<div class="vertax-boot-line"></div>' +
+      '<span class="vertax-boot-caret"></span>' +
+    '</div>';
+  var lineEls = display.querySelectorAll('.vertax-boot-line');
+
+  function alive(){ return document.contains(display) && display.dataset.vertaxBoot === 'running'; }
+
+  function typeChar(idx, charIdx){
+    if (!alive()) return;
+    var text = lines[idx];
+    var el = lineEls[idx];
+    if (!el) return;
+    if (charIdx <= text.length) {
+      el.textContent = text.slice(0, charIdx);
+      var nextDelay = 24 + Math.random() * 14;
+      setTimeout(function(){ typeChar(idx, charIdx + 1); }, nextDelay);
+    } else {
+      setTimeout(function(){
+        if (!alive()) return;
+        if (idx + 1 < lines.length) typeChar(idx + 1, 0);
+        else finish();
+      }, 220);
+    }
+  }
+  function finish(){
+    if (!alive()) return;
+    setTimeout(function(){
+      if (!alive()) return;
+      display.classList.add('is-boot-fading');
+      setTimeout(function(){
+        if (!document.contains(display)) return;
+        display.classList.remove('is-boot-fading');
+        delete display.dataset.vertaxBoot;
+        display.innerHTML = vertaxStandardDisplayInnerHtml();
+        try { sessionStorage.setItem('vertaxBootShown', '1'); } catch(_){}
+        window.__vertaxBootShown = true;
+        startVertaxClockTicker();
+      }, 350);
+    }, 1000);
+  }
+  typeChar(0, 0);
+}
+
+function vertaxAfterRender(){
+  if (typeof state === 'undefined') return;
+  if (state.view !== 'home') return;
+  var display = document.getElementById('vertax-display');
+  if (!display) return;
+  if (typeof window.__vertaxBootShown === 'undefined') {
+    try { window.__vertaxBootShown = !!sessionStorage.getItem('vertaxBootShown'); } catch(_){ window.__vertaxBootShown = true; }
+  }
+  if (!window.__vertaxBootShown && !window.__vertaxBootStarted) {
+    window.__vertaxBootStarted = true;
+    runVertaxBootSequence(display);
+  }
+  if (!display.dataset.vertaxBoot) startVertaxClockTicker();
+}
+window.vertaxAfterRender = vertaxAfterRender;
+window.startVertaxClockTicker = startVertaxClockTicker;

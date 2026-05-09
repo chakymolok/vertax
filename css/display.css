@@ -1,0 +1,323 @@
+/* VERTAX-01 central display, hardware theme toggle, and boot screen.
+   Loaded after themes.css so it can use --runt-* tokens. */
+
+/* DSEG digital fonts. Files are optional — if missing, fallback chain kicks in. */
+@font-face {
+  font-family: "DSEG7";
+  src: url("../fonts/DSEG7Classic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DSEG14";
+  src: url("../fonts/DSEG14Classic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+#laiso-app {
+  --font-display-digits: "DSEG7", "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", "Courier New", monospace;
+  --font-display-text: "DSEG14", "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", "Courier New", monospace;
+}
+
+/* Lime caret in all inputs, both themes */
+#laiso-app input,
+#laiso-app textarea,
+#laiso-app [contenteditable="true"] {
+  caret-color: var(--runt-accent, #C8FF2E);
+}
+
+/* Smooth theme transitions on the chrome that actually changes color */
+body,
+#laiso-app,
+#laiso-app .laiso-chassis,
+#laiso-app .laiso-panel,
+#laiso-app .laiso-btn,
+#laiso-app .laiso-btn-secondary,
+#laiso-app .laiso-input,
+#laiso-app .laiso-textarea,
+#laiso-app .laiso-vinyl-card,
+#laiso-app .laiso-track,
+#laiso-app .laiso-search-result,
+#laiso-app .vertax-display,
+#laiso-app .vertax-theme-toggle-track,
+#laiso-app .vertax-theme-toggle-handle {
+  transition:
+    background-color .35s ease,
+    border-color .35s ease,
+    color .25s ease,
+    box-shadow .35s ease;
+}
+
+/* ============================================================
+   HARDWARE THEME TOGGLE
+   ============================================================ */
+#laiso-app .vertax-theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 64px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#laiso-app .vertax-theme-toggle:focus { outline: none; }
+#laiso-app .vertax-theme-toggle:focus-visible .vertax-theme-toggle-track {
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,.65),
+    inset 0 -1px 0 rgba(255,255,255,.06),
+    0 0 0 2px rgba(200,255,46,.45);
+}
+#laiso-app .vertax-theme-toggle-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #1F221F 0%, #0E100E 100%);
+  border: 1px solid #000;
+  border-radius: 999px;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,.65),
+    inset 0 -1px 0 rgba(255,255,255,.06),
+    0 1px 0 rgba(255,255,255,.45);
+  overflow: hidden;
+}
+#laiso-app .vertax-theme-toggle-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity .25s ease, color .25s ease;
+}
+#laiso-app .vertax-theme-icon-ice  { left: 9px; color: #ECEFF1; opacity: 1; }
+#laiso-app .vertax-theme-icon-night{ right: 9px; color: rgba(200,255,46,.5); opacity: .55; }
+#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-icon-ice  { opacity: .35; color: rgba(255,255,255,.4); }
+#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-icon-night{ opacity: 1; color: var(--runt-accent, #C8FF2E); }
+
+#laiso-app .vertax-theme-toggle-handle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(180deg, #F8F9F7 0%, #C8CACA 100%);
+  border: 1px solid rgba(0,0,0,.6);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.7),
+    0 1px 2px rgba(0,0,0,.45);
+  transition:
+    left .25s cubic-bezier(.5, 1.5, .5, 1),
+    background .25s ease,
+    box-shadow .25s ease;
+  pointer-events: none;
+}
+#laiso-app .vertax-theme-toggle.is-dark .vertax-theme-toggle-handle {
+  left: calc(100% - 24px);
+  background: linear-gradient(180deg, #DDFF55 0%, #9BCB22 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    0 0 8px rgba(200,255,46,.5);
+}
+#laiso-app .vertax-theme-toggle:active .vertax-theme-toggle-handle {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    0 0 4px rgba(0,0,0,.35);
+}
+
+/* ============================================================
+   CENTRAL DISPLAY
+   ============================================================ */
+#laiso-app .vertax-display {
+  position: relative;
+  background: linear-gradient(180deg, #0F1110 0%, #060807 100%);
+  border: 1px solid #000;
+  border-radius: 6px;
+  padding: 18px 20px 16px;
+  margin: 8px 0 18px;
+  color: var(--runt-accent, #C8FF2E);
+  text-shadow: 0 0 4px rgba(200,255,46,.35);
+  box-shadow:
+    inset 0 2px 14px rgba(0,0,0,.85),
+    inset 0 0 0 1px rgba(200,255,46,.04),
+    0 1px 0 rgba(255,255,255,.35);
+  overflow: hidden;
+  min-height: 138px;
+}
+#laiso-app .vertax-display::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,.05) 0 1px,
+    transparent 1px 4px
+  );
+  opacity: .35;
+  mix-blend-mode: screen;
+}
+#laiso-app .vertax-display::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(140% 80% at 50% 0%, rgba(200,255,46,.07), transparent 60%);
+}
+body.vertax-theme-dark #laiso-app .vertax-display::before { opacity: .18; }
+body.vertax-theme-dark #laiso-app .vertax-display { box-shadow: inset 0 2px 14px rgba(0,0,0,.9), inset 0 0 0 1px rgba(200,255,46,.06), 0 1px 0 rgba(255,255,255,.05); }
+
+#laiso-app .vertax-display.is-boot-fading { opacity: .35; transition: opacity .35s ease; }
+
+#laiso-app .vertax-display-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-display-text);
+  font-size: 11px;
+  letter-spacing: .14em;
+  margin-bottom: 16px;
+}
+#laiso-app .vertax-display-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+#laiso-app .vertax-display-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--runt-accent, #C8FF2E);
+  box-shadow: 0 0 8px var(--runt-accent, #C8FF2E);
+  animation: vertax-led-pulse 2.4s ease-in-out infinite;
+}
+@keyframes vertax-led-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--runt-accent, #C8FF2E); }
+  50%      { opacity: .55; box-shadow: 0 0 4px var(--runt-accent, #C8FF2E); }
+}
+#laiso-app .vertax-display-clock {
+  font-family: var(--font-display-digits);
+  font-size: 18px;
+  letter-spacing: .04em;
+  font-weight: 400;
+  min-width: 72px;
+  text-align: right;
+  color: var(--runt-accent, #C8FF2E);
+}
+#laiso-app .vertax-display-colon {
+  display: inline-block;
+  animation: vertax-colon-blink 1s steps(2, end) infinite;
+}
+@keyframes vertax-colon-blink {
+  50% { opacity: .2; }
+}
+
+#laiso-app .vertax-display-title {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display-text);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.05;
+  text-align: center;
+  margin: 4px 0 18px;
+  color: var(--runt-accent, #C8FF2E);
+}
+
+#laiso-app .vertax-display-stats {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-display-text);
+  font-size: 10px;
+  letter-spacing: .14em;
+}
+#laiso-app .vertax-display-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  min-width: 0;
+}
+#laiso-app .vertax-display-stat:nth-child(2) { align-items: center; flex: 1; }
+#laiso-app .vertax-display-stat:nth-child(3) { align-items: flex-end; }
+#laiso-app .vertax-display-stat strong {
+  font-family: var(--font-display-digits);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: .04em;
+  color: var(--runt-accent, #C8FF2E);
+  line-height: 1;
+}
+#laiso-app .vertax-display-stat small {
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: rgba(200,255,46,.55);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   BOOT SCREEN
+   ============================================================ */
+#laiso-app .vertax-boot {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display-text);
+  font-size: 13px;
+  letter-spacing: .08em;
+  color: var(--runt-accent, #C8FF2E);
+  line-height: 1.7;
+  min-height: 80px;
+  padding-top: 4px;
+}
+#laiso-app .vertax-boot-line {
+  white-space: pre;
+  min-height: 1.7em;
+  text-transform: uppercase;
+}
+#laiso-app .vertax-boot-caret {
+  display: inline-block;
+  width: 8px;
+  height: 13px;
+  background: var(--runt-accent, #C8FF2E);
+  margin-left: 2px;
+  vertical-align: -2px;
+  animation: vertax-caret-blink .8s steps(2, end) infinite;
+  box-shadow: 0 0 4px var(--runt-accent, #C8FF2E);
+}
+@keyframes vertax-caret-blink {
+  50% { opacity: 0; }
+}
+
+/* Mobile tightening */
+@media (max-width: 480px) {
+  #laiso-app .vertax-display { padding: 14px 14px 12px; min-height: 130px; }
+  #laiso-app .vertax-display-title { font-size: 24px; margin-bottom: 14px; }
+  #laiso-app .vertax-display-stat strong { font-size: 16px; }
+  #laiso-app .vertax-display-clock { font-size: 16px; min-width: 64px; }
+  #laiso-app .vertax-theme-toggle { width: 56px; height: 26px; }
+  #laiso-app .vertax-theme-toggle-handle { width: 20px; height: 20px; }
+  #laiso-app .vertax-theme-toggle.is-dark .vertax-theme-toggle-handle { left: calc(100% - 22px); }
+  #laiso-app .vertax-theme-toggle-icon { font-size: 7px; }
+}
