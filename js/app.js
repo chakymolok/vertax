@@ -31,12 +31,18 @@ function haptic(type){
 }
 window.haptic = haptic;
 
+function getHostWebApp(){
+  if (window.Telegram && window.Telegram.WebApp) return window.Telegram.WebApp;
+  if (window.WebApp) return window.WebApp;
+  return null;
+}
+
 function getTelegramWebApp(){
-  return window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  return getHostWebApp();
 }
 
 function maximizeTelegramWebApp(){
-  var tg = getTelegramWebApp();
+  var tg = getHostWebApp();
   if (!tg) return;
   try { if (typeof tg.ready === 'function') tg.ready(); } catch(_) {}
   try { if (typeof tg.expand === 'function') tg.expand(); } catch(_) {}
@@ -65,7 +71,10 @@ function telegramBack(){
 }
 
 function syncTelegramChrome(){
-  var tg = getTelegramWebApp();
+  if (document.body && typeof state !== 'undefined') {
+    document.body.classList.toggle('vertax-dark', state.view === 'live-set');
+  }
+  var tg = getHostWebApp();
   if (!tg) return;
   try {
     if (tg.BackButton) {
@@ -76,7 +85,7 @@ function syncTelegramChrome(){
 }
 
 function installTelegramWebAppChrome(){
-  var tg = getTelegramWebApp();
+  var tg = getHostWebApp();
   if (!tg || window.__vertaxTelegramChromeInstalled) return;
   window.__vertaxTelegramChromeInstalled = true;
   maximizeTelegramWebApp();
@@ -90,6 +99,7 @@ function installTelegramWebAppChrome(){
   syncTelegramChrome();
 }
 window.getTelegramWebApp = getTelegramWebApp;
+window.getHostWebApp = getHostWebApp;
 window.maximizeTelegramWebApp = maximizeTelegramWebApp;
 
 /* ============================================================ *//* GLOBAL EVENT DELEGATION *//* ============================================================ */function getActionTarget(e){ var n = e.target; while (n && n !== document.body) { if (n.dataset && n.dataset.action) return n; n = n.parentNode; } return null; } document.addEventListener('click', function(e){ if (!document.getElementById('laiso-app')) return; if (!e.target.closest || !e.target.closest('#laiso-app')) return; /* Close menus when clicking outside */var clickedMenu = e.target.closest && e.target.closest('.laiso-menu'); if (!clickedMenu) { document.querySelectorAll('#laiso-app .laiso-menu.open').forEach(function(m){ m.classList.remove('open'); }); } var t = getActionTarget(e); if (!t) return; var action = t.dataset.action; var fn = handlers[action]; if (fn) { try { fn(e, t); } catch(err){ console.warn('action error', action, err); showToast('Ошибка: ' + err.message); } } }); document.addEventListener('change', function(e){ if (!e.target.closest || !e.target.closest('#laiso-app')) return; var t = getActionTarget(e); if (!t) return; var action = t.dataset.action; var fn = handlers[action]; if (fn) try { fn(e, t); } catch(err){ console.warn('change error', err); } }); document.addEventListener('input', function(e){ if (!e.target.closest || !e.target.closest('#laiso-app')) return; /* Live-bind addCatno / addArtist / searchQuery / photoOcrText */var bind = e.target.dataset && e.target.dataset.bind; if (bind) { state.ui[bind] = e.target.value; /* Don't re-render to keep focus */return; } var t = getActionTarget(e); if (!t) return; if (t.dataset.action === 'collection-search' || t.dataset.action === 'bpm-input' || t.dataset.action === 'add-track-search') { var fn = handlers[t.dataset.action]; if (fn) try { fn(e, t); } catch(err){} } }); /* Enter-key submit for free-text search field */document.addEventListener('keydown', function(e){ if (!e.target.closest || !e.target.closest('#laiso-app')) return; if (e.key !== 'Enter') return; var action = e.target.dataset && e.target.dataset.action; if (action === 'search-input') { e.preventDefault(); runDiscogsSearch(); } }); /* ============================================================ *//* INIT *//* ============================================================ */async function init(){ try { dbInstance = await dbOpen(); var loadedVinyls = await dbGetAll('vinyls'); var loadedSets = await dbGetAll('sets'); state.collection = loadedVinyls || []; state.sets = loadedSets || []; } catch(e){ console.warn('IndexedDB unavailable, running in volatile mode:', e); } render(); } init(); /* Expose for console debug (optional) */window.laisoBuck = { state: state, render: render };
@@ -130,6 +140,95 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
       console.warn('extension install failed', installers[i] && installers[i].name, e);
     }
   }
+})();
+
+(function installVertaxCompactSetTouchDnd(){
+  if (window.__vertaxCompactSetTouchDndInstalled) return;
+  window.__vertaxCompactSetTouchDndInstalled = true;
+  var drag = null;
+
+  function clearMarks(){
+    document.querySelectorAll('#laiso-app .runt-set-card.runt-dragging,#laiso-app .runt-set-card.runt-drag-over').forEach(function(el){
+      el.classList.remove('runt-dragging', 'runt-drag-over');
+    });
+  }
+
+  function cardFromEventTarget(target){
+    return target && target.closest && target.closest('#laiso-app .runt-set-card[data-set-idx]');
+  }
+
+  document.addEventListener('touchstart', function(e){
+    if (e.touches && e.touches.length !== 1) return;
+    var card = cardFromEventTarget(e.target);
+    if (!card) return;
+    var idx = parseInt(card.getAttribute('data-set-idx'), 10);
+    if (isNaN(idx)) return;
+
+    var start = e.touches[0];
+    var sx = start.clientX;
+    var sy = start.clientY;
+    var timer = setTimeout(function(){
+      drag = { from: idx, card: card, lastTo: idx };
+      card.classList.add('runt-dragging');
+      if (typeof haptic === 'function') haptic('medium');
+    }, 280);
+
+    function cancelPress(){
+      clearTimeout(timer);
+      document.removeEventListener('touchend', cancelPress);
+      document.removeEventListener('touchcancel', cancelPress);
+      document.removeEventListener('touchmove', maybeScroll);
+    }
+
+    function maybeScroll(ev){
+      if (drag) return;
+      var t = ev.touches && ev.touches[0];
+      if (!t) return;
+      if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) cancelPress();
+    }
+
+    document.addEventListener('touchend', cancelPress, { once: true });
+    document.addEventListener('touchcancel', cancelPress, { once: true });
+    document.addEventListener('touchmove', maybeScroll, { passive: true });
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e){
+    if (!drag) return;
+    if (e.cancelable) e.preventDefault();
+    var t = e.touches && e.touches[0];
+    if (!t) return;
+    var under = document.elementFromPoint(t.clientX, t.clientY);
+    var target = cardFromEventTarget(under);
+    document.querySelectorAll('#laiso-app .runt-set-card.runt-drag-over').forEach(function(el){
+      if (el !== target) el.classList.remove('runt-drag-over');
+    });
+    if (target && target !== drag.card) {
+      target.classList.add('runt-drag-over');
+      var to = parseInt(target.getAttribute('data-set-idx'), 10);
+      if (!isNaN(to)) drag.lastTo = to;
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', function(){
+    if (!drag) return;
+    var from = drag.from;
+    var to = drag.lastTo;
+    clearMarks();
+    drag = null;
+    if (isNaN(from) || isNaN(to) || from === to) return;
+    var arr = (state && state.ui && state.ui.generatedSet) || [];
+    if (!arr[from] || !arr[to]) return;
+    var moved = arr.splice(from, 1)[0];
+    arr.splice(to, 0, moved);
+    state.ui.generatedSet = arr;
+    if (typeof haptic === 'function') haptic('light');
+    if (typeof render === 'function') render();
+  });
+
+  document.addEventListener('touchcancel', function(){
+    clearMarks();
+    drag = null;
+  });
 })();
 
 (function installVertaxTelegramChromeSync(){

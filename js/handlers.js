@@ -584,6 +584,11 @@ function installVertaxBackupFeature(){
     if (window.__vertaxSmartSuggestionsInstalled) return;
     window.__vertaxSmartSuggestionsInstalled = true;
     var prevViewSet = window.viewSet;
+    function getSmartSuggestPool(){
+      if (typeof runtGetTracksByScope === 'function') return runtGetTracksByScope('collection', { includeAll: true });
+      if (typeof getAllSessionTracks === 'function') return getAllSessionTracks({ includeAll: true });
+      return [];
+    }
     function suggestionsHtml(){
       try {
         var s = window.laisoBuck.state;
@@ -591,7 +596,7 @@ function installVertaxBackupFeature(){
         if (set.length < 1 || set.length > 3) return '';
         var last = set[set.length - 1];
         if (!last) return '';
-        var pool = (typeof getAllSessionTracks === 'function') ? getAllSessionTracks({ includeAll: true }) : [];
+        var pool = getSmartSuggestPool();
         if (!pool.length) return '';
         var usedIds = {}, usedKeys = {};
         set.forEach(function(t){
@@ -645,7 +650,7 @@ function installVertaxBackupFeature(){
       on('suggest-pick', function(e, el){
         var tid = el && el.dataset && el.dataset.trackId;
         if (!tid) return;
-        var pool = (typeof getAllSessionTracks === 'function') ? getAllSessionTracks({ includeAll: true }) : [];
+        var pool = getSmartSuggestPool();
         var cand = pool.find(function(t){ return String(t.id) === String(tid); });
         if (!cand) return;
         var s = window.laisoBuck.state;
