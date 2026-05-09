@@ -163,20 +163,21 @@ body,
   pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255,255,255,.05) 0 1px,
+    rgba(200,255,46,.10) 0 1px,
     transparent 1px 4px
   );
-  opacity: .35;
-  mix-blend-mode: screen;
+  opacity: 1;
 }
 #laiso-app .vertax-display::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(140% 80% at 50% 0%, rgba(200,255,46,.07), transparent 60%);
+  background:
+    radial-gradient(140% 80% at 50% 0%, rgba(200,255,46,.14), transparent 60%),
+    radial-gradient(120% 60% at 50% 100%, rgba(200,255,46,.08), transparent 65%);
 }
-body.vertax-theme-dark #laiso-app .vertax-display::before { opacity: .18; }
+body.vertax-theme-dark #laiso-app .vertax-display::before { opacity: .55; }
 body.vertax-theme-dark #laiso-app .vertax-display { box-shadow: inset 0 2px 14px rgba(0,0,0,.9), inset 0 0 0 1px rgba(200,255,46,.06), 0 1px 0 rgba(255,255,255,.05); }
 
 #laiso-app .vertax-display.is-boot-fading { opacity: .35; transition: opacity .35s ease; }

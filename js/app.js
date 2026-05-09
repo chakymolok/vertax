@@ -325,9 +325,26 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
 function getVertaxUserName(){
   try {
     var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && typeof tg.ready === 'function') { try { tg.ready(); } catch(_) {} }
     var user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
     if (user && user.first_name) return String(user.first_name).toUpperCase();
+    if (user && user.last_name) return String(user.last_name).toUpperCase();
     if (user && user.username) return '@' + String(user.username).toUpperCase();
+    var raw = tg && tg.initData;
+    if (raw && typeof raw === 'string') {
+      try {
+        var params = new URLSearchParams(raw);
+        var u = params.get('user');
+        if (u) {
+          var parsed = JSON.parse(decodeURIComponent(u));
+          if (parsed && parsed.first_name) return String(parsed.first_name).toUpperCase();
+          if (parsed && parsed.username) return '@' + String(parsed.username).toUpperCase();
+        }
+      } catch(_) {}
+    }
+    var max = window.WebApp;
+    var maxUser = max && max.initDataUnsafe && max.initDataUnsafe.user;
+    if (maxUser && maxUser.first_name) return String(maxUser.first_name).toUpperCase();
   } catch(e) {}
   return 'SELECTOR';
 }
@@ -416,8 +433,7 @@ function runVertaxBootSequence(display){
         display.classList.remove('is-boot-fading');
         delete display.dataset.vertaxBoot;
         display.innerHTML = vertaxStandardDisplayInnerHtml();
-        try { sessionStorage.setItem('vertaxBootShown', '1'); } catch(_){}
-        window.__vertaxBootShown = true;
+        window.__vertaxBootDone = true;
         startVertaxClockTicker();
       }, 350);
     }, 1000);
@@ -430,10 +446,7 @@ function vertaxAfterRender(){
   if (state.view !== 'home') return;
   var display = document.getElementById('vertax-display');
   if (!display) return;
-  if (typeof window.__vertaxBootShown === 'undefined') {
-    try { window.__vertaxBootShown = !!sessionStorage.getItem('vertaxBootShown'); } catch(_){ window.__vertaxBootShown = true; }
-  }
-  if (!window.__vertaxBootShown && !window.__vertaxBootStarted) {
+  if (!window.__vertaxBootStarted) {
     window.__vertaxBootStarted = true;
     runVertaxBootSequence(display);
   }
