@@ -21,7 +21,7 @@ document.addEventListener("gesturestart",function(e){e.preventDefault();},{passi
 
 /* Telegram Haptic Feedback wrapper. No-op outside Telegram WebApp. */
 function haptic(type){
-  var tg = window.Telegram && window.Telegram.WebApp;
+  var tg = getHostWebApp();
   var h = tg && tg.HapticFeedback;
   if (!h) return;
   try {
@@ -46,7 +46,6 @@ function maximizeTelegramWebApp(){
   if (!tg) return;
   try { if (typeof tg.ready === 'function') tg.ready(); } catch(_) {}
   try { if (typeof tg.expand === 'function') tg.expand(); } catch(_) {}
-  try { if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen(); } catch(_) {}
   try { if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes(); } catch(_) {}
 }
 
@@ -146,15 +145,39 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
   if (window.__vertaxCompactSetTouchDndInstalled) return;
   window.__vertaxCompactSetTouchDndInstalled = true;
   var drag = null;
+  var ghost = null;
 
   function clearMarks(){
     document.querySelectorAll('#laiso-app .runt-set-card.runt-dragging,#laiso-app .runt-set-card.runt-drag-over').forEach(function(el){
       el.classList.remove('runt-dragging', 'runt-drag-over');
     });
+    if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    ghost = null;
   }
 
   function cardFromEventTarget(target){
     return target && target.closest && target.closest('#laiso-app .runt-set-card[data-set-idx]');
+  }
+
+  function moveGhost(x, y){
+    if (!ghost) return;
+    ghost.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0) translate(-50%,-50%) rotate(-1.5deg)';
+  }
+
+  function createGhost(card, x, y){
+    if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    var rect = card.getBoundingClientRect();
+    ghost = card.cloneNode(true);
+    ghost.classList.add('runt-touch-ghost');
+    ghost.style.width = rect.width + 'px';
+    ghost.style.left = '0';
+    ghost.style.top = '0';
+    ghost.style.position = 'fixed';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '99998';
+    ghost.style.margin = '0';
+    document.body.appendChild(ghost);
+    moveGhost(x, y);
   }
 
   document.addEventListener('touchstart', function(e){
@@ -170,6 +193,7 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
     var timer = setTimeout(function(){
       drag = { from: idx, card: card, lastTo: idx };
       card.classList.add('runt-dragging');
+      createGhost(card, sx, sy);
       if (typeof haptic === 'function') haptic('medium');
     }, 280);
 
@@ -197,6 +221,7 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
     if (e.cancelable) e.preventDefault();
     var t = e.touches && e.touches[0];
     if (!t) return;
+    moveGhost(t.clientX, t.clientY);
     var under = document.elementFromPoint(t.clientX, t.clientY);
     var target = cardFromEventTarget(under);
     document.querySelectorAll('#laiso-app .runt-set-card.runt-drag-over').forEach(function(el){
