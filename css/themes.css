@@ -714,3 +714,208 @@ body.vertax-dark:not(.vertax-theme-dark) #laiso-app .vertax-suggest-row {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dark theme final contrast guard */
+body.vertax-theme-dark #laiso-app,
+body.vertax-theme-dark #laiso-app .laiso-panel,
+body.vertax-theme-dark #laiso-app .laiso-panel-recess,
+body.vertax-theme-dark #laiso-app .laiso-modal,
+body.vertax-theme-dark #laiso-app .laiso-vinyl-card,
+body.vertax-theme-dark #laiso-app .laiso-search-result,
+body.vertax-theme-dark #laiso-app .laiso-track,
+body.vertax-theme-dark #laiso-app .laiso-set-card,
+body.vertax-theme-dark #laiso-app .runt-set-card,
+body.vertax-theme-dark #laiso-app .runt19-live-card,
+body.vertax-theme-dark #laiso-app .runt21-suggest-row,
+body.vertax-theme-dark #laiso-app .vertax-suggest-row,
+body.vertax-theme-dark #laiso-app .runt18c-pick-card,
+body.vertax-theme-dark #laiso-app .runt25-diag-card,
+body.vertax-theme-dark #laiso-app .runt26-card,
+body.vertax-theme-dark #laiso-app .laiso-menu-list {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-panel-recess,
+body.vertax-theme-dark #laiso-app .laiso-tabs,
+body.vertax-theme-dark #laiso-app .laiso-toggle,
+body.vertax-theme-dark #laiso-app .laiso-drop,
+body.vertax-theme-dark #laiso-app .laiso-track:nth-child(odd),
+body.vertax-theme-dark #laiso-app .runt26-search-panel {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line-soft) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-h1,
+body.vertax-theme-dark #laiso-app .laiso-h2,
+body.vertax-theme-dark #laiso-app .laiso-vinyl-title,
+body.vertax-theme-dark #laiso-app .laiso-search-result-title,
+body.vertax-theme-dark #laiso-app .laiso-track-title,
+body.vertax-theme-dark #laiso-app .laiso-track-pos,
+body.vertax-theme-dark #laiso-app .laiso-track-bpm,
+body.vertax-theme-dark #laiso-app .laiso-track-key,
+body.vertax-theme-dark #laiso-app .laiso-track-cam,
+body.vertax-theme-dark #laiso-app .laiso-track-bpm-val,
+body.vertax-theme-dark #laiso-app .laiso-set-title,
+body.vertax-theme-dark #laiso-app .runt-set-title,
+body.vertax-theme-dark #laiso-app .runt19-live-title,
+body.vertax-theme-dark #laiso-app .runt21-suggest-name,
+body.vertax-theme-dark #laiso-app .vertax-suggest-title,
+body.vertax-theme-dark #laiso-app .runt18c-pick-title,
+body.vertax-theme-dark #laiso-app .runt25-track-title,
+body.vertax-theme-dark #laiso-app .runt26-title,
+body.vertax-theme-dark #laiso-app .laiso-modal-title,
+body.vertax-theme-dark #laiso-app .laiso-empty strong {
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-meta,
+body.vertax-theme-dark #laiso-app .laiso-hint,
+body.vertax-theme-dark #laiso-app .laiso-vinyl-artist,
+body.vertax-theme-dark #laiso-app .laiso-vinyl-meta,
+body.vertax-theme-dark #laiso-app .laiso-search-result-artist,
+body.vertax-theme-dark #laiso-app .laiso-search-result-meta,
+body.vertax-theme-dark #laiso-app .laiso-set-meta,
+body.vertax-theme-dark #laiso-app .runt-set-release,
+body.vertax-theme-dark #laiso-app .runt19-live-release,
+body.vertax-theme-dark #laiso-app .runt21-suggest-meta,
+body.vertax-theme-dark #laiso-app .vertax-suggest-meta,
+body.vertax-theme-dark #laiso-app .runt18c-pick-meta,
+body.vertax-theme-dark #laiso-app .runt25-track-meta,
+body.vertax-theme-dark #laiso-app .runt26-meta,
+body.vertax-theme-dark #laiso-app .laiso-data-hint {
+  color: var(--runt-muted) !important;
+  -webkit-text-fill-color: var(--runt-muted) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn,
+body.vertax-theme-dark #laiso-app .laiso-btn-main,
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary,
+body.vertax-theme-dark #laiso-app .runt-set-btn,
+body.vertax-theme-dark #laiso-app .runt30-remove-track,
+body.vertax-theme-dark #laiso-app .laiso-x2-btn,
+body.vertax-theme-dark #laiso-app .laiso-menu-list button {
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn-main:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary:hover,
+body.vertax-theme-dark #laiso-app .runt-set-btn:hover,
+body.vertax-theme-dark #laiso-app .laiso-x2-btn:hover,
+body.vertax-theme-dark #laiso-app .laiso-menu-list button:hover,
+body.vertax-theme-dark #laiso-app .vertax-suggest-row:hover {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-accent) !important;
+  color: var(--runt-accent) !important;
+  -webkit-text-fill-color: var(--runt-accent) !important;
+  text-shadow: 0 0 8px var(--runt-accent-soft) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="go-add"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="discogs-search"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="backup-download"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="backup-onboarding-done"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="discogs-import-load"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt26-build-selected"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="set-save"] {
+  background: var(--runt-accent) !important;
+  border-color: var(--runt-accent) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="go-add"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="discogs-search"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="backup-download"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="backup-onboarding-done"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="discogs-import-load"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="set-save"]:hover {
+  background: var(--runt-accent-dark) !important;
+  border-color: var(--runt-accent-dark) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="set-generate"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="set-export"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="fetching-done"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="done-add"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="confirm-tracklist"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt19-play-set"],
+body.vertax-theme-dark #laiso-app .runt19-play-btn {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="set-generate"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="set-export"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="fetching-done"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="done-add"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="confirm-tracklist"]:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt19-play-set"]:hover,
+body.vertax-theme-dark #laiso-app .runt19-play-btn:hover {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-accent) !important;
+  color: var(--runt-accent) !important;
+  -webkit-text-fill-color: var(--runt-accent) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-pill,
+body.vertax-theme-dark #laiso-app .runt-chip,
+body.vertax-theme-dark #laiso-app .runt-chip-light,
+body.vertax-theme-dark #laiso-app .runt-fetch-pill,
+body.vertax-theme-dark #laiso-app .runt19-live-pill.soft,
+body.vertax-theme-dark #laiso-app .runt21-suggest-score,
+body.vertax-theme-dark #laiso-app .laiso-set-big-key {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line-soft) !important;
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-pill-bpm,
+body.vertax-theme-dark #laiso-app .runt-metric-bpm,
+body.vertax-theme-dark #laiso-app .runt-fetch-bpm,
+body.vertax-theme-dark #laiso-app .runt19-live-bpm,
+body.vertax-theme-dark #laiso-app .runt19-live-status,
+body.vertax-theme-dark #laiso-app .runt19-live-pill,
+body.vertax-theme-dark #laiso-app .runt21-suggest-bpm,
+body.vertax-theme-dark #laiso-app .vertax-suggest-bpm,
+body.vertax-theme-dark #laiso-app .laiso-set-pos,
+body.vertax-theme-dark #laiso-app .laiso-set-pos-bottom,
+body.vertax-theme-dark #laiso-app .laiso-set-vinyl-pos,
+body.vertax-theme-dark #laiso-app .laiso-add-track-pos strong,
+body.vertax-theme-dark #laiso-app .laiso-lcd,
+body.vertax-theme-dark #laiso-app .laiso-lcd-mini,
+body.vertax-theme-dark #laiso-app .laiso-counter {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-lcd-2) !important;
+  color: var(--runt-accent) !important;
+  -webkit-text-fill-color: var(--runt-accent) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-pill-cam,
+body.vertax-theme-dark #laiso-app .runt-metric-cam,
+body.vertax-theme-dark #laiso-app .runt-fetch-cam,
+body.vertax-theme-dark #laiso-app .runt19-live-cam,
+body.vertax-theme-dark #laiso-app .runt21-suggest-cam,
+body.vertax-theme-dark #laiso-app .vertax-suggest-cam,
+body.vertax-theme-dark #laiso-app .vertax-suggest-add,
+body.vertax-theme-dark #laiso-app .laiso-set-big-cam,
+body.vertax-theme-dark #laiso-app .laiso-add-track-pos span,
+body.vertax-theme-dark #laiso-app .runt26-card.is-selected .runt26-check,
+body.vertax-theme-dark #laiso-app .runt18c-pick-check {
+  background: var(--runt-accent) !important;
+  border-color: var(--runt-accent) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
