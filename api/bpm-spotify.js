@@ -132,6 +132,78 @@ async function spotifyFetch(url, token) {
   return response.json();
 }
 
+function cleanSearchPart(value) {
+  return String(value || '')
+    .replace(/\s*[\[(][^\])]+[\])]/g, ' ')
+    .replace(/\b(original|remaster(?:ed)?|remix|mix|edit|version|vip)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function mainArtist(value) {
+  return String(value || '')
+    .split(/\s*(?:,|&|\+|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)[0]
+    .trim();
+}
+
+function normalizeMatchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9а-яё]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function trackScore(track, artist, title) {
+  if (!track) return 0;
+  const wantedArtist = normalizeMatchText(mainArtist(artist));
+  const wantedTitle = normalizeMatchText(cleanSearchPart(title) || title);
+  const trackTitle = normalizeMatchText(track.name);
+  const trackArtists = normalizeMatchText((track.artists || []).map((a) => a.name).join(' '));
+
+  let score = 0;
+  if (wantedArtist && trackArtists.indexOf(wantedArtist) >= 0) score += 2;
+  if (wantedTitle && trackTitle.indexOf(wantedTitle) >= 0) score += 3;
+  if (wantedTitle && wantedTitle.indexOf(trackTitle) >= 0) score += 1;
+  return score;
+}
+
+function buildSpotifyQueries(artist, title) {
+  const cleanArtist = cleanSearchPart(artist);
+  const cleanTitle = cleanSearchPart(title);
+  const leadArtist = mainArtist(cleanArtist || artist);
+  const variants = [
+    `artist:${artist} track:${title}`,
+    `track:${title} artist:${artist}`,
+    `${artist} ${title}`,
+    `${cleanArtist} ${cleanTitle}`,
+    `${leadArtist} ${cleanTitle || title}`
+  ];
+
+  return Array.from(new Set(variants.map((q) => q.replace(/\s+/g, ' ').trim()).filter(Boolean)));
+}
+
+async function findSpotifyTrack(token, artist, title) {
+  const queries = buildSpotifyQueries(artist, title);
+  let fallback = null;
+
+  for (const query of queries) {
+    const searchUrl = `${SPOTIFY_API_BASE}/search?q=${encodeURIComponent(query)}&type=track&limit=5`;
+    const search = await spotifyFetch(searchUrl, token);
+    const items = search && search.tracks && search.tracks.items ? search.tracks.items : [];
+    if (!items.length) continue;
+
+    if (!fallback) fallback = items[0];
+    const ranked = items
+      .map((track) => ({ track, score: trackScore(track, artist, title) }))
+      .sort((a, b) => b.score - a.score);
+
+    if (ranked[0] && ranked[0].score >= 4) return ranked[0].track;
+  }
+
+  return fallback;
+}
+
 module.exports = async function handler(req, res) {
   setCors(req, res);
 
@@ -156,10 +228,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const token = await getSpotifyToken();
-    const query = `artist:${artist} track:${title}`;
-    const searchUrl = `${SPOTIFY_API_BASE}/search?q=${encodeURIComponent(query)}&type=track&limit=1`;
-    const search = await spotifyFetch(searchUrl, token);
-    const track = search && search.tracks && search.tracks.items && search.tracks.items[0];
+    const track = await findSpotifyTrack(token, artist, title);
 
     if (!track || !track.id) {
       sendJson(res, 200, { found: false });

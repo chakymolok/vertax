@@ -480,6 +480,22 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     return !meta || (!meta.bpm && !meta.key && !meta.camelot);
   }
 
+  var lastSpotifyMissToastAt = 0;
+
+  function isSpotifyMeta(meta){
+    var source = String(meta && (meta.source || meta.bpmSource || meta.keySource) || '').toLowerCase();
+    return source === 'spotify';
+  }
+
+  function showSpotifyMissToast(){
+    if (typeof showToast !== 'function') return;
+    if (typeof state !== 'undefined' && state && state.ui && state.ui.discogsImportEnrichStage) return;
+    var now = Date.now();
+    if (now - lastSpotifyMissToastAt < 7000) return;
+    lastSpotifyMissToastAt = now;
+    showToast('Spotify не нашёл — пробую другие источники', 2800);
+  }
+
   function isDnbVinyl(vinyl){
     var words = ['drum and bass', "drum 'n' bass", 'drum & bass', 'drum&bass', 'dnb', 'd&b', 'jungle'];
     var hay = [
@@ -495,9 +511,20 @@ window.startVertaxClockTicker = startVertaxClockTicker;
   async function fetchFromSpotify(artist, title) {
     try {
       var url = '/api/bpm-spotify?artist=' + encodeURIComponent(artist || '') + '&title=' + encodeURIComponent(title || '');
+      window.__vertaxSpotifyLastLookup = {
+        artist: artist || '',
+        title: title || '',
+        url: url,
+        status: 'request'
+      };
       var response = await fetch(url);
-      if (!response.ok) return null;
+      if (!response.ok) {
+        window.__vertaxSpotifyLastLookup.status = response.status;
+        return null;
+      }
       var data = await response.json();
+      window.__vertaxSpotifyLastLookup.status = 'response';
+      window.__vertaxSpotifyLastLookup.data = data;
       if (data.found === false || !data.bpm) return null;
       return {
         bpm: data.bpm,
@@ -507,6 +534,12 @@ window.startVertaxClockTicker = startVertaxClockTicker;
         confidence: data.confidence == null ? 'medium' : data.confidence
       };
     } catch (e) {
+      window.__vertaxSpotifyLastLookup = {
+        artist: artist || '',
+        title: title || '',
+        status: 'error',
+        message: e && e.message ? e.message : String(e)
+      };
       console.warn('Spotify lookup failed', e);
       return null;
     }
@@ -541,21 +574,22 @@ window.startVertaxClockTicker = startVertaxClockTicker;
 
       if (typeof getCachedMetadata === 'function') {
         var cached = await getCachedMetadata(cacheKey);
-        if (cached) return cached;
+        if (cached && isSpotifyMeta(cached)) return cached;
       }
 
-      var primary = await fetchFromGetSongBPM(artist, title);
-      var spotify = null;
+      var spotify = await fetchFromSpotify(artist, title);
+      var primary = null;
       var secondary = null;
 
-      if (metadataEmpty(primary)) {
-        spotify = await fetchFromSpotify(artist, title);
+      if (metadataEmpty(spotify)) {
+        showSpotifyMissToast();
+        primary = await fetchFromGetSongBPM(artist, title);
       }
-      if (metadataEmpty(primary) && metadataEmpty(spotify)) {
+      if (metadataEmpty(spotify) && metadataEmpty(primary)) {
         secondary = await fetchFromAcousticBrainz(artist, title);
       }
 
-      var result = primary || spotify || secondary;
+      var result = spotify || primary || secondary;
       if (result && result.bpm) result = applySpotifyHalftimeCorrection(result, vinyl || {});
       if (result && result.source) {
         result = Object.assign({}, result, {
