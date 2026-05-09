@@ -37,6 +37,40 @@ function getHostWebApp(){
   return null;
 }
 
+function getVertaxTheme(){
+  try {
+    var value = localStorage.getItem('vertax-theme');
+    return value === 'dark' ? 'dark' : 'light';
+  } catch(e) {
+    return 'light';
+  }
+}
+
+function applyVertaxTheme(theme){
+  var normalized = theme === 'dark' ? 'dark' : 'light';
+  if (document.body) {
+    document.body.classList.remove('vertax-theme-light', 'vertax-theme-dark');
+    document.body.classList.add(normalized === 'dark' ? 'vertax-theme-dark' : 'vertax-theme-light');
+  }
+  try {
+    localStorage.setItem('vertax-theme', normalized);
+  } catch(e) {}
+  try {
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', normalized === 'dark' ? '#0B0D0C' : '#ECEFF1');
+  } catch(e) {}
+  return normalized;
+}
+
+function toggleVertaxTheme(){
+  return applyVertaxTheme(getVertaxTheme() === 'dark' ? 'light' : 'dark');
+}
+
+window.getVertaxTheme = getVertaxTheme;
+window.applyVertaxTheme = applyVertaxTheme;
+window.toggleVertaxTheme = toggleVertaxTheme;
+applyVertaxTheme(getVertaxTheme());
+
 function getTelegramWebApp(){
   return getHostWebApp();
 }

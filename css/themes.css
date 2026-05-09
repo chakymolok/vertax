@@ -1,0 +1,495 @@
+/* VERTAX theme system: Graphite Ice / Graphite Night */
+
+html,
+body {
+  background: var(--runt-bg, #ECEFF1);
+  color: var(--runt-text, #101010);
+}
+
+body.vertax-theme-light {
+  --runt-bg: #ECEFF1;
+  --runt-text: #101010;
+  background: #ECEFF1 !important;
+  color: #101010 !important;
+}
+
+body.vertax-theme-dark {
+  --runt-bg: #0B0D0C;
+  --runt-text: #F2F4F2;
+  background: #0B0D0C !important;
+  color: #F2F4F2 !important;
+}
+
+body.vertax-theme-light #laiso-app,
+#laiso-app {
+  --runt-bg: #ECEFF1;
+  --runt-shell: #F8F9F7;
+  --runt-card: #FFFFFF;
+  --runt-card-soft: #F4F6F4;
+  --runt-line: #D2D6D3;
+  --runt-line-soft: #E6E9E7;
+  --runt-text: #101010;
+  --runt-muted: #626762;
+  --runt-faint: #8A908A;
+  --runt-lcd: #10110F;
+  --runt-lcd-2: #1A1B18;
+  --runt-accent: #C8FF2E;
+  --runt-accent-dark: #A7E600;
+  --runt-accent-soft: rgba(200,255,46,.28);
+  --runt-danger: #E66A2C;
+  --runt-danger-soft: #FFF0E8;
+  --runt-shadow: rgba(16,17,15,.055);
+  --runt-page-gradient: radial-gradient(120% 90% at 50% 0%, #F8F9F7 0%, #ECEFF1 62%, #DDE1DD 100%);
+}
+
+body.vertax-theme-dark #laiso-app {
+  --runt-bg: #0B0D0C;
+  --runt-shell: #111312;
+  --runt-card: #171918;
+  --runt-card-soft: #1D201E;
+  --runt-line: #2E332F;
+  --runt-line-soft: #232724;
+  --runt-text: #F2F4F2;
+  --runt-muted: #A3A8A3;
+  --runt-faint: #727872;
+  --runt-lcd: #050605;
+  --runt-lcd-2: #121411;
+  --runt-accent: #C8FF2E;
+  --runt-accent-dark: #A7E600;
+  --runt-accent-soft: rgba(200,255,46,.22);
+  --runt-danger: #FF7A3D;
+  --runt-danger-soft: rgba(255,122,61,.13);
+  --runt-shadow: rgba(0,0,0,.28);
+  --runt-page-gradient: radial-gradient(120% 90% at 50% 0%, #1A1D1A 0%, #101210 58%, #070807 100%);
+}
+
+body.vertax-theme-light #laiso-app,
+body.vertax-theme-dark #laiso-app,
+#laiso-app {
+  --bg-primary: var(--runt-bg);
+  --bg-secondary: var(--runt-shell);
+  --panel-light: var(--runt-card);
+  --panel-metal: var(--runt-card-soft);
+  --panel-recess: var(--runt-card-soft);
+  --text-primary: var(--runt-text);
+  --text-secondary: var(--runt-muted);
+  --text-tertiary: var(--runt-faint);
+  --border-soft: var(--runt-line);
+  --border-faint: var(--runt-line-soft);
+  --border-dark: var(--runt-text);
+  --lcd-black: var(--runt-lcd);
+  --lcd-text: var(--runt-accent);
+  --led-lime: var(--runt-accent);
+  --led-lime-dark: var(--runt-accent-dark);
+  --led-lime-shadow: var(--runt-accent-soft);
+  --accent-lime: var(--runt-accent);
+  --accent-lime-dark: var(--runt-accent-dark);
+  --warning: var(--runt-danger);
+  --warning-soft: var(--runt-danger-soft);
+  --border: var(--runt-line);
+  --border-active: var(--runt-text);
+  --bg-panel: var(--runt-card);
+  --VERTAX-bg: var(--runt-bg);
+  --VERTAX-shell: var(--runt-shell);
+  --VERTAX-card: var(--runt-card);
+  --VERTAX-card-soft: var(--runt-card-soft);
+  --VERTAX-line: var(--runt-line);
+  --VERTAX-line-2: var(--runt-line-soft);
+  --VERTAX-ink: var(--runt-text);
+  --VERTAX-muted: var(--runt-muted);
+  --VERTAX-faint: var(--runt-faint);
+  --VERTAX-lcd: var(--runt-lcd);
+  --VERTAX-accent: var(--runt-accent);
+  --VERTAX-accent-dark: var(--runt-accent-dark);
+  --VERTAX-orange: var(--runt-danger);
+  --runt-orange-cta: var(--runt-accent);
+  --runt-orange-cta-dark: var(--runt-accent-dark);
+  --runt-orange-cta-soft: var(--runt-accent-soft);
+  background: var(--runt-page-gradient) !important;
+  color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-chassis {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--runt-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 14px 2px 18px !important;
+  margin-bottom: 20px !important;
+}
+
+#laiso-app .laiso-chassis::before,
+#laiso-app .laiso-chassis::after {
+  display: none !important;
+}
+
+#laiso-app .laiso-panel,
+#laiso-app .laiso-modal,
+#laiso-app .laiso-vinyl-card,
+#laiso-app .laiso-search-result,
+#laiso-app .laiso-match-top,
+#laiso-app .laiso-addtrack-row,
+#laiso-app .runt-set-card,
+#laiso-app .runt26-card,
+#laiso-app .runt25-diag-card,
+#laiso-app .runt18c-pick-card,
+#laiso-app .runt19-live-card,
+#laiso-app .runt21-suggest-row,
+#laiso-app .vertax-suggest-row,
+#laiso-app .vertax-backup-onboarding,
+#laiso-app .vertax-backup-restore,
+#laiso-app .laiso-sticker {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  box-shadow: 0 16px 44px var(--runt-shadow) !important;
+}
+
+#laiso-app .laiso-panel-recess,
+#laiso-app .laiso-tabs,
+#laiso-app .laiso-toggle,
+#laiso-app .laiso-drop,
+#laiso-app .runt18c-bpm-line,
+#laiso-app .runt25-pill,
+#laiso-app .runt26-pill,
+#laiso-app .runt21-suggest-score {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line-soft) !important;
+  color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-home-hero,
+#laiso-app .laiso-lcd,
+#laiso-app .laiso-toast,
+#laiso-app .laiso-lcd-mini,
+#laiso-app .laiso-counter,
+#laiso-app .runt25-diag-stat,
+#laiso-app .runt19-live-status,
+#laiso-app .runt19-live-bpm,
+#laiso-app .runt-fetch-bpm,
+#laiso-app .vertax-backup-status,
+#laiso-app .vertax-suggest-bpm {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-lcd-2) !important;
+  color: var(--runt-accent) !important;
+}
+
+#laiso-app .laiso-brand,
+#laiso-app .laiso-h1,
+#laiso-app .laiso-h2,
+#laiso-app .laiso-vinyl-title,
+#laiso-app .laiso-track-title,
+#laiso-app .runt-set-title,
+#laiso-app .runt19-live-title,
+#laiso-app .runt25-track-title,
+#laiso-app .runt26-title,
+#laiso-app .vertax-suggest-title {
+  color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-brand small,
+#laiso-app .laiso-meta,
+#laiso-app .laiso-vinyl-artist,
+#laiso-app .laiso-vinyl-meta,
+#laiso-app .laiso-set-meta,
+#laiso-app .runt-set-release,
+#laiso-app .runt19-live-release,
+#laiso-app .runt25-track-meta,
+#laiso-app .runt26-meta,
+#laiso-app .vertax-suggest-meta,
+#laiso-app .laiso-footer,
+#laiso-app .laiso-footer a {
+  color: var(--runt-muted) !important;
+}
+
+#laiso-app .laiso-sticker span,
+#laiso-app .laiso-sticker small,
+#laiso-app .laiso-sticker-donate span,
+#laiso-app .laiso-sticker-donate small {
+  color: var(--runt-muted) !important;
+}
+
+#laiso-app .laiso-sticker strong,
+#laiso-app .laiso-sticker-donate strong {
+  color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-sticker::after,
+#laiso-app .laiso-sticker-donate::after {
+  background: var(--runt-accent) !important;
+  box-shadow: 0 0 14px var(--runt-accent-soft) !important;
+}
+
+#laiso-app .laiso-btn,
+#laiso-app .laiso-btn-main,
+#laiso-app .laiso-btn[data-action="go-add"] {
+  background: linear-gradient(180deg, #D8FF55 0%, var(--runt-accent) 100%) !important;
+  border-color: var(--runt-accent) !important;
+  color: #101010 !important;
+  text-shadow: none !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 12px 26px var(--runt-accent-soft) !important;
+}
+
+#laiso-app .laiso-btn:hover,
+#laiso-app .laiso-btn-main:hover {
+  background: linear-gradient(180deg, var(--runt-accent) 0%, var(--runt-accent-dark) 100%) !important;
+  color: #101010 !important;
+}
+
+#laiso-app .laiso-btn-secondary,
+#laiso-app .laiso-back,
+#laiso-app .laiso-tab,
+#laiso-app .laiso-menu-list button,
+#laiso-app .runt-set-btn,
+#laiso-app .laiso-btn[data-action="backup-restore-pick"],
+#laiso-app .laiso-btn[data-action="discogs-import-merge"],
+#laiso-app .laiso-btn[data-action="discogs-import-cancel"] {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 22px var(--runt-shadow) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary,
+body.vertax-theme-dark #laiso-app .laiso-back,
+body.vertax-theme-dark #laiso-app .laiso-tab,
+body.vertax-theme-dark #laiso-app .laiso-menu-list button,
+body.vertax-theme-dark #laiso-app .runt-set-btn {
+  background: var(--runt-card-soft) !important;
+}
+
+#laiso-app .laiso-btn[data-action="discogs-search"],
+#laiso-app .laiso-btn[data-action="backup-download"],
+#laiso-app .laiso-btn[data-action="set-generate"],
+#laiso-app .laiso-btn[data-action="set-save"],
+#laiso-app .laiso-btn[data-action="fetching-done"],
+#laiso-app .laiso-btn[data-action="done-add"],
+#laiso-app .laiso-btn[data-action="confirm-tracklist"],
+#laiso-app .laiso-btn[data-action="runt19-play-set"],
+#laiso-app .runt19-play-btn {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-lcd-2) !important;
+  color: #FFFFFF !important;
+}
+
+#laiso-app .laiso-btn-warning,
+#laiso-app .runt30-remove-track,
+#laiso-app .laiso-menu-list button.danger {
+  background: var(--runt-danger-soft) !important;
+  border-color: var(--runt-danger) !important;
+  color: var(--runt-danger) !important;
+}
+
+#laiso-app .laiso-input,
+#laiso-app .laiso-select,
+#laiso-app .laiso-textarea,
+#laiso-app input,
+#laiso-app textarea,
+#laiso-app select {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+  caret-color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-stepper {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+}
+
+#laiso-app .laiso-stepper button {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  box-shadow: none !important;
+}
+
+#laiso-app .laiso-stepper button:hover {
+  background: var(--runt-accent) !important;
+  color: #101010 !important;
+}
+
+#laiso-app .laiso-stepper input {
+  background: var(--runt-card) !important;
+  border: 0 !important;
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+  caret-color: var(--runt-text) !important;
+  box-shadow: inset 0 0 0 1px var(--runt-line-soft) !important;
+}
+
+#laiso-app .laiso-stepper input:focus {
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px var(--runt-accent), 0 0 0 3px var(--runt-accent-soft) !important;
+}
+
+#laiso-app input::placeholder,
+#laiso-app textarea::placeholder,
+#laiso-app .laiso-input::placeholder,
+#laiso-app .laiso-textarea::placeholder {
+  color: var(--runt-faint) !important;
+  -webkit-text-fill-color: var(--runt-faint) !important;
+  opacity: 1 !important;
+}
+
+#laiso-app .laiso-tab.active,
+#laiso-app .laiso-toggle button.active,
+#laiso-app .laiso-badge-recognized,
+#laiso-app .runt26-card.is-selected .runt26-check,
+#laiso-app .runt19-live-cam,
+#laiso-app .runt21-suggest-cam,
+#laiso-app .vertax-suggest-cam,
+#laiso-app .vertax-suggest-add {
+  background: var(--runt-accent) !important;
+  border-color: var(--runt-accent) !important;
+  color: #101010 !important;
+}
+
+#laiso-app .laiso-badge-awaiting,
+#laiso-app .laiso-badge-manual,
+#laiso-app .laiso-pill,
+#laiso-app .runt-chip,
+#laiso-app .runt-fetch-pill {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line-soft) !important;
+  color: var(--runt-text) !important;
+}
+
+#laiso-app .laiso-badge-not-found,
+#laiso-app .laiso-badge-confirm,
+#laiso-app .laiso-hint-warn,
+#laiso-app .laiso-pill-warn,
+#laiso-app .vertax-backup-warn {
+  background: var(--runt-danger-soft) !important;
+  border-color: var(--runt-danger) !important;
+  color: var(--runt-danger) !important;
+}
+
+#laiso-app .laiso-dotmark {
+  color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-dotmark {
+  color: #E6E9E7 !important;
+}
+
+#laiso-app .laiso-menu-list {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+}
+
+#laiso-app .laiso-modal-bg {
+  background: rgba(5,6,5,.58) !important;
+}
+
+#laiso-app .vertax-theme-panel {
+  background: var(--runt-card) !important;
+  border: 1px solid var(--runt-line) !important;
+  border-radius: 18px;
+  box-shadow: 0 16px 44px var(--runt-shadow);
+  padding: 14px;
+  margin: 14px 0;
+}
+
+#laiso-app .vertax-theme-title {
+  color: var(--runt-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+#laiso-app .vertax-theme-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+#laiso-app .vertax-theme-btn {
+  min-height: 44px;
+  border: 1px solid var(--runt-line);
+  border-radius: 999px;
+  background: var(--runt-card-soft);
+  color: var(--runt-text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#laiso-app .vertax-theme-btn.is-active {
+  background: var(--runt-accent);
+  border-color: var(--runt-accent);
+  color: #101010;
+  box-shadow: 0 0 0 4px var(--runt-accent-soft);
+}
+
+#laiso-app .runt-set-card {
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, border-color .18s ease, opacity .18s ease, background .18s ease !important;
+  will-change: transform;
+}
+
+#laiso-app .runt-set-card.runt-dragging {
+  opacity: .34 !important;
+  transform: scale(.985) !important;
+  border-color: var(--runt-accent) !important;
+}
+
+#laiso-app .runt-set-card.runt-drag-over {
+  transform: translateY(6px) !important;
+  border-color: var(--runt-accent) !important;
+  box-shadow: 0 0 0 3px var(--runt-accent-soft), 0 18px 42px rgba(0,0,0,.16) !important;
+}
+
+.runt-touch-ghost {
+  opacity: .96 !important;
+  border: 2px solid var(--runt-accent, #C8FF2E) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.30), 0 0 0 6px var(--runt-accent-soft, rgba(200,255,46,.22)) !important;
+  filter: saturate(1.05);
+}
+
+.runt-touch-ghost .runt-drag-hint {
+  color: var(--runt-accent, #C8FF2E) !important;
+}
+
+body.vertax-dark:not(.vertax-theme-dark) #laiso-app .vertax-suggest-row {
+  background: var(--runt-card) !important;
+  border-color: var(--runt-line) !important;
+}
+
+@media (max-width: 620px) {
+  #laiso-app {
+    padding-top: 18px !important;
+  }
+
+  #laiso-app .laiso-chassis-row {
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 12px !important;
+  }
+
+  #laiso-app .laiso-brand {
+    font-size: 24px !important;
+    line-height: .98 !important;
+  }
+
+  #laiso-app .laiso-brand small {
+    margin-top: 6px !important;
+    font-size: 9px !important;
+  }
+
+  #laiso-app .laiso-chassis-side {
+    align-self: start !important;
+    padding-top: 4px !important;
+  }
+
+  #laiso-app .vertax-theme-switch {
+    grid-template-columns: 1fr;
+  }
+}
