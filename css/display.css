@@ -1,25 +1,18 @@
 /* VERTAX-01 central display, hardware theme toggle, and boot screen.
    Loaded after themes.css so it can use --runt-* tokens. */
 
-/* DSEG digital fonts. Files are optional — if missing, fallback chain kicks in. */
+/* Digital display font — Share Tech Mono. Bundled, no external CDN. */
 @font-face {
-  font-family: "DSEG7";
-  src: url("../fonts/DSEG7Classic-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DSEG14";
-  src: url("../fonts/DSEG14Classic-Regular.woff2") format("woff2");
+  font-family: "Share Tech Mono";
+  src: url("../fonts/ShareTechMono-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 #laiso-app {
-  --font-display-digits: "DSEG7", "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", "Courier New", monospace;
-  --font-display-text: "DSEG14", "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", "Courier New", monospace;
+  --font-display-digits: "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", "Courier New", monospace;
+  --font-display-text:   "Share Tech Mono", "IBM Plex Mono", "Roboto Mono", "Courier New", monospace;
 }
 
 /* Lime caret in all inputs, both themes */

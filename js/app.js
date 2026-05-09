@@ -323,29 +323,36 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
    VERTAX CENTRAL DISPLAY: clock ticker + boot screen typewriter
    ============================================================ */
 function getVertaxUserName(){
+  var debug = { source: null, hasTg: false, hasInitData: false, hasUser: false };
   try {
     var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) debug.hasTg = true;
     if (tg && typeof tg.ready === 'function') { try { tg.ready(); } catch(_) {} }
     var user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-    if (user && user.first_name) return String(user.first_name).toUpperCase();
-    if (user && user.last_name) return String(user.last_name).toUpperCase();
-    if (user && user.username) return '@' + String(user.username).toUpperCase();
+    if (user) debug.hasUser = true;
+    if (user && user.first_name) { debug.source = 'first_name'; window.__vertaxNameDebug = debug; return String(user.first_name).toUpperCase(); }
+    if (user && user.last_name)  { debug.source = 'last_name';  window.__vertaxNameDebug = debug; return String(user.last_name).toUpperCase(); }
+    if (user && user.username)   { debug.source = 'username';   window.__vertaxNameDebug = debug; return '@' + String(user.username).toUpperCase(); }
     var raw = tg && tg.initData;
     if (raw && typeof raw === 'string') {
+      debug.hasInitData = true;
       try {
         var params = new URLSearchParams(raw);
         var u = params.get('user');
         if (u) {
           var parsed = JSON.parse(decodeURIComponent(u));
-          if (parsed && parsed.first_name) return String(parsed.first_name).toUpperCase();
-          if (parsed && parsed.username) return '@' + String(parsed.username).toUpperCase();
+          if (parsed && parsed.first_name) { debug.source = 'initData.first_name'; window.__vertaxNameDebug = debug; return String(parsed.first_name).toUpperCase(); }
+          if (parsed && parsed.username)   { debug.source = 'initData.username';   window.__vertaxNameDebug = debug; return '@' + String(parsed.username).toUpperCase(); }
         }
       } catch(_) {}
     }
     var max = window.WebApp;
     var maxUser = max && max.initDataUnsafe && max.initDataUnsafe.user;
-    if (maxUser && maxUser.first_name) return String(maxUser.first_name).toUpperCase();
+    if (maxUser && maxUser.first_name) { debug.source = 'max.first_name'; window.__vertaxNameDebug = debug; return String(maxUser.first_name).toUpperCase(); }
   } catch(e) {}
+  debug.source = 'fallback';
+  window.__vertaxNameDebug = debug;
+  try { console.warn('[VERTAX] getVertaxUserName fell back to SELECTOR. Inspect window.__vertaxNameDebug and window.Telegram?.WebApp?.initDataUnsafe.'); } catch(_){}
   return 'SELECTOR';
 }
 window.getVertaxUserName = getVertaxUserName;
@@ -434,12 +441,15 @@ function runVertaxBootSequence(display){
         delete display.dataset.vertaxBoot;
         display.innerHTML = vertaxStandardDisplayInnerHtml();
         window.__vertaxBootDone = true;
+        try { localStorage.setItem('vertaxBootLastShownAt', String(Date.now())); } catch(_){}
         startVertaxClockTicker();
       }, 350);
     }, 1000);
   }
   typeChar(0, 0);
 }
+
+var VERTAX_BOOT_TTL_MS = 30000; /* show boot again if last shown >30s ago */
 
 function vertaxAfterRender(){
   if (typeof state === 'undefined') return;
@@ -448,7 +458,12 @@ function vertaxAfterRender(){
   if (!display) return;
   if (!window.__vertaxBootStarted) {
     window.__vertaxBootStarted = true;
-    runVertaxBootSequence(display);
+    var lastShown = 0;
+    try { lastShown = parseInt(localStorage.getItem('vertaxBootLastShownAt'), 10) || 0; } catch(_){}
+    var now = Date.now();
+    if (!lastShown || (now - lastShown) > VERTAX_BOOT_TTL_MS) {
+      runVertaxBootSequence(display);
+    }
   }
   if (!display.dataset.vertaxBoot) startVertaxClockTicker();
 }
