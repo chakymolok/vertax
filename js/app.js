@@ -331,9 +331,7 @@ function getVertaxUserName(){
     if (tg && typeof tg.ready === 'function') { try { tg.ready(); } catch(_) {} }
     var user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
     if (user) debug.hasUser = true;
-    if (user && user.first_name) { debug.source = 'first_name'; window.__vertaxNameDebug = debug; return String(user.first_name).toUpperCase(); }
-    if (user && user.last_name)  { debug.source = 'last_name';  window.__vertaxNameDebug = debug; return String(user.last_name).toUpperCase(); }
-    if (user && user.username)   { debug.source = 'username';   window.__vertaxNameDebug = debug; return '@' + String(user.username).toUpperCase(); }
+    if (user && user.username)   { debug.source = 'username';   window.__vertaxNameDebug = debug; return String(user.username).toUpperCase(); }
     var raw = tg && tg.initData;
     if (raw && typeof raw === 'string') {
       debug.hasInitData = true;
@@ -342,19 +340,18 @@ function getVertaxUserName(){
         var u = params.get('user');
         if (u) {
           var parsed = JSON.parse(decodeURIComponent(u));
-          if (parsed && parsed.first_name) { debug.source = 'initData.first_name'; window.__vertaxNameDebug = debug; return String(parsed.first_name).toUpperCase(); }
-          if (parsed && parsed.username)   { debug.source = 'initData.username';   window.__vertaxNameDebug = debug; return '@' + String(parsed.username).toUpperCase(); }
+          if (parsed && parsed.username)   { debug.source = 'initData.username';   window.__vertaxNameDebug = debug; return String(parsed.username).toUpperCase(); }
         }
       } catch(_) {}
     }
     var max = window.WebApp;
     var maxUser = max && max.initDataUnsafe && max.initDataUnsafe.user;
-    if (maxUser && maxUser.first_name) { debug.source = 'max.first_name'; window.__vertaxNameDebug = debug; return String(maxUser.first_name).toUpperCase(); }
+    if (maxUser && maxUser.username) { debug.source = 'max.username'; window.__vertaxNameDebug = debug; return String(maxUser.username).toUpperCase(); }
   } catch(e) {}
   debug.source = 'fallback';
   window.__vertaxNameDebug = debug;
-  try { console.warn('[VERTAX] getVertaxUserName fell back to SELECTOR. Inspect window.__vertaxNameDebug and window.Telegram?.WebApp?.initDataUnsafe.'); } catch(_){}
-  return 'SELECTOR';
+  try { console.warn('[VERTAX] getVertaxUserName fell back to DUDE. Inspect window.__vertaxNameDebug and window.Telegram?.WebApp?.initDataUnsafe.'); } catch(_){}
+  return 'DUDE';
 }
 window.getVertaxUserName = getVertaxUserName;
 
@@ -398,14 +395,13 @@ function runVertaxBootSequence(display){
   if (!display || display.dataset.vertaxBoot === 'running') return;
   display.dataset.vertaxBoot = 'running';
   var name = getVertaxUserName();
-  var lines = ['BOOTING VERTAX-01...', 'HI, ' + name, 'LOCAL DB ONLINE'];
+  var lines = ['HELLO, ' + name, 'DIG. PLAY. SHARE.'];
   display.innerHTML =
     '<div class="vertax-display-top">' +
       '<span class="vertax-display-status"><span class="vertax-display-led"></span>BOOT</span>' +
       '<span class="vertax-display-clock"></span>' +
     '</div>' +
     '<div class="vertax-boot">' +
-      '<div class="vertax-boot-line"></div>' +
       '<div class="vertax-boot-line"></div>' +
       '<div class="vertax-boot-line"></div>' +
       '<span class="vertax-boot-caret"></span>' +
@@ -471,39 +467,168 @@ function vertaxAfterRender(){
 window.vertaxAfterRender = vertaxAfterRender;
 window.startVertaxClockTicker = startVertaxClockTicker;
 
-/* RUNT-01 PATCH 33 — Spotify BPM/Key source via Vercel proxy */
-(function installVertaxSpotifyBpmPatch(){
-  if (window.__vertaxSpotifyBpmPatchInstalled) return;
-  window.__vertaxSpotifyBpmPatchInstalled = true;
+/* RUNT-01 PATCH 33 — Deezer BPM source (client-side, no keys) */
+(function installVertaxDeezerBpmPatch(){
+  if (window.__vertaxDeezerBpmPatchInstalled) return;
+  window.__vertaxDeezerBpmPatchInstalled = true;
 
   function metadataEmpty(meta){
     return !meta || (!meta.bpm && !meta.key && !meta.camelot);
   }
 
-  var lastSpotifyMissToastAt = 0;
-
-  function isSpotifyMeta(meta){
-    var source = String(meta && (meta.source || meta.bpmSource || meta.keySource) || '').toLowerCase();
-    return source === 'spotify';
+  function metadataFull(meta){
+    return !!(meta && meta.bpm && (meta.key || meta.camelot));
   }
 
-  function showSpotifyMissToast(){
-    if (typeof showToast !== 'function') return;
-    if (typeof state !== 'undefined' && state && state.ui && state.ui.discogsImportEnrichStage) return;
-    var now = Date.now();
-    if (now - lastSpotifyMissToastAt < 7000) return;
-    lastSpotifyMissToastAt = now;
-    var data = window.__vertaxSpotifyLastLookup && window.__vertaxSpotifyLastLookup.data;
-    if (data && data.reason === 'audio-features-unavailable') {
-      showToast('Spotify нашёл трек, но не отдал BPM/Key — пробую другие источники', 4200);
-      return;
-    }
-    if (data && data.reason === 'audio-features-empty') {
-      showToast('Spotify нашёл трек без BPM/Key — пробую другие источники', 3600);
-      return;
-    }
-    showToast('Spotify не нашёл — пробую другие источники', 2800);
+  function hasKey(meta){
+    return !!(meta && (meta.key || meta.camelot));
   }
+
+  function sourceName(meta){
+    return String(meta && (meta.source || meta.bpmSource || meta.keySource) || '').toLowerCase();
+  }
+
+  function normalizeSearchText(value){
+    return String(value || '')
+      .toLowerCase()
+      .replace(/\s*[\[(][^\])]+[\])]/g, ' ')
+      .replace(/\b(original|remaster(?:ed)?|remix|mix|edit|version|vip)\b/gi, ' ')
+      .replace(/[^a-z0-9а-яё]+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function leadArtist(value){
+    return String(value || '')
+      .split(/\s*(?:,|&|\+|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)[0]
+      .trim();
+  }
+
+  function trackScore(track, artist, title){
+    if (!track) return 0;
+    var wantedArtist = normalizeSearchText(leadArtist(artist));
+    var wantedTitle = normalizeSearchText(title);
+    var trackArtist = normalizeSearchText(track.artist && track.artist.name);
+    var trackTitle = normalizeSearchText(track.title || track.title_short);
+    var score = 0;
+    if (wantedArtist && trackArtist.indexOf(wantedArtist) >= 0) score += 2;
+    if (wantedTitle && trackTitle.indexOf(wantedTitle) >= 0) score += 3;
+    if (wantedTitle && wantedTitle.indexOf(trackTitle) >= 0) score += 1;
+    return score;
+  }
+
+  function deezerJsonp(url){
+    return new Promise(function(resolve, reject){
+      var cb = '__vertaxDeezerJsonp_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+      var script = document.createElement('script');
+      var done = false;
+      var timer = setTimeout(function(){
+        cleanup();
+        reject(new Error('Deezer JSONP timeout'));
+      }, 8000);
+      function cleanup(){
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { delete window[cb]; } catch(_) { window[cb] = undefined; }
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+      }
+      window[cb] = function(data){
+        cleanup();
+        resolve(data);
+      };
+      script.onerror = function(){
+        cleanup();
+        reject(new Error('Deezer JSONP failed'));
+      };
+      script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'output=jsonp&callback=' + encodeURIComponent(cb);
+      document.head.appendChild(script);
+    });
+  }
+
+  async function deezerRequest(url){
+    try {
+      var response = await fetch(url);
+      if (response.ok) return await response.json();
+    } catch(_) {}
+    return deezerJsonp(url);
+  }
+
+  function buildDeezerQueries(artist, title){
+    var a = String(artist || '').trim();
+    var t = String(title || '').trim();
+    var cleanA = leadArtist(a);
+    var cleanT = String(t).replace(/\s*[\[(][^\])]+[\])]/g, ' ').replace(/\s+/g, ' ').trim();
+    var variants = [
+      'artist:"' + a + '" track:"' + t + '"',
+      a + ' ' + t,
+      cleanA + ' ' + cleanT,
+      t + ' ' + a
+    ];
+    var seen = {};
+    return variants.map(function(q){ return q.replace(/\s+/g, ' ').trim(); }).filter(function(q){
+      if (!q || seen[q]) return false;
+      seen[q] = true;
+      return true;
+    });
+  }
+
+  async function findDeezerTrack(artist, title){
+    var queries = buildDeezerQueries(artist, title);
+    var fallback = null;
+    for (var i = 0; i < queries.length; i++) {
+      var searchUrl = 'https://api.deezer.com/search?q=' + encodeURIComponent(queries[i]) + '&limit=5';
+      var searchData = await deezerRequest(searchUrl);
+      var tracks = searchData && Array.isArray(searchData.data) ? searchData.data : [];
+      if (!tracks.length) continue;
+      if (!fallback) fallback = tracks[0];
+      tracks.sort(function(a, b){ return trackScore(b, artist, title) - trackScore(a, artist, title); });
+      if (trackScore(tracks[0], artist, title) >= 4) return tracks[0];
+    }
+    return fallback;
+  }
+
+  async function fetchFromDeezer(artist, title) {
+    try {
+      if (!artist || !title) return null;
+      window.__vertaxDeezerLastLookup = { artist: artist || '', title: title || '', status: 'request' };
+      var track = await findDeezerTrack(artist, title);
+      if (!track || !track.id) {
+        window.__vertaxDeezerLastLookup.status = 'not-found';
+        return null;
+      }
+      var trackUrl = 'https://api.deezer.com/track/' + encodeURIComponent(track.id);
+      var trackData = await deezerRequest(trackUrl);
+      window.__vertaxDeezerLastLookup.status = 'response';
+      window.__vertaxDeezerLastLookup.track = {
+        id: trackData && trackData.id || track.id,
+        title: trackData && trackData.title || track.title || '',
+        artist: trackData && trackData.artist && trackData.artist.name || track.artist && track.artist.name || '',
+        bpm: trackData && trackData.bpm
+      };
+      if (!trackData || !trackData.bpm || trackData.bpm === 0) return null;
+      return {
+        bpm: Math.round(trackData.bpm),
+        key: null,
+        camelot: null,
+        source: 'deezer',
+        bpmSource: 'deezer',
+        cover: trackData.album && trackData.album.cover_medium ? trackData.album.cover_medium : null,
+        year: trackData.release_date ? String(trackData.release_date).slice(0, 4) : null,
+        confidence: 'medium'
+      };
+    } catch (e) {
+      window.__vertaxDeezerLastLookup = {
+        artist: artist || '',
+        title: title || '',
+        status: 'error',
+        message: e && e.message ? e.message : String(e)
+      };
+      console.warn('Deezer lookup failed', e);
+      return null;
+    }
+  }
+  window.fetchFromDeezer = fetchFromDeezer;
 
   function isDnbVinyl(vinyl){
     var words = ['drum and bass', "drum 'n' bass", 'drum & bass', 'drum&bass', 'dnb', 'd&b', 'jungle'];
@@ -517,50 +642,44 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     return words.some(function(word){ return hay.indexOf(word) >= 0; });
   }
 
-  async function fetchFromSpotify(artist, title) {
-    try {
-      var url = '/api/bpm-spotify?artist=' + encodeURIComponent(artist || '') + '&title=' + encodeURIComponent(title || '');
-      window.__vertaxSpotifyLastLookup = {
-        artist: artist || '',
-        title: title || '',
-        url: url,
-        status: 'request'
-      };
-      var response = await fetch(url);
-      if (!response.ok) {
-        window.__vertaxSpotifyLastLookup.status = response.status;
-        return null;
-      }
-      var data = await response.json();
-      window.__vertaxSpotifyLastLookup.status = 'response';
-      window.__vertaxSpotifyLastLookup.data = data;
-      if (data.found === false || !data.bpm) return null;
-      return {
-        bpm: data.bpm,
-        key: data.key || null,
-        camelot: data.camelot || null,
-        source: 'spotify',
-        confidence: data.confidence == null ? 'medium' : data.confidence
-      };
-    } catch (e) {
-      window.__vertaxSpotifyLastLookup = {
-        artist: artist || '',
-        title: title || '',
-        status: 'error',
-        message: e && e.message ? e.message : String(e)
-      };
-      console.warn('Spotify lookup failed', e);
-      return null;
-    }
+  function normalizeMeta(meta){
+    if (!meta) return null;
+    var out = Object.assign({}, meta);
+    var src = sourceName(out);
+    if (out.bpm && !out.bpmSource && src) out.bpmSource = src;
+    if ((out.key || out.camelot) && !out.keySource && src) out.keySource = src;
+    return out;
   }
-  window.fetchFromSpotify = fetchFromSpotify;
 
-  function applySpotifyHalftimeCorrection(meta, vinyl){
+  function combineMeta(base, addition){
+    var out = normalizeMeta(base) || {};
+    var add = normalizeMeta(addition);
+    if (!add) return metadataEmpty(out) ? null : out;
+    var addSource = sourceName(add);
+    if (!out.bpm && add.bpm) {
+      out.bpm = add.bpm;
+      out.bpmSource = add.bpmSource || addSource || null;
+      if (add.originalBpm) out.originalBpm = add.originalBpm;
+      if (add.halftimeCorrected) out.halftimeCorrected = add.halftimeCorrected;
+    }
+    if (!hasKey(out) && hasKey(add)) {
+      out.key = add.key || null;
+      out.camelot = add.camelot || (add.key && typeof KEY_TO_CAMELOT !== 'undefined' ? KEY_TO_CAMELOT[add.key] : null);
+      out.keySource = add.keySource || addSource || null;
+    }
+    out.source = out.bpmSource && out.keySource && out.bpmSource !== out.keySource
+      ? out.bpmSource + '+' + out.keySource
+      : (out.bpmSource || out.keySource || addSource || out.source || null);
+    out.confidence = out.confidence || add.confidence || 'medium';
+    return metadataEmpty(out) ? null : out;
+  }
+
+  function applyFinalHalftimeCorrection(meta, vinyl){
     var result = meta;
     if (typeof applyHalftimeCorrection === 'function') {
       result = applyHalftimeCorrection(result, vinyl);
     }
-    if (result && result.source === 'spotify' && result.bpm && !result.halftimeCorrected && isDnbVinyl(vinyl) && result.bpm < 100) {
+    if (result && result.bpmSource === 'deezer' && result.bpm && !result.halftimeCorrected && isDnbVinyl(vinyl) && result.bpm < 100) {
       result = Object.assign({}, result, {
         bpm: result.bpm * 2,
         halftimeCorrected: true,
@@ -574,100 +693,107 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     if (typeof fetchTrackMetadata !== 'function') return false;
     if (typeof fetchFromGetSongBPM !== 'function') return false;
     if (typeof fetchFromAcousticBrainz !== 'function') return false;
-    if (window.__vertaxSpotifyFetchTrackMetadataWrapped) return true;
+    if (window.__vertaxDeezerFetchTrackMetadataWrapped) return true;
 
     fetchTrackMetadata = window.fetchTrackMetadata = async function(track, vinyl){
-      var artist = (vinyl && vinyl.artist) || (track && track.vinylArtist) || '';
-      var title = track && track.title || '';
+      vinyl = vinyl || {};
+      track = track || {};
+      var artist = vinyl.artist || track.vinylArtist || '';
+      var title = track.title || '';
       var cacheKey = String(artist || '').toLowerCase().trim() + '|' + String(title || '').toLowerCase().trim();
+      var result = null;
 
       if (typeof getCachedMetadata === 'function') {
         var cached = await getCachedMetadata(cacheKey);
-        if (cached && isSpotifyMeta(cached)) return cached;
+        if (cached) {
+          result = normalizeMeta(cached);
+          if (metadataFull(result)) return result;
+        }
       }
 
-      var spotify = await fetchFromSpotify(artist, title);
-      var primary = null;
-      var secondary = null;
-
-      if (metadataEmpty(spotify)) {
-        showSpotifyMissToast();
-        primary = await fetchFromGetSongBPM(artist, title);
-      }
-      if (metadataEmpty(spotify) && metadataEmpty(primary)) {
-        secondary = await fetchFromAcousticBrainz(artist, title);
+      if (!metadataFull(result) && metadataEmpty(result)) {
+        result = combineMeta(result, await fetchFromGetSongBPM(artist, title));
+        if (metadataFull(result)) {
+          result = applyFinalHalftimeCorrection(result, vinyl);
+          if (typeof setCachedMetadata === 'function') await setCachedMetadata(cacheKey, result);
+          return result;
+        }
       }
 
-      var result = spotify || primary || secondary;
-      if (result && result.bpm) result = applySpotifyHalftimeCorrection(result, vinyl || {});
-      if (result && result.source) {
-        result = Object.assign({}, result, {
-          bpmSource: result.bpmSource || result.source,
-          keySource: result.keySource || result.source
-        });
+      if (!metadataFull(result)) {
+        result = combineMeta(result, await fetchFromAcousticBrainz(artist, title));
+        if (metadataFull(result)) {
+          result = applyFinalHalftimeCorrection(result, vinyl);
+          if (typeof setCachedMetadata === 'function') await setCachedMetadata(cacheKey, result);
+          return result;
+        }
       }
+
+      if (!result || !result.bpm) {
+        result = combineMeta(result, await fetchFromDeezer(artist, title));
+      }
+
+      if (result && result.bpm) result = applyFinalHalftimeCorrection(result, vinyl);
       if (result && typeof setCachedMetadata === 'function') await setCachedMetadata(cacheKey, result);
       return result;
     };
 
-    window.__vertaxSpotifyFetchTrackMetadataWrapped = true;
+    window.__vertaxDeezerFetchTrackMetadataWrapped = true;
     return true;
   }
 
-  function getTrackSource(track){
-    return String(track && (track.bpmSource || track.keySource || '') || '').toLowerCase();
+  function getTrackBpmSource(track){
+    return String(track && (track.bpmSource || track.source || '') || '').toLowerCase();
   }
 
-  function injectSpotifyBadges(){
+  function injectDeezerBadges(){
     if (typeof state === 'undefined' || !state) return;
-
     if (state.view === 'tracklist') {
       var vinyl = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
       if (vinyl && Array.isArray(vinyl.tracklist)) {
         document.querySelectorAll('#laiso-app .laiso-track[data-track-id]').forEach(function(row){
-          var track = vinyl.tracklist.find(function(t){ return String(t.id) === String(row.getAttribute('data-track-id')); });
-          if (!track || getTrackSource(track) !== 'spotify' || !track.bpm) return;
+          var tr = vinyl.tracklist.find(function(t){ return String(t.id) === String(row.getAttribute('data-track-id')); });
+          if (!tr || getTrackBpmSource(tr) !== 'deezer' || !tr.bpm) return;
           var box = row.querySelector('.laiso-track-bpm');
-          if (box && !box.querySelector('.vertax-source-spotify')) {
-            box.insertAdjacentHTML('beforeend', '<span class="vertax-source-spotify">SPOTIFY' + (track.halftimeCorrected ? ' <span>1/2x</span>' : '') + '</span>');
+          if (box && !box.querySelector('.vertax-source-deezer')) {
+            box.insertAdjacentHTML('beforeend', '<span class="vertax-source-deezer">DEEZER' + (tr.halftimeCorrected ? ' <span>1/2x</span>' : '') + '</span>');
           }
         });
       }
     }
-
     if (state.view === 'edit-track') {
       var v = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
       var t = v && typeof findTrack === 'function' ? findTrack(v, state.ui && state.ui.currentTrackId) : null;
-      if (!t || getTrackSource(t) !== 'spotify') return;
+      if (!t || getTrackBpmSource(t) !== 'deezer') return;
       var toggle = document.querySelector('#laiso-app .laiso-toggle');
-      if (toggle && !toggle.querySelector('.vertax-source-spotify-toggle')) {
-        toggle.insertAdjacentHTML('beforeend', '<button type="button" class="active vertax-source-spotify-toggle">SPOTIFY</button>');
+      if (toggle && !toggle.querySelector('.vertax-source-deezer-toggle')) {
+        toggle.insertAdjacentHTML('beforeend', '<button type="button" class="active vertax-source-deezer-toggle">DEEZER</button>');
       }
     }
   }
 
   function afterRender(){
     installMetadataCascade();
-    injectSpotifyBadges();
+    injectDeezerBadges();
   }
 
   function wrapRender(){
-    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxSpotifyBuckRenderWrapped) {
+    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxDeezerBuckRenderWrapped) {
       var oldBuck = window.laisoBuck.render;
       window.laisoBuck.render = function(){
         oldBuck();
         setTimeout(afterRender, 0);
       };
-      window.__vertaxSpotifyBuckRenderWrapped = true;
+      window.__vertaxDeezerBuckRenderWrapped = true;
     }
     try {
-      if (typeof render === 'function' && !window.__vertaxSpotifyGlobalRenderWrapped) {
+      if (typeof render === 'function' && !window.__vertaxDeezerGlobalRenderWrapped) {
         var oldRender = render;
         render = function(){
           oldRender();
           setTimeout(afterRender, 0);
         };
-        window.__vertaxSpotifyGlobalRenderWrapped = true;
+        window.__vertaxDeezerGlobalRenderWrapped = true;
       }
     } catch(_) {}
     afterRender();
@@ -675,13 +801,14 @@ window.startVertaxClockTicker = startVertaxClockTicker;
 
   var style = document.createElement('style');
   style.textContent = [
-    '#laiso-app .vertax-source-spotify{display:block;font-family:var(--font-mono);font-size:8px;color:var(--text-tertiary);letter-spacing:.04em;margin-top:1px;line-height:1;text-transform:uppercase;}',
-    '#laiso-app .vertax-source-spotify span{color:var(--warning);}',
-    '#laiso-app .vertax-source-spotify-toggle{background:var(--bg-panel)!important;color:var(--text-primary)!important;border-color:var(--border)!important;}'
+    '#laiso-app .vertax-source-deezer{display:block;font-family:var(--font-mono);font-size:8px;color:var(--text-tertiary);letter-spacing:.04em;margin-top:1px;line-height:1;text-transform:uppercase;}',
+    '#laiso-app .vertax-source-deezer span{color:var(--warning);}',
+    '#laiso-app .vertax-source-deezer-toggle{background:var(--bg-panel)!important;color:var(--text-primary)!important;border-color:var(--border)!important;}',
+    'body #laiso-app input,body #laiso-app input.laiso-input,body #laiso-app textarea,body #laiso-app textarea.laiso-textarea,body #laiso-app select,body #laiso-app select.laiso-select,body #laiso-app [contenteditable="true"]{caret-color:var(--runt-accent,#C8FF2E)!important;}'
   ].join('\n');
   document.head.appendChild(style);
 
   wrapRender();
   setTimeout(wrapRender, 300);
-  console.log('RUNT-01 PATCH-33 loaded: Spotify BPM/Key source');
+  console.log('RUNT-01 PATCH-33 loaded: Deezer BPM source');
 })();

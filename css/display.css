@@ -325,3 +325,14 @@ body.vertax-has-tg-back #laiso-app .laiso-header { grid-template-columns: 1fr 52
   #laiso-app .laiso-back { display: none !important; }
   #laiso-app .laiso-header { grid-template-columns: 1fr 52px !important; }
 }
+
+/* Final caret color guard: old component rules use !important. */
+body #laiso-app input,
+body #laiso-app input.laiso-input,
+body #laiso-app textarea,
+body #laiso-app textarea.laiso-textarea,
+body #laiso-app select,
+body #laiso-app select.laiso-select,
+body #laiso-app [contenteditable="true"] {
+  caret-color: var(--runt-accent, #C8FF2E) !important;
+}
