@@ -254,6 +254,21 @@
   background:var(--VERTAX-accent,var(--accent-lime,#C4F542))!important;
   border-color:var(--VERTAX-accent,var(--accent-lime,#C4F542))!important;
 }
+#laiso-app .laiso-vinyl-card-clickable{
+  cursor:pointer;
+}
+#laiso-app .laiso-vinyl-card-clickable:hover{
+  border-color:#111!important;
+}
+#laiso-app .laiso-vinyl-card-clickable .laiso-menu,
+#laiso-app .laiso-vinyl-card-clickable .laiso-menu *{
+  cursor:auto;
+}
+#laiso-app .laiso-tracklist-empty-panel p{
+  margin:6px 0 14px;
+  color:var(--text-secondary,#666158);
+  line-height:1.45;
+}
 #laiso-app input,
 #laiso-app textarea,
 #laiso-app [contenteditable="true"]{
