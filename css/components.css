@@ -146,6 +146,34 @@
 @media(max-width:620px){ #laiso-app .runt30-remove-track{ min-height:32px; padding:6px 10px; }
 }
 
+/* Tracklist side tabs: A-F must fit on phone screens */
+#laiso-app .laiso-side-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:3px!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow:visible!important;
+}
+#laiso-app .laiso-side-tabs .laiso-tab{
+  min-width:0!important;
+  padding:8px 3px!important;
+  font-size:9px!important;
+  letter-spacing:.06em!important;
+  white-space:nowrap!important;
+}
+@media(max-width:420px){
+  #laiso-app .laiso-side-tabs{
+    gap:2px!important;
+    padding:3px!important;
+  }
+  #laiso-app .laiso-side-tabs .laiso-tab{
+    padding:8px 1px!important;
+    font-size:8px!important;
+    letter-spacing:0!important;
+  }
+}
+
 /* style block 22 */
 /* PATCH-31: hide bulky top controls in source picker */
 #laiso-app .runt26-source-page .runt26-tools{ display:none!important;
