@@ -31,7 +31,6 @@ document.addEventListener("gesturestart",function(e){e.preventDefault();},{passi
     installRuntCompactSetCards,
     installRuntManualMetadataHandlers,
     installRuntTrackPositionHelpers,
-    installRuntFetchingManualPanel,
     installRuntCollectionQuickActions,
     installRuntDiscogsDuplicatePicker,
     installRuntManualMetaValidation,
