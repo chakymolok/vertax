@@ -470,3 +470,175 @@ function vertaxAfterRender(){
 }
 window.vertaxAfterRender = vertaxAfterRender;
 window.startVertaxClockTicker = startVertaxClockTicker;
+
+/* RUNT-01 PATCH 33 — Spotify BPM/Key source via Vercel proxy */
+(function installVertaxSpotifyBpmPatch(){
+  if (window.__vertaxSpotifyBpmPatchInstalled) return;
+  window.__vertaxSpotifyBpmPatchInstalled = true;
+
+  function metadataEmpty(meta){
+    return !meta || (!meta.bpm && !meta.key && !meta.camelot);
+  }
+
+  function isDnbVinyl(vinyl){
+    var words = ['drum and bass', "drum 'n' bass", 'drum & bass', 'drum&bass', 'dnb', 'd&b', 'jungle'];
+    var hay = [
+      vinyl && vinyl.format,
+      vinyl && vinyl.genre,
+      vinyl && vinyl.style,
+      vinyl && vinyl.label,
+      vinyl && vinyl.title
+    ].map(function(x){ return String(x || '').toLowerCase(); }).join(' ');
+    return words.some(function(word){ return hay.indexOf(word) >= 0; });
+  }
+
+  async function fetchFromSpotify(artist, title) {
+    try {
+      var url = '/api/bpm-spotify?artist=' + encodeURIComponent(artist || '') + '&title=' + encodeURIComponent(title || '');
+      var response = await fetch(url);
+      if (!response.ok) return null;
+      var data = await response.json();
+      if (data.found === false || !data.bpm) return null;
+      return {
+        bpm: data.bpm,
+        key: data.key || null,
+        camelot: data.camelot || null,
+        source: 'spotify',
+        confidence: data.confidence == null ? 'medium' : data.confidence
+      };
+    } catch (e) {
+      console.warn('Spotify lookup failed', e);
+      return null;
+    }
+  }
+  window.fetchFromSpotify = fetchFromSpotify;
+
+  function applySpotifyHalftimeCorrection(meta, vinyl){
+    var result = meta;
+    if (typeof applyHalftimeCorrection === 'function') {
+      result = applyHalftimeCorrection(result, vinyl);
+    }
+    if (result && result.source === 'spotify' && result.bpm && !result.halftimeCorrected && isDnbVinyl(vinyl) && result.bpm < 100) {
+      result = Object.assign({}, result, {
+        bpm: result.bpm * 2,
+        halftimeCorrected: true,
+        originalBpm: result.bpm
+      });
+    }
+    return result;
+  }
+
+  function installMetadataCascade(){
+    if (typeof fetchTrackMetadata !== 'function') return false;
+    if (typeof fetchFromGetSongBPM !== 'function') return false;
+    if (typeof fetchFromAcousticBrainz !== 'function') return false;
+    if (window.__vertaxSpotifyFetchTrackMetadataWrapped) return true;
+
+    fetchTrackMetadata = window.fetchTrackMetadata = async function(track, vinyl){
+      var artist = (vinyl && vinyl.artist) || (track && track.vinylArtist) || '';
+      var title = track && track.title || '';
+      var cacheKey = String(artist || '').toLowerCase().trim() + '|' + String(title || '').toLowerCase().trim();
+
+      if (typeof getCachedMetadata === 'function') {
+        var cached = await getCachedMetadata(cacheKey);
+        if (cached) return cached;
+      }
+
+      var primary = await fetchFromGetSongBPM(artist, title);
+      var spotify = null;
+      var secondary = null;
+
+      if (metadataEmpty(primary)) {
+        spotify = await fetchFromSpotify(artist, title);
+      }
+      if (metadataEmpty(primary) && metadataEmpty(spotify)) {
+        secondary = await fetchFromAcousticBrainz(artist, title);
+      }
+
+      var result = primary || spotify || secondary;
+      if (result && result.bpm) result = applySpotifyHalftimeCorrection(result, vinyl || {});
+      if (result && result.source) {
+        result = Object.assign({}, result, {
+          bpmSource: result.bpmSource || result.source,
+          keySource: result.keySource || result.source
+        });
+      }
+      if (result && typeof setCachedMetadata === 'function') await setCachedMetadata(cacheKey, result);
+      return result;
+    };
+
+    window.__vertaxSpotifyFetchTrackMetadataWrapped = true;
+    return true;
+  }
+
+  function getTrackSource(track){
+    return String(track && (track.bpmSource || track.keySource || '') || '').toLowerCase();
+  }
+
+  function injectSpotifyBadges(){
+    if (typeof state === 'undefined' || !state) return;
+
+    if (state.view === 'tracklist') {
+      var vinyl = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
+      if (vinyl && Array.isArray(vinyl.tracklist)) {
+        document.querySelectorAll('#laiso-app .laiso-track[data-track-id]').forEach(function(row){
+          var track = vinyl.tracklist.find(function(t){ return String(t.id) === String(row.getAttribute('data-track-id')); });
+          if (!track || getTrackSource(track) !== 'spotify' || !track.bpm) return;
+          var box = row.querySelector('.laiso-track-bpm');
+          if (box && !box.querySelector('.vertax-source-spotify')) {
+            box.insertAdjacentHTML('beforeend', '<span class="vertax-source-spotify">SPOTIFY' + (track.halftimeCorrected ? ' <span>1/2x</span>' : '') + '</span>');
+          }
+        });
+      }
+    }
+
+    if (state.view === 'edit-track') {
+      var v = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
+      var t = v && typeof findTrack === 'function' ? findTrack(v, state.ui && state.ui.currentTrackId) : null;
+      if (!t || getTrackSource(t) !== 'spotify') return;
+      var toggle = document.querySelector('#laiso-app .laiso-toggle');
+      if (toggle && !toggle.querySelector('.vertax-source-spotify-toggle')) {
+        toggle.insertAdjacentHTML('beforeend', '<button type="button" class="active vertax-source-spotify-toggle">SPOTIFY</button>');
+      }
+    }
+  }
+
+  function afterRender(){
+    installMetadataCascade();
+    injectSpotifyBadges();
+  }
+
+  function wrapRender(){
+    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxSpotifyBuckRenderWrapped) {
+      var oldBuck = window.laisoBuck.render;
+      window.laisoBuck.render = function(){
+        oldBuck();
+        setTimeout(afterRender, 0);
+      };
+      window.__vertaxSpotifyBuckRenderWrapped = true;
+    }
+    try {
+      if (typeof render === 'function' && !window.__vertaxSpotifyGlobalRenderWrapped) {
+        var oldRender = render;
+        render = function(){
+          oldRender();
+          setTimeout(afterRender, 0);
+        };
+        window.__vertaxSpotifyGlobalRenderWrapped = true;
+      }
+    } catch(_) {}
+    afterRender();
+  }
+
+  var style = document.createElement('style');
+  style.textContent = [
+    '#laiso-app .vertax-source-spotify{display:block;font-family:var(--font-mono);font-size:8px;color:var(--text-tertiary);letter-spacing:.04em;margin-top:1px;line-height:1;text-transform:uppercase;}',
+    '#laiso-app .vertax-source-spotify span{color:var(--warning);}',
+    '#laiso-app .vertax-source-spotify-toggle{background:var(--bg-panel)!important;color:var(--text-primary)!important;border-color:var(--border)!important;}'
+  ].join('\n');
+  document.head.appendChild(style);
+
+  wrapRender();
+  setTimeout(wrapRender, 300);
+  console.log('RUNT-01 PATCH-33 loaded: Spotify BPM/Key source');
+})();
