@@ -336,3 +336,209 @@ body #laiso-app select.laiso-select,
 body #laiso-app [contenteditable="true"] {
   caret-color: var(--runt-accent, #C8FF2E) !important;
 }
+
+/* Final contrast pass for late legacy styles. Keep this file last in index.html. */
+#laiso-app .laiso-wheel-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+#laiso-app .laiso-wheel {
+  display: block;
+  width: min(100%, 300px);
+  max-width: 300px;
+  height: auto;
+}
+
+#laiso-app .laiso-wheel-sec {
+  fill: var(--runt-card) !important;
+  stroke: var(--runt-line) !important;
+  stroke-width: 1 !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-wheel-sec {
+  fill: var(--runt-card-soft) !important;
+  stroke: var(--runt-line) !important;
+}
+
+#laiso-app .laiso-wheel-sec.active {
+  fill: var(--runt-accent) !important;
+  stroke: var(--runt-accent-dark) !important;
+}
+
+body.vertax-theme-light #laiso-app .laiso-wheel-sec.active,
+body.vertax-theme-dark #laiso-app .laiso-wheel-sec.active {
+  fill: var(--runt-accent, #C8FF2E) !important;
+  stroke: var(--runt-accent-dark, #A7E600) !important;
+}
+
+#laiso-app .laiso-wheel-label {
+  fill: var(--runt-text) !important;
+  stroke: none !important;
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: .04em !important;
+  pointer-events: none;
+  user-select: none;
+}
+
+#laiso-app .laiso-wheel-label.active {
+  fill: #101010 !important;
+}
+
+#laiso-app .laiso-tab.active,
+#laiso-app .laiso-toggle button.active,
+#laiso-app .runt26-check,
+#laiso-app .laiso-btn-main,
+#laiso-app .laiso-btn[data-action="go-add"],
+#laiso-app .laiso-btn[data-action="discogs-search"],
+#laiso-app .laiso-btn[data-action="discogs-import-load"],
+#laiso-app .laiso-btn[data-action="discogs-import-replace"],
+#laiso-app .laiso-btn[data-action="backup-download"],
+#laiso-app .laiso-btn[data-action="backup-onboarding-done"],
+#laiso-app .laiso-btn[data-action="set-generate"],
+#laiso-app .laiso-btn[data-action="set-save"],
+#laiso-app .laiso-btn[data-action="set-export"],
+#laiso-app .laiso-btn[data-action="fetching-done"],
+#laiso-app .laiso-btn[data-action="done-add"],
+#laiso-app .laiso-btn[data-action="confirm-tracklist"],
+#laiso-app .laiso-btn[data-action="open-add-track-modal"],
+#laiso-app .laiso-btn[data-action="add-track-from-collection"],
+#laiso-app .laiso-btn[data-action="camelot-filter-apply"],
+#laiso-app .laiso-btn[data-action="runt26-build-selected"] {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+#laiso-app .laiso-tab.active,
+#laiso-app .laiso-toggle button.active,
+#laiso-app .runt26-check {
+  background: var(--runt-accent, #C8FF2E) !important;
+  border-color: var(--runt-accent-dark, #A7E600) !important;
+  box-shadow: none !important;
+}
+
+body.vertax-theme-light #laiso-app .laiso-tab.active,
+body.vertax-theme-light #laiso-app .laiso-toggle button.active,
+body.vertax-theme-dark #laiso-app .laiso-tab.active,
+body.vertax-theme-dark #laiso-app .laiso-toggle button.active {
+  background: var(--runt-accent, #C8FF2E) !important;
+  border-color: var(--runt-accent-dark, #A7E600) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+#laiso-app .laiso-btn-main *,
+#laiso-app .laiso-btn[data-action="go-add"] *,
+#laiso-app .laiso-btn[data-action="discogs-search"] *,
+#laiso-app .laiso-btn[data-action="discogs-import-load"] *,
+#laiso-app .laiso-btn[data-action="discogs-import-replace"] *,
+#laiso-app .laiso-btn[data-action="backup-download"] *,
+#laiso-app .laiso-btn[data-action="backup-onboarding-done"] *,
+#laiso-app .laiso-btn[data-action="set-generate"] *,
+#laiso-app .laiso-btn[data-action="set-save"] *,
+#laiso-app .laiso-btn[data-action="set-export"] *,
+#laiso-app .laiso-btn[data-action="fetching-done"] *,
+#laiso-app .laiso-btn[data-action="done-add"] *,
+#laiso-app .laiso-btn[data-action="confirm-tracklist"] *,
+#laiso-app .laiso-btn[data-action="open-add-track-modal"] *,
+#laiso-app .laiso-btn[data-action="add-track-from-collection"] *,
+#laiso-app .laiso-btn[data-action="camelot-filter-apply"] *,
+#laiso-app .laiso-btn[data-action="runt26-build-selected"] * {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary:hover,
+body.vertax-theme-dark #laiso-app .laiso-x2-btn:hover,
+body.vertax-theme-dark #laiso-app .runt-set-btn:hover,
+body.vertax-theme-dark #laiso-app .runt30-remove-track:hover {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-accent) !important;
+  color: var(--runt-accent) !important;
+  -webkit-text-fill-color: var(--runt-accent) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary,
+body.vertax-theme-dark #laiso-app .laiso-btn.laiso-btn-secondary {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+  text-shadow: none !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary *,
+body.vertax-theme-dark #laiso-app .laiso-btn.laiso-btn-secondary * {
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary:hover,
+body.vertax-theme-dark #laiso-app .laiso-btn.laiso-btn-secondary:hover {
+  background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
+  border-color: var(--runt-accent) !important;
+  color: var(--runt-accent) !important;
+  -webkit-text-fill-color: var(--runt-accent) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn-secondary:hover *,
+body.vertax-theme-dark #laiso-app .laiso-btn.laiso-btn-secondary:hover * {
+  color: var(--runt-accent) !important;
+  -webkit-text-fill-color: var(--runt-accent) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-data-panel,
+body.vertax-theme-dark #laiso-app .runt-fetch-panel,
+body.vertax-theme-dark #laiso-app .laiso-track-row {
+  background: var(--runt-card-soft) !important;
+  border-color: var(--runt-line) !important;
+  color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-data-panel strong,
+body.vertax-theme-dark #laiso-app .laiso-data-panel .laiso-data-hint,
+body.vertax-theme-dark #laiso-app .runt-fetch-panel strong,
+body.vertax-theme-dark #laiso-app .laiso-track-row strong,
+body.vertax-theme-dark #laiso-app .laiso-track-row-title,
+body.vertax-theme-dark #laiso-app .laiso-track-title {
+  color: var(--runt-text) !important;
+  -webkit-text-fill-color: var(--runt-text) !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-data-panel .laiso-meta,
+body.vertax-theme-dark #laiso-app .runt-fetch-panel .laiso-meta,
+body.vertax-theme-dark #laiso-app .laiso-track-row .laiso-meta {
+  color: var(--runt-muted) !important;
+  -webkit-text-fill-color: var(--runt-muted) !important;
+}
+
+body.vertax-theme-light #laiso-app .laiso-data-panel {
+  background: var(--runt-danger-soft) !important;
+  border-color: var(--runt-danger) !important;
+}
+
+#laiso-app .laiso-toast,
+#laiso-app .vertax-backup-toast,
+body > .vertax-backup-toast {
+  background: linear-gradient(180deg, var(--runt-lcd-2, #1A1B18), var(--runt-lcd, #10110F)) !important;
+  border: 1px solid var(--runt-line, #2E332F) !important;
+  color: var(--runt-accent, #C8FF2E) !important;
+  -webkit-text-fill-color: var(--runt-accent, #C8FF2E) !important;
+  text-shadow: none !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.28) !important;
+  border-radius: 999px !important;
+  padding: 12px 18px !important;
+  max-width: min(92vw, 420px) !important;
+  line-height: 1.25 !important;
+  z-index: 3000 !important;
+}
+
+body.vertax-theme-light > .vertax-backup-toast {
+  background: linear-gradient(180deg, #1A1B18, #10110F) !important;
+  border-color: #D2D6D3 !important;
+  color: #C8FF2E !important;
+  -webkit-text-fill-color: #C8FF2E !important;
+}

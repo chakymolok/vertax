@@ -489,8 +489,8 @@ function installVertaxBackupFeature(){
       var current = currentVinylCount();
       var missing = lastAt ? Math.max(0, current - lastCount) : current;
       if (current <= 0 || (lastAt && missing <= 0)) return;
-      var msg = !lastAt ? '💾 Сохраните резервную копию коллекции' :
-        (missing === 1 ? '💾 1 пластинка без резервной копии' : '💾 ' + missing + ' пластинок без резервной копии');
+      var msg = !lastAt ? 'Сохраните резервную копию' :
+        (missing === 1 ? '1 пластинка без резервной копии' : missing + ' пластинок без резервной копии');
       var old = document.querySelector('.vertax-backup-toast');
       if (old) old.remove();
       var el = document.createElement('button');
@@ -498,7 +498,7 @@ function installVertaxBackupFeature(){
       el.className = 'laiso-toast vertax-backup-toast';
       el.setAttribute('data-action', 'goto-backup');
       el.textContent = msg;
-      document.body.appendChild(el);
+      (document.getElementById('laiso-app') || document.body).appendChild(el);
       setTimeout(function(){ if (el && el.parentNode) el.parentNode.removeChild(el); }, 5200);
     }
     function scheduleBackupHint(){
