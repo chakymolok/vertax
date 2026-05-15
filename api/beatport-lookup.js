@@ -21,8 +21,8 @@ function send(res, status, body) {
 function normalize(value) {
   return String(value || '')
     .toLowerCase()
-    .replace(/\([^)]*(original|extended|radio|edit|remix|mix|version|vip|dub|remaster)[^)]*\)/gi, ' ')
-    .replace(/\[[^\]]*(original|extended|radio|edit|remix|mix|version|vip|dub|remaster)[^\]]*\]/gi, ' ')
+    .replace(/\([^)]*(original|extended|radio|edit|remix|mix|version|vip|dub|remaster|feat|ft|with)[^)]*\)/gi, ' ')
+    .replace(/\[[^\]]*(original|extended|radio|edit|remix|mix|version|vip|dub|remaster|feat|ft|with)[^\]]*\]/gi, ' ')
     .replace(/\b(feat|ft|with)\.?\b/gi, ' ')
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9а-яё]+/gi, ' ')
@@ -66,6 +66,13 @@ function similarity(a, b) {
   return Math.max(0, 1 - levenshtein(na, nb) / max);
 }
 
+function titleCore(value) {
+  return normalize(value)
+    .replace(/\b(original|extended|radio|edit|remix|mix|version|vip|dub|remaster)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function names(list) {
   return (Array.isArray(list) ? list : [])
     .map((item) => item && item.name)
@@ -94,11 +101,17 @@ function beatportUrl(track) {
 function scoreTrack(track, wanted) {
   const artistScore = similarity(leadArtist(wanted.artist), names(track.artists));
   const titleBits = [track.name, track.mix_name].filter(Boolean).join(' ');
+  const wantedTitleCore = titleCore(wanted.title);
+  const trackTitleCore = titleCore(track.name);
   const titleScore = Math.max(
     similarity(wanted.title, track.name),
-    similarity(wanted.title, titleBits)
+    similarity(wanted.title, titleBits),
+    similarity(wantedTitleCore, trackTitleCore)
   );
   let score = artistScore * 0.6 + titleScore * 0.4;
+  if (wantedTitleCore && trackTitleCore && (trackTitleCore.indexOf(wantedTitleCore) >= 0 || wantedTitleCore.indexOf(trackTitleCore) >= 0)) {
+    score += 0.06;
+  }
   const wantedLabel = normalize(wanted.label);
   const trackLabel = normalize(getLabel(track));
   if (wantedLabel && trackLabel && (wantedLabel === trackLabel || trackLabel.indexOf(wantedLabel) >= 0 || wantedLabel.indexOf(trackLabel) >= 0)) {
@@ -140,12 +153,48 @@ function candidate(track, confidence) {
   };
 }
 
-async function beatportSearch(token, artist, title, label) {
-  const query = [artist, title, label].filter(Boolean).join(' ');
+function cleanQueryPart(value) {
+  return String(value || '')
+    .replace(/\([^)]*(feat|ft|with)[^)]*\)/gi, ' ')
+    .replace(/\[[^\]]*(feat|ft|with)[^\]]*\]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildQueries(artist, title, label) {
+  const a = cleanQueryPart(artist);
+  const lead = cleanQueryPart(leadArtist(artist));
+  const t = cleanQueryPart(title);
+  const core = titleCore(title);
+  const l = cleanQueryPart(label);
+  const variants = [
+    [a, t, l],
+    [a, t],
+    [lead, t],
+    [t, a],
+    [lead, core],
+    [core, lead],
+    [core, l],
+    [core, a],
+    [t],
+    [core]
+  ];
+  const seen = {};
+  return variants
+    .map((parts) => parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim())
+    .filter((query) => {
+      const key = normalize(query);
+      if (!key || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+}
+
+async function beatportSearchQuery(token, query) {
   const url = new URL(API_BASE + '/catalog/search/');
   url.searchParams.set('q', query);
   url.searchParams.set('type', 'tracks');
-  url.searchParams.set('per_page', '8');
+  url.searchParams.set('per_page', '10');
   url.searchParams.set('page', '1');
 
   const response = await fetch(url.toString(), {
@@ -169,6 +218,23 @@ async function beatportSearch(token, artist, title, label) {
   if (Array.isArray(data.tracks)) return data.tracks;
   if (Array.isArray(data.results)) return data.results;
   return [];
+}
+
+async function beatportSearch(token, artist, title, label) {
+  const queries = buildQueries(artist, title, label);
+  const out = [];
+  const seen = {};
+  for (const query of queries) {
+    const tracks = await beatportSearchQuery(token, query);
+    for (const track of tracks) {
+      const id = track && track.id || beatportUrl(track) || JSON.stringify(track);
+      if (!id || seen[id]) continue;
+      seen[id] = true;
+      out.push(track);
+    }
+    if (out.length >= 12) break;
+  }
+  return out;
 }
 
 module.exports = async function beatportLookup(req, res) {
