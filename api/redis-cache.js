@@ -51,10 +51,15 @@ function makeBeatportCacheIdentity(artist, title, label) {
   return {
     normalized,
     hash,
-    readableKey: readableTrackKey(artist, title, ''),
+    readableKey: readableTrackKey(artist, title, 'original mix'),
     trackKey: 'vertax:beatport:track:' + hash,
     missKey: 'vertax:beatport:miss:' + hash
   };
+}
+
+function stableReadableKey(identity, current) {
+  const value = String(current || '');
+  return value && !/:-$/.test(value) ? value : identity.readableKey;
 }
 
 function beatportPayloadFromFlat(body) {
@@ -79,7 +84,7 @@ function normalizeTrackRecord(identity, body) {
   if (body.beatport || body.curated) {
     return Object.assign({
       matched: true,
-      track_key: body.track_key || identity.readableKey,
+      track_key: stableReadableKey(identity, body.track_key),
       redis_key: identity.trackKey,
       beatport: body.beatport || {},
       curated: body.curated || {},
@@ -110,15 +115,20 @@ function resolveTrackRecord(record) {
   const curated = record.curated || {};
   const beatport = record.beatport || {};
   const resolved = {};
+  const sources = {};
   ['bpm', 'camelot', 'key_name', 'genre', 'sub_genre', 'label', 'release_year', 'mix_name', 'beatport_url', 'confidence'].forEach((field) => {
     const value = pickResolvedField(curated, beatport, field);
-    if (value != null) resolved[field] = value;
+    if (value != null) {
+      resolved[field] = value;
+      sources[field] = curated[field] != null && curated[field] !== '' ? 'curated' : 'beatport';
+    }
   });
   return Object.assign({
     matched: true,
     track_key: record.track_key,
     redis_key: record.redis_key,
     resolved,
+    sources,
     curated: Object.keys(curated).length ? curated : null,
     beatport: Object.keys(beatport).length ? beatport : null,
     _has_curated: Object.keys(curated).length > 0
@@ -202,9 +212,9 @@ async function setBeatportCache(identity, body) {
   try { existing = existingRaw ? normalizeTrackRecord(identity, JSON.parse(existingRaw)) : null; } catch (_) {}
   const record = Object.assign({}, existing || {}, {
     matched: true,
-    track_key: existing && existing.track_key || identity.readableKey,
+    track_key: stableReadableKey(identity, existing && existing.track_key),
     redis_key: identity.trackKey,
-    beatport: beatportPayloadFromFlat(body) || body.beatport || {},
+    beatport: body.beatport || beatportPayloadFromFlat(body) || {},
     curated: existing && existing.curated || {},
     updated_at: new Date().toISOString()
   });

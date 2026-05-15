@@ -248,7 +248,7 @@ async function beatportSearch(token, artist, title, label) {
 
 async function lookupBeatportMetadata(artist, title, label, options) {
   const forceRefresh = Boolean(options && options.forceRefresh);
-  const identity = makeBeatportCacheIdentity(artist, title, label);
+  const identity = makeBeatportCacheIdentity(artist, title, '');
   const memoryCached = lookupCache.get(identity.normalized);
 
   if (!forceRefresh) {

@@ -1001,14 +1001,16 @@ window.startVertaxClockTicker = startVertaxClockTicker;
       if (!data || data.matched === false) return null;
       var key = normalizeBeatportKey(data.key_name, data.camelot);
       if (!data.bpm && !data.camelot && !key) return null;
-      var resolvedSource = data._has_curated ? 'curated' : 'beatport';
+      var sources = data.sources || {};
+      var bpmSource = sources.bpm || (data.curated && data.curated.bpm != null ? 'curated' : 'beatport');
+      var keyResolvedSource = sources.camelot || sources.key_name || (data.curated && (data.curated.camelot != null || data.curated.key_name != null) ? 'curated' : 'beatport');
       return {
         bpm: data.bpm ? Math.round(Number(data.bpm)) : null,
         key: key,
         camelot: data.camelot || (key && typeof KEY_TO_CAMELOT !== 'undefined' ? KEY_TO_CAMELOT[key] : null),
-        source: resolvedSource,
-        bpmSource: data.bpm ? resolvedSource : null,
-        keySource: (data.camelot || key) ? resolvedSource : null,
+        source: data._has_curated ? 'curated' : 'beatport',
+        bpmSource: data.bpm ? bpmSource : null,
+        keySource: (data.camelot || key) ? keyResolvedSource : null,
         confidence: data.confidence >= 0.9 ? 'high' : 'medium',
         beatport: {
           label: data.label || null,
