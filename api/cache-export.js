@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { exportBeatportCache, getCacheStats } = require('./redis-cache');
 
 function setCors(res) {
@@ -23,6 +24,19 @@ module.exports = async function cacheExport(req, res) {
   }
   if (req.method !== 'GET') {
     send(res, 405, { message: 'Method not allowed' });
+    return;
+  }
+
+  const token = String(req.query.token || '');
+  const expected = String(process.env.EXPORT_TOKEN || '');
+  const tokenBuffer = Buffer.from(token);
+  const expectedBuffer = Buffer.from(expected);
+  const isAuthorized = expectedBuffer.length > 0
+    && tokenBuffer.length === expectedBuffer.length
+    && crypto.timingSafeEqual(tokenBuffer, expectedBuffer);
+
+  if (!isAuthorized) {
+    send(res, 401, { error: 'unauthorized' });
     return;
   }
 
