@@ -1,7 +1,13 @@
 const { getAccessToken } = require('./beatport-auth');
+const {
+  makeBeatportCacheIdentity,
+  getBeatportCache,
+  setBeatportCache,
+  deleteBeatportCache,
+  MISS_TTL_SECONDS
+} = require('./redis-cache');
 
 const API_BASE = 'https://api.beatport.com/v4';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const lookupCache = new Map();
 
 function setCors(res) {
@@ -14,7 +20,7 @@ function send(res, status, body) {
   setCors(res);
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', status === 200 ? 's-maxage=3600, stale-while-revalidate=86400' : 'no-store');
+  res.setHeader('Cache-Control', 'no-store');
   res.end(JSON.stringify(body));
 }
 
@@ -136,7 +142,8 @@ function mapTrack(track, confidence) {
     mix_name: track && track.mix_name || null,
     beatport_url: beatportUrl(track),
     confidence: Math.round(confidence * 100) / 100,
-    source: 'beatport'
+    source: 'beatport',
+    cached: false
   };
 }
 
@@ -237,7 +244,55 @@ async function beatportSearch(token, artist, title, label) {
   return out;
 }
 
-module.exports = async function beatportLookup(req, res) {
+async function lookupBeatportMetadata(artist, title, label, options) {
+  const forceRefresh = Boolean(options && options.forceRefresh);
+  const identity = makeBeatportCacheIdentity(artist, title, label);
+  const memoryCached = lookupCache.get(identity.normalized);
+
+  if (!forceRefresh) {
+    const redisCached = await getBeatportCache(identity);
+    if (redisCached && redisCached.body) {
+      return Object.assign({}, redisCached.body, {
+        cached: true,
+        cache: 'redis',
+        cache_type: redisCached.type
+      });
+    }
+
+    if (memoryCached && (!memoryCached.expiresAt || Date.now() < memoryCached.expiresAt)) {
+      return Object.assign({}, memoryCached.body, {
+        cached: true,
+        cache: 'memory',
+        cache_type: memoryCached.type
+      });
+    }
+    if (memoryCached && memoryCached.expiresAt) lookupCache.delete(identity.normalized);
+  }
+
+  if (forceRefresh) {
+    await deleteBeatportCache(identity);
+    lookupCache.delete(identity.normalized);
+  }
+
+  const token = await getAccessToken();
+  const tracks = await beatportSearch(token, artist, title, label);
+  const scored = tracks
+    .map((track) => ({ track, score: scoreTrack(track, { artist, title, label }) }))
+    .sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  const body = best && best.score >= 0.75
+    ? mapTrack(best.track, best.score)
+    : { matched: false, candidates: scored.slice(0, 5).map((item) => candidate(item.track, item.score)), cached: false };
+  const type = body.matched === false ? 'miss' : 'track';
+  const expiresAt = type === 'miss' ? Date.now() + MISS_TTL_SECONDS * 1000 : 0;
+
+  lookupCache.set(identity.normalized, { body, type, expiresAt });
+  await setBeatportCache(identity, body);
+
+  return body;
+}
+
+async function beatportLookup(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -252,32 +307,21 @@ module.exports = async function beatportLookup(req, res) {
   const artist = String(req.query.artist || '').trim();
   const title = String(req.query.title || '').trim();
   const label = String(req.query.label || '').trim();
+  const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
   if (!artist || !title) {
     send(res, 400, { message: 'artist and title are required' });
     return;
   }
 
-  const cacheKey = normalize(artist) + '|' + normalize(title) + '|' + normalize(label);
-  const cached = lookupCache.get(cacheKey);
-  if (cached && Date.now() - cached.createdAt < CACHE_TTL_MS) {
-    send(res, 200, cached.body);
-    return;
-  }
-
   try {
-    const token = await getAccessToken();
-    const tracks = await beatportSearch(token, artist, title, label);
-    const scored = tracks
-      .map((track) => ({ track, score: scoreTrack(track, { artist, title, label }) }))
-      .sort((a, b) => b.score - a.score);
-    const best = scored[0];
-    const body = best && best.score >= 0.75
-      ? mapTrack(best.track, best.score)
-      : { matched: false, candidates: scored.slice(0, 5).map((item) => candidate(item.track, item.score)) };
-    lookupCache.set(cacheKey, { createdAt: Date.now(), body });
+    const body = await lookupBeatportMetadata(artist, title, label, { forceRefresh });
     send(res, 200, body);
   } catch (error) {
     const status = error && error.status === 429 ? 429 : 500;
     send(res, status, { message: error && error.message ? error.message : 'Beatport lookup failed' });
   }
-};
+}
+
+module.exports = beatportLookup;
+module.exports.lookupBeatportMetadata = lookupBeatportMetadata;
+module.exports.normalize = normalize;
