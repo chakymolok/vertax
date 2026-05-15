@@ -4,6 +4,8 @@ const {
   getBeatportCache,
   setBeatportCache,
   deleteBeatportCache,
+  normalizeTrackRecord,
+  resolveTrackRecord,
   MISS_TTL_SECONDS
 } = require('./redis-cache');
 
@@ -97,11 +99,30 @@ function getYear(track) {
   return date ? String(date).slice(0, 4) : null;
 }
 
+function trackId(track) {
+  if (!track) return null;
+  if (track.id) return String(track.id);
+  const url = String(track.url || track.href || track.api_url || '');
+  const match = url.match(/\/tracks\/(\d+)\/?/) || url.match(/\/track\/[^/]+\/(\d+)\/?/);
+  return match ? match[1] : null;
+}
+
+function camelotFromKey(key) {
+  if (!key) return null;
+  if (key.camelot) return String(key.camelot).toUpperCase();
+  const number = key.camelot_number == null ? key.camelotNumber : key.camelot_number;
+  const letter = key.camelot_letter == null ? key.camelotLetter : key.camelot_letter;
+  if (number != null && letter) return String(number) + String(letter).toUpperCase();
+  return null;
+}
+
 function beatportUrl(track) {
   if (!track) return null;
-  if (track.url) return /^https?:\/\//.test(track.url) ? track.url : 'https://www.beatport.com' + track.url;
-  if (track.slug && track.id) return 'https://www.beatport.com/track/' + track.slug + '/' + track.id;
-  return track.id ? 'https://www.beatport.com/track/' + track.id : null;
+  const id = trackId(track);
+  if (track.slug && id) return 'https://www.beatport.com/track/' + track.slug + '/' + id;
+  if (track.url && /^https?:\/\/www\.beatport\.com\//.test(track.url)) return track.url;
+  if (track.url && /^\/track\//.test(track.url)) return 'https://www.beatport.com' + track.url;
+  return id ? 'https://www.beatport.com/track/' + id : null;
 }
 
 function scoreTrack(track, wanted) {
@@ -132,8 +153,12 @@ function mapTrack(track, confidence) {
   const subGenre = track && track.sub_genre || {};
   return {
     matched: true,
+    id: trackId(track),
+    slug: track && track.slug || null,
+    artist: names(track && track.artists),
+    title: track && track.name || null,
     bpm: track && track.bpm ? Math.round(Number(track.bpm)) : null,
-    camelot: key.camelot || null,
+    camelot: camelotFromKey(key),
     key_name: key.name || null,
     genre: genre.name || null,
     sub_genre: subGenre.name || null,
@@ -154,7 +179,7 @@ function candidate(track, confidence) {
     mix_name: track.mix_name || null,
     label: getLabel(track) || null,
     bpm: track.bpm || null,
-    camelot: track.key && track.key.camelot || null,
+    camelot: camelotFromKey(track && track.key),
     beatport_url: beatportUrl(track),
     confidence: Math.round(confidence * 100) / 100
   };
@@ -244,6 +269,28 @@ async function beatportSearch(token, artist, title, label) {
   return out;
 }
 
+async function fetchBeatportTrack(token, id) {
+  const response = await fetch(API_BASE + '/catalog/tracks/' + encodeURIComponent(id) + '/', {
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/json',
+      'User-Agent': 'VERTAX-01'
+    }
+  });
+  if (response.status === 429) {
+    const err = new Error('Beatport rate limited');
+    err.status = 429;
+    throw err;
+  }
+  if (!response.ok) {
+    const err = new Error('Beatport full track failed: HTTP ' + response.status);
+    err.status = response.status;
+    throw err;
+  }
+  const data = await response.json();
+  return data && data.track || data;
+}
+
 async function lookupBeatportMetadata(artist, title, label, options) {
   const forceRefresh = Boolean(options && options.forceRefresh);
   const identity = makeBeatportCacheIdentity(artist, title, label);
@@ -280,9 +327,21 @@ async function lookupBeatportMetadata(artist, title, label, options) {
     .map((track) => ({ track, score: scoreTrack(track, { artist, title, label }) }))
     .sort((a, b) => b.score - a.score);
   const best = scored[0];
-  const body = best && best.score >= 0.75
-    ? mapTrack(best.track, best.score)
-    : { matched: false, candidates: scored.slice(0, 5).map((item) => candidate(item.track, item.score)), cached: false };
+  let body;
+  if (best && best.score >= 0.75) {
+    let fullTrack = best.track;
+    const id = trackId(best.track);
+    if (id) {
+      try {
+        fullTrack = Object.assign({}, best.track, await fetchBeatportTrack(token, id));
+      } catch (error) {
+        console.warn('Beatport full track fetch failed', id, error && error.message ? error.message : error);
+      }
+    }
+    body = resolveTrackRecord(normalizeTrackRecord(identity, mapTrack(fullTrack, best.score)));
+  } else {
+    body = { matched: false, candidates: scored.slice(0, 5).map((item) => candidate(item.track, item.score)), cached: false };
+  }
   const type = body.matched === false ? 'miss' : 'track';
   const expiresAt = type === 'miss' ? Date.now() + MISS_TTL_SECONDS * 1000 : 0;
 
@@ -325,3 +384,6 @@ async function beatportLookup(req, res) {
 module.exports = beatportLookup;
 module.exports.lookupBeatportMetadata = lookupBeatportMetadata;
 module.exports.normalize = normalize;
+module.exports.fetchBeatportTrack = fetchBeatportTrack;
+module.exports.mapTrack = mapTrack;
+module.exports.trackId = trackId;

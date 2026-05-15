@@ -48,6 +48,120 @@ function makeBeatportCacheIdentity(artist, title, label) {
   };
 }
 
+function isHalfTimeGenre(genre, subGenre, bpm) {
+  const n = Number(bpm);
+  if (!Number.isFinite(n)) return false;
+  const g = String(genre || '').trim().toLowerCase();
+  const sg = String(subGenre || '').trim().toLowerCase();
+  if (g === 'drum & bass' && n < 100) return true;
+  if (g === 'dubstep' && n < 90) return true;
+  if ((g === '140 / deep dubstep / grime' || sg === '140 / deep dubstep / grime') && n < 90) return true;
+  return false;
+}
+
+function normalizeBeatportPayload(payload) {
+  if (!payload || payload.matched === false) return payload || { matched: false };
+  const out = Object.assign({}, payload);
+  const bpm = Number(out.bpm);
+  if (Number.isFinite(bpm)) {
+    out.bpm = Math.round(bpm);
+    if (isHalfTimeGenre(out.genre, out.sub_genre, out.bpm)) {
+      out.original_bpm = out.original_bpm || out.bpm;
+      out.bpm = out.bpm * 2;
+      out.halftime_corrected = true;
+    }
+  } else {
+    out.bpm = null;
+  }
+  return out;
+}
+
+function beatportPayloadFromRecord(record) {
+  if (!record || record.matched === false) return null;
+  if (record.beatport) return normalizeBeatportPayload(record.beatport);
+  return normalizeBeatportPayload({
+    bpm: record.bpm == null ? null : record.bpm,
+    camelot: record.camelot || null,
+    key_name: record.key_name || null,
+    genre: record.genre || null,
+    sub_genre: record.sub_genre || null,
+    label: record.label || null,
+    release_year: record.release_year || null,
+    mix_name: record.mix_name || null,
+    beatport_url: record.beatport_url || null,
+    confidence: record.confidence == null ? null : record.confidence,
+    source: 'beatport',
+    id: record.id || null,
+    slug: record.slug || null,
+    artist: record.artist || null,
+    title: record.title || null
+  });
+}
+
+function normalizeTrackRecord(identity, body) {
+  if (!body || body.matched === false) return body || { matched: false };
+  const now = new Date().toISOString();
+  if (body.beatport || body.curated) {
+    const beatport = normalizeBeatportPayload(body.beatport || {});
+    return Object.assign({}, body, {
+      matched: true,
+      track_key: body.track_key || identity.normalized,
+      redis_key: body.redis_key || identity.trackKey,
+      beatport,
+      curated: body.curated || {},
+      updated_at: body.updated_at || now
+    });
+  }
+  return {
+    matched: true,
+    track_key: body.track_key || identity.normalized,
+    redis_key: identity.trackKey,
+    beatport: beatportPayloadFromRecord(body) || {},
+    curated: {},
+    created_at: body.created_at || now,
+    updated_at: now
+  };
+}
+
+function resolvedField(curated, beatport, field) {
+  return curated && curated[field] != null && curated[field] !== ''
+    ? curated[field]
+    : beatport && beatport[field] != null && beatport[field] !== ''
+      ? beatport[field]
+      : null;
+}
+
+function resolveTrackRecord(record) {
+  if (!record || record.matched === false) return record || { matched: false };
+  const curated = record.curated || {};
+  const beatport = normalizeBeatportPayload(record.beatport || {});
+  const resolved = {};
+  const sources = {};
+  [
+    'bpm', 'camelot', 'key_name', 'genre', 'sub_genre', 'label',
+    'release_year', 'mix_name', 'beatport_url', 'confidence',
+    'id', 'slug', 'artist', 'title', 'original_bpm', 'halftime_corrected'
+  ].forEach((field) => {
+    const value = resolvedField(curated, beatport, field);
+    if (value != null) {
+      resolved[field] = value;
+      sources[field] = curated[field] != null && curated[field] !== '' ? 'curated' : 'beatport';
+    }
+  });
+  return Object.assign({
+    matched: true,
+    track_key: record.track_key,
+    redis_key: record.redis_key,
+    resolved,
+    sources,
+    curated: Object.keys(curated).length ? curated : null,
+    beatport: Object.keys(beatport).length ? beatport : null,
+    _has_curated: Object.keys(curated).length > 0
+  }, resolved, {
+    source: Object.keys(curated).length ? 'curated' : 'beatport'
+  });
+}
+
 async function redisCommand(command, args) {
   if (!hasRedisEnv()) return null;
 
@@ -87,9 +201,14 @@ async function getBeatportCache(identity) {
   const trackRaw = await safeRedis('GET', [identity.trackKey], null);
   if (trackRaw) {
     try {
+      const record = normalizeTrackRecord(identity, JSON.parse(trackRaw));
+      if (record && record.beatport) {
+        await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
+      }
       return {
         type: 'track',
-        body: JSON.parse(trackRaw)
+        body: resolveTrackRecord(record),
+        record
       };
     } catch (_) {}
   }
@@ -113,7 +232,19 @@ async function setBeatportCache(identity, body) {
     return;
   }
 
-  await safeRedis('SET', [identity.trackKey, JSON.stringify(body)], null);
+  const existingRaw = await safeRedis('GET', [identity.trackKey], null);
+  let existing = null;
+  try { existing = existingRaw ? normalizeTrackRecord(identity, JSON.parse(existingRaw)) : null; } catch (_) {}
+  const record = Object.assign({}, existing || {}, {
+    matched: true,
+    track_key: existing && existing.track_key || identity.normalized,
+    redis_key: identity.trackKey,
+    beatport: beatportPayloadFromRecord(body) || {},
+    curated: existing && existing.curated || {},
+    updated_at: new Date().toISOString()
+  });
+  if (!record.created_at) record.created_at = record.updated_at;
+  await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
   await safeRedis('SADD', [TRACK_SET_KEY, identity.trackKey], null);
 }
 
@@ -164,7 +295,14 @@ async function exportBeatportCache(limit) {
 module.exports = {
   MISS_TTL_SECONDS,
   getRedisUrlSource,
+  redisCommand,
+  safeRedis,
+  normalizeCachePart,
   makeBeatportCacheIdentity,
+  normalizeBeatportPayload,
+  normalizeTrackRecord,
+  resolveTrackRecord,
+  beatportPayloadFromRecord,
   getBeatportCache,
   setBeatportCache,
   deleteBeatportCache,
