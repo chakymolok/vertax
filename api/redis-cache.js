@@ -3,8 +3,22 @@ const crypto = require('crypto');
 const TRACK_SET_KEY = 'vertax:beatport:tracks';
 const MISS_TTL_SECONDS = 7 * 24 * 60 * 60;
 
+function getRedisUrl() {
+  return process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '';
+}
+
+function getRedisToken() {
+  return process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
+}
+
+function getRedisUrlSource() {
+  if (process.env.UPSTASH_REDIS_REST_URL) return 'upstash';
+  if (process.env.KV_REST_API_URL) return 'vercel_kv';
+  return 'none';
+}
+
 function hasRedisEnv() {
-  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  return Boolean(getRedisUrl() && getRedisToken());
 }
 
 function normalizeCachePart(value) {
@@ -37,11 +51,11 @@ function makeBeatportCacheIdentity(artist, title, label) {
 async function redisCommand(command, args) {
   if (!hasRedisEnv()) return null;
 
-  const base = process.env.UPSTASH_REDIS_REST_URL.replace(/\/+$/, '');
+  const base = getRedisUrl().replace(/\/+$/, '');
   const response = await fetch(base, {
     method: 'POST',
     headers: {
-      Authorization: 'Bearer ' + process.env.UPSTASH_REDIS_REST_TOKEN,
+      Authorization: 'Bearer ' + getRedisToken(),
       'Content-Type': 'application/json'
     },
     body: JSON.stringify([command].concat(args || []))
@@ -122,10 +136,13 @@ async function countKeysByScan(pattern) {
 }
 
 async function getCacheStats() {
+  const ping = await safeRedis('PING', [], null);
   const totalTracks = Number(await safeRedis('SCARD', [TRACK_SET_KEY], 0)) || 0;
   const totalMisses = await countKeysByScan('vertax:beatport:miss:*');
   return {
     redis_enabled: hasRedisEnv(),
+    redis_url_source: getRedisUrlSource(),
+    redis_ping_ok: ping === 'PONG',
     total_tracks: totalTracks,
     total_misses: totalMisses
   };
@@ -146,6 +163,7 @@ async function exportBeatportCache(limit) {
 
 module.exports = {
   MISS_TTL_SECONDS,
+  getRedisUrlSource,
   makeBeatportCacheIdentity,
   getBeatportCache,
   setBeatportCache,
