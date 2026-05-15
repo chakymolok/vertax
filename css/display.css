@@ -958,3 +958,27 @@ body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover * {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
 }
+
+/* Final contrast guardrails for service links and destructive actions. */
+body.vertax-theme-light #laiso-app .laiso-footer a[href*="getsong"],
+body.vertax-theme-light #laiso-app a[href*="getsong"] {
+  color: #4F7200 !important;
+}
+
+body.vertax-theme-light #laiso-app .laiso-footer a[href*="acousticbrainz"],
+body.vertax-theme-light #laiso-app a[href*="acousticbrainz"] {
+  color: #1D6EA8 !important;
+}
+
+body #laiso-app .laiso-btn-warning,
+body #laiso-app button.laiso-btn-warning,
+body #laiso-app .laiso-btn.laiso-btn-warning,
+body #laiso-app .laiso-btn-warning:hover,
+body #laiso-app button.laiso-btn-warning:hover,
+body #laiso-app .laiso-btn.laiso-btn-warning:hover {
+  background: var(--runt-danger, #E66A2C) !important;
+  border-color: var(--runt-danger, #E66A2C) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}

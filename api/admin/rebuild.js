@@ -1,3 +1,4 @@
+const { getAccessToken } = require('../beatport-auth');
 const {
   scanKeys,
   readTrack,
@@ -5,7 +6,10 @@ const {
   setBeatportCache
 } = require('../redis-cache');
 const {
-  enrichTrackFromBeatport
+  enrichTrackFromBeatport,
+  fetchBeatportTrack,
+  mapTrack,
+  trackId
 } = require('../beatport-lookup');
 
 const TRACK_KEY_PATTERN = 'vertax:beatport:track:*';
@@ -50,6 +54,7 @@ function trackInput(record) {
     title: String(flat.title_original || flat.title || '').trim(),
     mix: String(flat.mix_name || '').trim(),
     label: String(flat.label || '').trim(),
+    beatportTrackId: String(flat.beatport_track_id || flat.id || trackId({ url: flat.beatport_url }) || '').trim(),
     confidence: Number(flat.confidence || 0) || 0
   };
 }
@@ -96,9 +101,18 @@ module.exports = async function adminRebuild(req, res) {
         const parsed = JSON.parse(raw);
         const identity = identityForKey(key, parsed);
         const input = trackInput(parsed);
-        if (!input.artist || !input.title) throw new Error('missing artist_original/title_original');
+        let mapped;
+        if (input.artist && input.title) {
+          mapped = await enrichTrackFromBeatport(input.artist, input.title, input.mix, input.label);
+        } else if (input.beatportTrackId) {
+          const token = await getAccessToken();
+          const fullTrack = await fetchBeatportTrack(token, input.beatportTrackId);
+          mapped = mapTrack(fullTrack, input.confidence || 1, {});
+          console.log('[beatport-rebuild] fallback by beatport id', position + '/' + total, key, input.beatportTrackId);
+        } else {
+          throw new Error('missing artist_original/title_original and beatport_track_id');
+        }
 
-        const mapped = await enrichTrackFromBeatport(input.artist, input.title, input.mix, input.label);
         if (!mapped || mapped.matched === false) {
           skippedNoMatch += 1;
           const message = 'new lookup found no match; old record kept';
