@@ -956,3 +956,202 @@ window.startVertaxClockTicker = startVertaxClockTicker;
   setTimeout(wrapRender, 300);
   console.log('RUNT-01 PATCH-33 loaded: Deezer BPM source');
 })();
+
+/* RUNT-01 PATCH 34 — Beatport first BPM/Key source via Vercel proxy */
+(function installVertaxBeatportBpmPatch(){
+  if (window.__vertaxBeatportBpmPatchInstalled) return;
+  window.__vertaxBeatportBpmPatchInstalled = true;
+
+  function hasMeta(meta){
+    return !!(meta && (meta.bpm || meta.key || meta.camelot));
+  }
+
+  function hasFullMeta(meta){
+    return !!(meta && meta.bpm && (meta.key || meta.camelot));
+  }
+
+  function sourceName(meta){
+    return String(meta && (meta.source || meta.bpmSource || meta.keySource) || '').toLowerCase();
+  }
+
+  function normalizeBeatportKey(keyName, camelot){
+    if (camelot && typeof CAMELOT_TO_KEY !== 'undefined' && CAMELOT_TO_KEY[camelot]) return CAMELOT_TO_KEY[camelot];
+    if (!keyName) return null;
+    var text = String(keyName).trim()
+      .replace(/\bmin\b/i, 'minor')
+      .replace(/\bmaj\b/i, 'major');
+    if (typeof normalizeKeyName === 'function') return normalizeKeyName(text);
+    return text || null;
+  }
+
+  async function fetchFromBeatport(artist, title, label){
+    try {
+      if (!artist || !title) return null;
+      var url = '/api/beatport-lookup?artist=' + encodeURIComponent(artist) + '&title=' + encodeURIComponent(title);
+      if (label) url += '&label=' + encodeURIComponent(label);
+      window.__vertaxBeatportLastLookup = { artist: artist || '', title: title || '', status: 'request' };
+      var response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) {
+        window.__vertaxBeatportLastLookup.status = response.status === 429 ? 'rate-limit' : 'error';
+        window.__vertaxBeatportLastLookup.httpStatus = response.status;
+        return null;
+      }
+      var data = await response.json();
+      window.__vertaxBeatportLastLookup = Object.assign({ artist: artist || '', title: title || '', status: data && data.matched ? 'matched' : 'not-found' }, data || {});
+      if (!data || data.matched === false) return null;
+      var key = normalizeBeatportKey(data.key_name, data.camelot);
+      if (!data.bpm && !data.camelot && !key) return null;
+      return {
+        bpm: data.bpm ? Math.round(Number(data.bpm)) : null,
+        key: key,
+        camelot: data.camelot || (key && typeof KEY_TO_CAMELOT !== 'undefined' ? KEY_TO_CAMELOT[key] : null),
+        source: 'beatport',
+        bpmSource: data.bpm ? 'beatport' : null,
+        keySource: (data.camelot || key) ? 'beatport' : null,
+        confidence: data.confidence >= 0.9 ? 'high' : 'medium',
+        beatport: {
+          label: data.label || null,
+          genre: data.genre || null,
+          subGenre: data.sub_genre || null,
+          releaseYear: data.release_year || null,
+          mixName: data.mix_name || null,
+          url: data.beatport_url || null,
+          confidence: data.confidence || null
+        }
+      };
+    } catch (e) {
+      window.__vertaxBeatportLastLookup = {
+        artist: artist || '',
+        title: title || '',
+        status: 'error',
+        message: e && e.message ? e.message : String(e)
+      };
+      console.warn('Beatport lookup failed', e);
+      return null;
+    }
+  }
+  window.fetchFromBeatport = fetchFromBeatport;
+
+  function applyBeatportHalftime(meta, vinyl){
+    var result = meta;
+    if (typeof applyHalftimeCorrection === 'function') result = applyHalftimeCorrection(result, vinyl);
+    if (!result || sourceName(result) !== 'beatport' || !result.bpm || result.halftimeCorrected) return result;
+    var hay = [
+      vinyl && vinyl.format,
+      vinyl && vinyl.genre,
+      vinyl && vinyl.style,
+      vinyl && vinyl.label,
+      vinyl && vinyl.title,
+      result.beatport && result.beatport.genre,
+      result.beatport && result.beatport.subGenre
+    ].map(function(x){ return String(x || '').toLowerCase(); }).join(' ');
+    if (/(drum\s*(?:&|and)?\s*bass|dnb|d&b|jungle|neurofunk|liquid funk|techstep)/i.test(hay) && result.bpm < 100) {
+      result = Object.assign({}, result, {
+        bpm: result.bpm * 2,
+        halftimeCorrected: true,
+        originalBpm: result.bpm
+      });
+    }
+    return result;
+  }
+
+  function installBeatportFirstCascade(){
+    if (typeof fetchTrackMetadata !== 'function') return false;
+    if (window.__vertaxBeatportFetchTrackMetadataWrapped) return true;
+    var oldFetchTrackMetadata = fetchTrackMetadata;
+
+    fetchTrackMetadata = window.fetchTrackMetadata = async function(track, vinyl){
+      track = track || {};
+      vinyl = vinyl || {};
+      var artist = vinyl.artist || track.vinylArtist || '';
+      var title = track.title || '';
+      var label = vinyl.label || track.vinylLabel || '';
+      var cacheKey = String(artist || '').toLowerCase().trim() + '|' + String(title || '').toLowerCase().trim();
+
+      var beatport = await fetchFromBeatport(artist, title, label);
+      if (hasMeta(beatport)) {
+        beatport = applyBeatportHalftime(beatport, vinyl);
+        if (typeof setCachedMetadata === 'function') {
+          try { await setCachedMetadata(cacheKey, beatport); } catch(_) {}
+        }
+        return beatport;
+      }
+
+      var fallback = await oldFetchTrackMetadata(track, vinyl);
+      if (hasFullMeta(fallback)) return fallback;
+      return fallback || null;
+    };
+
+    window.__vertaxBeatportFetchTrackMetadataWrapped = true;
+    return true;
+  }
+
+  function trackSource(track){
+    return String(track && (track.bpmSource || track.keySource || track.source || '') || '').toLowerCase();
+  }
+
+  function injectBeatportBadges(){
+    if (typeof state === 'undefined' || !state) return;
+    if (state.view === 'tracklist') {
+      var vinyl = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
+      if (vinyl && Array.isArray(vinyl.tracklist)) {
+        document.querySelectorAll('#laiso-app .laiso-track[data-track-id]').forEach(function(row){
+          var tr = vinyl.tracklist.find(function(t){ return String(t.id) === String(row.getAttribute('data-track-id')); });
+          if (!tr || trackSource(tr) !== 'beatport' || !tr.bpm) return;
+          var box = row.querySelector('.laiso-track-bpm');
+          if (box && !box.querySelector('.vertax-source-beatport')) {
+            box.insertAdjacentHTML('beforeend', '<span class="vertax-source-beatport">BEATPORT' + (tr.halftimeCorrected ? ' <span>1/2x</span>' : '') + '</span>');
+          }
+        });
+      }
+    }
+    if (state.view === 'edit-track') {
+      var v = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
+      var t = v && typeof findTrack === 'function' ? findTrack(v, state.ui && state.ui.currentTrackId) : null;
+      if (!t || trackSource(t) !== 'beatport') return;
+      var toggle = document.querySelector('#laiso-app .laiso-toggle');
+      if (toggle && !toggle.querySelector('.vertax-source-beatport-toggle')) {
+        toggle.insertAdjacentHTML('afterbegin', '<button type="button" class="active vertax-source-beatport-toggle">BEATPORT</button>');
+      }
+    }
+  }
+
+  function afterRender(){
+    installBeatportFirstCascade();
+    injectBeatportBadges();
+  }
+
+  function wrapRender(){
+    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxBeatportBuckRenderWrapped) {
+      var oldBuck = window.laisoBuck.render;
+      window.laisoBuck.render = function(){
+        oldBuck();
+        setTimeout(afterRender, 0);
+      };
+      window.__vertaxBeatportBuckRenderWrapped = true;
+    }
+    try {
+      if (typeof render === 'function' && !window.__vertaxBeatportGlobalRenderWrapped) {
+        var oldRender = render;
+        render = function(){
+          oldRender();
+          setTimeout(afterRender, 0);
+        };
+        window.__vertaxBeatportGlobalRenderWrapped = true;
+      }
+    } catch(_) {}
+    afterRender();
+  }
+
+  var style = document.createElement('style');
+  style.textContent = [
+    '#laiso-app .vertax-source-beatport{display:block;font-family:var(--font-mono);font-size:8px;color:var(--text-tertiary);letter-spacing:.04em;margin-top:1px;line-height:1;text-transform:uppercase;}',
+    '#laiso-app .vertax-source-beatport span{color:var(--warning);}',
+    '#laiso-app .vertax-source-beatport-toggle{background:var(--runt-accent,#C8FF2E)!important;color:#101010!important;border-color:var(--runt-accent-dark,#A7E600)!important;-webkit-text-fill-color:#101010!important;}'
+  ].join('\n');
+  document.head.appendChild(style);
+
+  wrapRender();
+  setTimeout(wrapRender, 500);
+  console.log('RUNT-01 PATCH-34 loaded: Beatport first BPM/Key source');
+})();
