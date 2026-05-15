@@ -187,3 +187,97 @@ Batch starting at offset 20...
   ]
 }
 Batch starting at offset 40...
+{
+  "total": 390,
+  "offset": 40,
+  "limit": 20,
+  "processed_in_batch": 20,
+  "updated": 0,
+  "failed": 20,
+  "skipped_no_match": 0,
+  "next_offset": 60,
+  "has_more": true,
+  "errors": [
+    {
+      "track_key": "vertax:beatport:track:1a1b264035f3da57ef8b46541022713140baf6eb",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1b1996ed8016ffb7575de11f5c228d6cdb387e4b",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1b2105df9dd359a8a309057a8376441ec333b0f9",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1b75573576a67f23ff1b1187e3dca7cf4427a63c",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1b7c2b11d1486cec4b914271993ae6af562e2766",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1d801343186b6a2d297958ab14eef3c2c00fd35f",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1e3998dd955f87fba9edc7040a52b8aac9567951",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1e3a4aa5cc90fc0592fa45b1b4e3bfde48597ab1",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1ebe3846c6d98a17506f2917af0450d4255bb41f",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:1fefa1efabf5cfaa1c2ba4672166c8e271190cd5",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:2124cd4ba52f6875bf3e4f1a237e46a9f7a4fc68",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:21d4eec93170be55fd655d9aca7a4a1ace6dbee8",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:22855c707c182c04d24d961d8f5b6f90421512f7",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:22f05d890954fdba142646db1ff0ddc1fe201b23",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:231d800f8e70fd9262bf761e6eff78ec54601c64",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:23256ba776f52092f7fbf753299d0b748719e339",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:241e26b9a0854eb95772326e654b090db80a09b8",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:2450c378be5a9918453da71a79cb8743f3ae4384",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:24ca138ed73944ed3dd68cd8c842b8b3538b1b95",
+      "error": "missing artist_original/title_original"
+    },
+    {
+      "track_key": "vertax:beatport:track:257833c563f992297d1d370b3e3ab523a12fdd09",
+      "error": "missing artist_original/title_original"
+    }
+  ]
+}
+Batch starting at offset 60...
