@@ -466,7 +466,9 @@ body.vertax-theme-dark #laiso-app .laiso-wheel-sec.active {
 #laiso-app .laiso-btn[data-action="open-add-track-modal"],
 #laiso-app .laiso-btn[data-action="add-track-from-collection"],
 #laiso-app .laiso-btn[data-action="camelot-filter-apply"],
-#laiso-app .laiso-btn[data-action="runt26-build-selected"] {
+#laiso-app .laiso-btn[data-action="runt25-open-diag"],
+#laiso-app .laiso-btn[data-action="runt26-build-selected"],
+#laiso-app .laiso-btn[data-action="runt30-build-selected"] {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
   text-shadow: none !important;
@@ -506,7 +508,9 @@ body.vertax-theme-dark #laiso-app .laiso-toggle button.active {
 #laiso-app .laiso-btn[data-action="open-add-track-modal"] *,
 #laiso-app .laiso-btn[data-action="add-track-from-collection"] *,
 #laiso-app .laiso-btn[data-action="camelot-filter-apply"] *,
-#laiso-app .laiso-btn[data-action="runt26-build-selected"] * {
+#laiso-app .laiso-btn[data-action="runt25-open-diag"] *,
+#laiso-app .laiso-btn[data-action="runt26-build-selected"] *,
+#laiso-app .laiso-btn[data-action="runt30-build-selected"] * {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
 }
@@ -770,8 +774,12 @@ body #laiso-app .laiso-btn[data-action="backup-onboarding-done"],
 body #laiso-app .laiso-btn[data-action="backup-onboarding-done"]:hover,
 body #laiso-app .laiso-btn[data-action="set-save"],
 body #laiso-app .laiso-btn[data-action="set-save"]:hover,
+body #laiso-app .laiso-btn[data-action="runt25-open-diag"],
+body #laiso-app .laiso-btn[data-action="runt25-open-diag"]:hover,
 body #laiso-app .laiso-btn[data-action="runt26-build-selected"],
-body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover {
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover,
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"],
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"]:hover {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
   text-shadow: none !important;
@@ -791,8 +799,12 @@ body #laiso-app .laiso-btn[data-action="backup-onboarding-done"] *,
 body #laiso-app .laiso-btn[data-action="backup-onboarding-done"]:hover *,
 body #laiso-app .laiso-btn[data-action="set-save"] *,
 body #laiso-app .laiso-btn[data-action="set-save"]:hover *,
+body #laiso-app .laiso-btn[data-action="runt25-open-diag"] *,
+body #laiso-app .laiso-btn[data-action="runt25-open-diag"]:hover *,
 body #laiso-app .laiso-btn[data-action="runt26-build-selected"] *,
-body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover * {
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover *,
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"] *,
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"]:hover * {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
 }
@@ -923,6 +935,26 @@ body #laiso-app .laiso-btn[data-action="go-add"] *,
 body #laiso-app .laiso-btn[data-action="go-add"]:hover *,
 body #laiso-app .laiso-btn[data-action="collection-add-vinyl"] *,
 body #laiso-app .laiso-btn[data-action="collection-add-vinyl"]:hover * {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+/* Final source-picker contrast after PATCH-30 rewrites the action name. */
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"],
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"]:hover,
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"],
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover {
+  background: linear-gradient(180deg, var(--runt-accent, #C8FF2E), var(--runt-accent-dark, #A7E600)) !important;
+  border-color: var(--runt-accent-dark, #A7E600) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"] *,
+body #laiso-app .laiso-btn[data-action="runt30-build-selected"]:hover *,
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"] *,
+body #laiso-app .laiso-btn[data-action="runt26-build-selected"]:hover * {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
 }
