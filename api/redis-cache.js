@@ -33,6 +33,14 @@ function normalizeCachePart(value) {
     .trim();
 }
 
+function readableTrackKey(artist, title, mix) {
+  return [
+    normalizeCachePart(artist),
+    normalizeCachePart(title),
+    normalizeCachePart(mix || '')
+  ].map((part) => part || '-').join(':');
+}
+
 function makeBeatportCacheIdentity(artist, title, label) {
   const normalized = [
     normalizeCachePart(artist),
@@ -43,9 +51,80 @@ function makeBeatportCacheIdentity(artist, title, label) {
   return {
     normalized,
     hash,
+    readableKey: readableTrackKey(artist, title, ''),
     trackKey: 'vertax:beatport:track:' + hash,
     missKey: 'vertax:beatport:miss:' + hash
   };
+}
+
+function beatportPayloadFromFlat(body) {
+  if (!body || body.matched === false) return null;
+  return {
+    bpm: body.bpm == null ? null : body.bpm,
+    camelot: body.camelot || null,
+    key_name: body.key_name || null,
+    genre: body.genre || null,
+    sub_genre: body.sub_genre || null,
+    label: body.label || null,
+    release_year: body.release_year || null,
+    mix_name: body.mix_name || null,
+    beatport_url: body.beatport_url || null,
+    confidence: body.confidence == null ? null : body.confidence,
+    source: 'beatport'
+  };
+}
+
+function normalizeTrackRecord(identity, body) {
+  if (!body || body.matched === false) return body || { matched: false };
+  if (body.beatport || body.curated) {
+    return Object.assign({
+      matched: true,
+      track_key: body.track_key || identity.readableKey,
+      redis_key: identity.trackKey,
+      beatport: body.beatport || {},
+      curated: body.curated || {},
+      updated_at: body.updated_at || new Date().toISOString()
+    }, body);
+  }
+  return {
+    matched: true,
+    track_key: identity.readableKey,
+    redis_key: identity.trackKey,
+    beatport: beatportPayloadFromFlat(body) || {},
+    curated: {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
+
+function pickResolvedField(curated, beatport, field) {
+  return curated && curated[field] != null && curated[field] !== ''
+    ? curated[field]
+    : beatport && beatport[field] != null && beatport[field] !== ''
+      ? beatport[field]
+      : null;
+}
+
+function resolveTrackRecord(record) {
+  if (!record || record.matched === false) return record || { matched: false };
+  const curated = record.curated || {};
+  const beatport = record.beatport || {};
+  const resolved = {};
+  ['bpm', 'camelot', 'key_name', 'genre', 'sub_genre', 'label', 'release_year', 'mix_name', 'beatport_url', 'confidence'].forEach((field) => {
+    const value = pickResolvedField(curated, beatport, field);
+    if (value != null) resolved[field] = value;
+  });
+  return Object.assign({
+    matched: true,
+    track_key: record.track_key,
+    redis_key: record.redis_key,
+    resolved,
+    curated: Object.keys(curated).length ? curated : null,
+    beatport: Object.keys(beatport).length ? beatport : null,
+    _has_curated: Object.keys(curated).length > 0
+  }, resolved, {
+    source: Object.keys(curated).length ? 'curated' : 'beatport'
+  });
 }
 
 async function redisCommand(command, args) {
@@ -87,9 +166,14 @@ async function getBeatportCache(identity) {
   const trackRaw = await safeRedis('GET', [identity.trackKey], null);
   if (trackRaw) {
     try {
+      const record = normalizeTrackRecord(identity, JSON.parse(trackRaw));
+      if (record && record.beatport) {
+        await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
+      }
       return {
         type: 'track',
-        body: JSON.parse(trackRaw)
+        body: resolveTrackRecord(record),
+        record
       };
     } catch (_) {}
   }
@@ -113,7 +197,19 @@ async function setBeatportCache(identity, body) {
     return;
   }
 
-  await safeRedis('SET', [identity.trackKey, JSON.stringify(body)], null);
+  const existingRaw = await safeRedis('GET', [identity.trackKey], null);
+  let existing = null;
+  try { existing = existingRaw ? normalizeTrackRecord(identity, JSON.parse(existingRaw)) : null; } catch (_) {}
+  const record = Object.assign({}, existing || {}, {
+    matched: true,
+    track_key: existing && existing.track_key || identity.readableKey,
+    redis_key: identity.trackKey,
+    beatport: beatportPayloadFromFlat(body) || body.beatport || {},
+    curated: existing && existing.curated || {},
+    updated_at: new Date().toISOString()
+  });
+  if (!record.created_at) record.created_at = new Date().toISOString();
+  await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
   await safeRedis('SADD', [TRACK_SET_KEY, identity.trackKey], null);
 }
 
@@ -139,12 +235,14 @@ async function getCacheStats() {
   const ping = await safeRedis('PING', [], null);
   const totalTracks = Number(await safeRedis('SCARD', [TRACK_SET_KEY], 0)) || 0;
   const totalMisses = await countKeysByScan('vertax:beatport:miss:*');
+  const totalProposals = Number(await safeRedis('SCARD', ['vertax:proposals'], 0)) || 0;
   return {
     redis_enabled: hasRedisEnv(),
     redis_url_source: getRedisUrlSource(),
     redis_ping_ok: ping === 'PONG',
     total_tracks: totalTracks,
-    total_misses: totalMisses
+    total_misses: totalMisses,
+    total_proposals: totalProposals
   };
 }
 
@@ -164,7 +262,14 @@ async function exportBeatportCache(limit) {
 module.exports = {
   MISS_TTL_SECONDS,
   getRedisUrlSource,
+  redisCommand,
+  safeRedis,
+  normalizeCachePart,
+  readableTrackKey,
   makeBeatportCacheIdentity,
+  normalizeTrackRecord,
+  resolveTrackRecord,
+  beatportPayloadFromFlat,
   getBeatportCache,
   setBeatportCache,
   deleteBeatportCache,

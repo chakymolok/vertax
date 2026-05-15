@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VERTAX Admin</title>
+  <style>
+    :root{--bg:#0b0d0c;--card:#171918;--line:#2e332f;--text:#f2f4f2;--muted:#a3a8a3;--accent:#c8ff2e;--danger:#ff7a3d}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,sans-serif}
+    main{width:min(1120px,calc(100vw - 32px));margin:32px auto 80px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+    h1{font-size:28px;letter-spacing:.08em;margin:0}
+    button,input{font:inherit}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+    input{background:#111312;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+    button{border:1px solid var(--line);background:#1d201e;color:var(--text);border-radius:10px;padding:10px 13px;cursor:pointer;font-weight:700;letter-spacing:.04em}
+    button.primary{background:var(--accent);border-color:var(--accent);color:#101010}
+    button.danger{border-color:rgba(255,122,61,.7);color:var(--danger)}
+    .proposal{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:16px;margin:12px 0}
+    .proposal.is-target{border-color:var(--accent);box-shadow:0 0 0 1px rgba(200,255,46,.35)}
+    .top{display:flex;justify-content:space-between;gap:14px;margin-bottom:12px}
+    .title{font-size:18px;font-weight:800}
+    .meta{color:var(--muted);font-size:13px;margin-top:3px}
+    .new{display:inline-block;background:rgba(200,255,46,.16);color:var(--accent);border:1px solid rgba(200,255,46,.35);border-radius:999px;padding:4px 8px;font-size:11px;letter-spacing:.08em}
+    .field{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+    .field-name{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;margin-bottom:8px}
+    .cand{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#111312}
+    .value{font-size:20px;font-weight:850}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    pre{white-space:pre-wrap;color:var(--muted)}
+    .empty{color:var(--muted);padding:24px;border:1px dashed var(--line);border-radius:16px}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>VERTAX ADMIN</h1>
+        <div class="meta">proposals / curated metadata</div>
+      </div>
+      <button id="reset-token">Сменить токен</button>
+    </header>
+    <div class="bar">
+      <input id="search" placeholder="Поиск по треку">
+      <button id="toggle-new">Только новые: выкл</button>
+      <button class="primary" id="reload">Обновить</button>
+    </div>
+    <section id="out" class="empty">Загрузка...</section>
+  </main>
+  <script>
+    var token = sessionStorage.getItem('vertax_admin_token') || '';
+    var onlyNew = false;
+    var targetTrack = new URLSearchParams(location.search).get('track') || '';
+    function ensureToken(){
+      if (!token) token = window.prompt('ADMIN_TOKEN') || '';
+      if (token) sessionStorage.setItem('vertax_admin_token', token);
+      return token;
+    }
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    async function api(path, opts){
+      ensureToken();
+      opts = opts || {};
+      opts.headers = Object.assign({'Authorization':'Bearer '+token,'Content-Type':'application/json'}, opts.headers || {});
+      var res = await fetch(path, opts);
+      if (res.status === 401) {
+        sessionStorage.removeItem('vertax_admin_token');
+        token = '';
+        ensureToken();
+        opts.headers.Authorization = 'Bearer '+token;
+        res = await fetch(path, opts);
+      }
+      var data = await res.json().catch(function(){return {};});
+      if (!res.ok) throw new Error(data.error || data.message || ('HTTP '+res.status));
+      return data;
+    }
+    function candidateHtml(trackKey, field, value, cand){
+      return '<div class="cand"><div><div class="value">'+esc(value)+'</div><div class="meta">голосов: '+esc(cand.count||0)+'</div></div><div class="actions">'+
+        '<button class="primary" data-act="approve" data-track="'+esc(trackKey)+'" data-field="'+esc(field)+'" data-value="'+esc(value)+'">Аппрувнуть</button>'+
+        '<button class="danger" data-act="reject" data-track="'+esc(trackKey)+'" data-field="'+esc(field)+'" data-value="'+esc(value)+'">Отклонить</button>'+
+      '</div></div>';
+    }
+    function proposalHtml(p){
+      var fields = p.pending_fields || {};
+      var body = Object.keys(fields).map(function(field){
+        var cands = fields[field].candidates || {};
+        return '<div class="field"><div class="field-name">'+esc(field)+'</div>'+
+          Object.keys(cands).map(function(value){return candidateHtml(p.track_key, field, value, cands[value]);}).join('')+
+        '</div>';
+      }).join('');
+      return '<article class="proposal '+(p.track_key===targetTrack?'is-target':'')+'"><div class="top"><div><div class="title">'+esc(p.artist_original)+' - '+esc(p.title_original)+'</div><div class="meta">'+esc(p.mix_name||'')+' · '+esc(p.track_key)+'</div></div>'+(p.is_new_track?'<span class="new">новый</span>':'')+'</div>'+body+'</article>';
+    }
+    async function load(){
+      var out = document.getElementById('out');
+      out.className = 'empty';
+      out.textContent = 'Загрузка...';
+      try {
+        var url = '/api/admin/proposals?limit=100' + (onlyNew ? '&filter=new_tracks_only' : '');
+        var data = await api(url);
+        var q = document.getElementById('search').value.toLowerCase().trim();
+        var rows = data.proposals || [];
+        if (q) rows = rows.filter(function(p){return JSON.stringify(p).toLowerCase().indexOf(q)>=0;});
+        out.className = '';
+        out.innerHTML = rows.length ? rows.map(proposalHtml).join('') : '<div class="empty">Предложений нет</div>';
+      } catch (e) {
+        out.innerHTML = '<pre>'+esc(e.message)+'</pre>';
+      }
+    }
+    document.addEventListener('click', async function(e){
+      var b = e.target.closest('button');
+      if (!b) return;
+      if (b.id === 'reload') return load();
+      if (b.id === 'reset-token') { sessionStorage.removeItem('vertax_admin_token'); token=''; return load(); }
+      if (b.id === 'toggle-new') { onlyNew=!onlyNew; b.textContent='Только новые: '+(onlyNew?'вкл':'выкл'); return load(); }
+      if (b.dataset.act) {
+        await api('/api/admin/'+b.dataset.act, {method:'POST', body:JSON.stringify({track_key:b.dataset.track,field:b.dataset.field,value:b.dataset.value})});
+        await load();
+      }
+    });
+    document.getElementById('search').addEventListener('input', load);
+    load();
+  </script>
+</body>
+</html>

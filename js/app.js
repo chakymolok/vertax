@@ -1001,13 +1001,14 @@ window.startVertaxClockTicker = startVertaxClockTicker;
       if (!data || data.matched === false) return null;
       var key = normalizeBeatportKey(data.key_name, data.camelot);
       if (!data.bpm && !data.camelot && !key) return null;
+      var resolvedSource = data._has_curated ? 'curated' : 'beatport';
       return {
         bpm: data.bpm ? Math.round(Number(data.bpm)) : null,
         key: key,
         camelot: data.camelot || (key && typeof KEY_TO_CAMELOT !== 'undefined' ? KEY_TO_CAMELOT[key] : null),
-        source: 'beatport',
-        bpmSource: data.bpm ? 'beatport' : null,
-        keySource: (data.camelot || key) ? 'beatport' : null,
+        source: resolvedSource,
+        bpmSource: data.bpm ? resolvedSource : null,
+        keySource: (data.camelot || key) ? resolvedSource : null,
         confidence: data.confidence >= 0.9 ? 'high' : 'medium',
         beatport: {
           label: data.label || null,
@@ -1097,7 +1098,7 @@ window.startVertaxClockTicker = startVertaxClockTicker;
       if (vinyl && Array.isArray(vinyl.tracklist)) {
         document.querySelectorAll('#laiso-app .laiso-track[data-track-id]').forEach(function(row){
           var tr = vinyl.tracklist.find(function(t){ return String(t.id) === String(row.getAttribute('data-track-id')); });
-          if (!tr || trackSource(tr) !== 'beatport' || !tr.bpm) return;
+          if (!tr || ['beatport','curated','local'].indexOf(trackSource(tr)) < 0 || !tr.bpm) return;
           var box = row.querySelector('.laiso-track-bpm');
           if (box && !box.querySelector('.vertax-source-beatport')) {
             box.insertAdjacentHTML('beforeend', '<span class="vertax-source-beatport">BEATPORT' + (tr.halftimeCorrected ? ' <span>1/2x</span>' : '') + '</span>');
@@ -1108,7 +1109,7 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     if (state.view === 'edit-track') {
       var v = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
       var t = v && typeof findTrack === 'function' ? findTrack(v, state.ui && state.ui.currentTrackId) : null;
-      if (!t || trackSource(t) !== 'beatport') return;
+      if (!t || ['beatport','curated','local'].indexOf(trackSource(t)) < 0) return;
       var toggle = document.querySelector('#laiso-app .laiso-toggle');
       if (toggle && !toggle.querySelector('.vertax-source-beatport-toggle')) {
         toggle.insertAdjacentHTML('afterbegin', '<button type="button" class="active vertax-source-beatport-toggle">BEATPORT</button>');
@@ -1154,4 +1155,198 @@ window.startVertaxClockTicker = startVertaxClockTicker;
   wrapRender();
   setTimeout(wrapRender, 500);
   console.log('RUNT-01 PATCH-34 loaded: Beatport first BPM/Key source');
+})();
+
+/* RUNT-01 PATCH 35 — local user metadata + curation proposals */
+(function installVertaxCurationPatch(){
+  if (window.__vertaxCurationPatchInstalled) return;
+  window.__vertaxCurationPatchInstalled = true;
+
+  var STORE_KEY = 'vertax_my_tracks';
+  var UID_KEY = 'vertax_uid';
+
+  function getUid(){
+    try {
+      var uid = localStorage.getItem(UID_KEY);
+      if (!uid) {
+        uid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(16).slice(2);
+        localStorage.setItem(UID_KEY, uid);
+      }
+      return uid;
+    } catch (_) {
+      return 'volatile-' + Date.now();
+    }
+  }
+
+  function norm(value){
+    return String(value || '')
+      .toLowerCase()
+      .replace(/\([^)]*(original|extended|radio|edit|remix|mix|version|vip|dub|remaster|feat|ft|with)[^)]*\)/gi, ' ')
+      .replace(/\[[^\]]*(original|extended|radio|edit|remix|mix|version|vip|dub|remaster|feat|ft|with)[^\]]*\]/gi, ' ')
+      .replace(/\b(feat|ft|with)\.?\b/gi, ' ')
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9а-яё]+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function trackKey(artist, title, mix){
+    return [norm(artist), norm(title), norm(mix || 'original mix')].map(function(part){ return part || '-'; }).join(':');
+  }
+
+  function readMine(){
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }
+    catch (_) { return {}; }
+  }
+
+  function writeMine(data){
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(data || {})); } catch (_) {}
+  }
+
+  function saveLocal(vinyl, track, fields){
+    if (!vinyl || !track || !fields) return;
+    var data = readMine();
+    var key = trackKey(vinyl.artist || track.vinylArtist, track.title, track.mix_name || track.mixName || 'Original Mix');
+    data[key] = Object.assign({}, data[key] || {}, fields, { savedAt: Date.now() });
+    writeMine(data);
+  }
+
+  function localFor(artist, title, mix){
+    return readMine()[trackKey(artist, title, mix || 'Original Mix')] || null;
+  }
+
+  function applyLocal(meta, artist, title, mix){
+    var mine = localFor(artist, title, mix);
+    if (!mine || !meta) return meta;
+    var out = Object.assign({}, meta);
+    if (mine.bpm != null) {
+      out.bpm = mine.bpm;
+      out.bpmSource = 'local';
+      out.source = 'local';
+    }
+    if (mine.camelot || mine.key_name) {
+      out.camelot = mine.camelot || out.camelot || null;
+      out.key = mine.key_name || out.key || null;
+      out.keySource = 'local';
+      out.source = 'local';
+    }
+    if (mine.label) {
+      out.beatport = Object.assign({}, out.beatport || {}, { label: mine.label });
+    }
+    return out;
+  }
+
+  async function submitProposal(vinyl, track, field, value){
+    if (!vinyl || !track || value == null || value === '') return;
+    try {
+      await fetch('/api/proposals/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': getUid()
+        },
+        body: JSON.stringify({
+          artist: vinyl.artist || track.vinylArtist || '',
+          title: track.title || '',
+          mix: track.mix_name || track.mixName || 'Original Mix',
+          field: field,
+          value: value
+        })
+      });
+    } catch (e) {
+      console.warn('Proposal submit failed', e);
+    }
+  }
+
+  function changed(before, after, field){
+    return String(before && before[field] == null ? '' : before && before[field]) !== String(after && after[field] == null ? '' : after && after[field]);
+  }
+
+  function snapshot(track){
+    return {
+      bpm: track && track.bpm,
+      camelot: track && track.camelot,
+      key_name: track && track.key
+    };
+  }
+
+  function findPairFromButton(el){
+    var vid = el && el.dataset && el.dataset.vid;
+    var tid = el && el.dataset && el.dataset.tid;
+    var v = typeof findVinyl === 'function' ? findVinyl(vid) : null;
+    var t = v && typeof findTrack === 'function' ? findTrack(v, tid) : null;
+    return { v:v, t:t };
+  }
+
+  function installManualSubmitWrappers(){
+    if (typeof handlers === 'undefined' || !handlers || window.__vertaxCurationHandlersWrapped) return;
+    ['track-manual-meta', 'bpm-x2', 'bpm-divide-2'].forEach(function(action){
+      var old = handlers[action];
+      if (typeof old !== 'function') return;
+      handlers[action] = function(e, el){
+        var pair = findPairFromButton(el);
+        var before = snapshot(pair.t);
+        var result = old.apply(this, arguments);
+        Promise.resolve(result).then(function(){
+          pair = findPairFromButton(el);
+          var after = snapshot(pair.t);
+          var fields = {};
+          if (changed(before, after, 'bpm') && after.bpm != null) {
+            fields.bpm = after.bpm;
+            submitProposal(pair.v, pair.t, 'bpm', after.bpm);
+          }
+          if (changed(before, after, 'camelot') && after.camelot) {
+            fields.camelot = after.camelot;
+            submitProposal(pair.v, pair.t, 'camelot', after.camelot);
+          }
+          if (changed(before, after, 'key_name') && after.key_name) {
+            fields.key_name = after.key_name;
+            submitProposal(pair.v, pair.t, 'key_name', after.key_name);
+          }
+          if (Object.keys(fields).length) saveLocal(pair.v, pair.t, fields);
+        });
+        return result;
+      };
+    });
+    window.__vertaxCurationHandlersWrapped = true;
+  }
+
+  function installBeatportLocalWrapper(){
+    if (typeof window.fetchFromBeatport !== 'function' || window.__vertaxCurationBeatportWrapped) return;
+    var oldFetch = window.fetchFromBeatport;
+    window.fetchFromBeatport = async function(artist, title, label){
+      var meta = await oldFetch.apply(this, arguments);
+      return applyLocal(meta, artist, title, 'Original Mix');
+    };
+    window.__vertaxCurationBeatportWrapped = true;
+  }
+
+  function injectSourceLabels(){
+    if (!document || typeof state === 'undefined' || !state) return;
+    document.querySelectorAll('#laiso-app .vertax-source-beatport').forEach(function(el){
+      if (el.textContent.indexOf('CURATED') >= 0) return;
+      var row = el.closest && el.closest('.laiso-track[data-track-id]');
+      if (!row) return;
+      var vinyl = typeof findVinyl === 'function' ? findVinyl(state.ui && state.ui.currentVinylId) : null;
+      var tr = vinyl && Array.isArray(vinyl.tracklist) ? vinyl.tracklist.find(function(t){ return String(t.id) === String(row.getAttribute('data-track-id')); }) : null;
+      if (tr && (tr.bpmSource === 'local' || tr.keySource === 'local')) el.textContent = 'ТВОЁ';
+      else if (tr && (tr.bpmSource === 'curated' || tr.keySource === 'curated')) el.textContent = 'ПРОВЕРЕНО';
+    });
+  }
+
+  function afterRender(){
+    installManualSubmitWrappers();
+    installBeatportLocalWrapper();
+    injectSourceLabels();
+  }
+
+  var oldAfter = window.vertaxAfterRender;
+  window.vertaxAfterRender = function(){
+    if (typeof oldAfter === 'function') oldAfter();
+    afterRender();
+  };
+  setTimeout(afterRender, 500);
+  window.vertaxGetUid = getUid;
+  window.vertaxExportMyTracks = function(){ return readMine(); };
+  console.log('RUNT-01 PATCH-35 loaded: local metadata and curation proposals');
 })();

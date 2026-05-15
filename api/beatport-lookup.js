@@ -4,7 +4,9 @@ const {
   getBeatportCache,
   setBeatportCache,
   deleteBeatportCache,
-  MISS_TTL_SECONDS
+  MISS_TTL_SECONDS,
+  normalizeTrackRecord,
+  resolveTrackRecord
 } = require('./redis-cache');
 
 const API_BASE = 'https://api.beatport.com/v4';
@@ -280,9 +282,10 @@ async function lookupBeatportMetadata(artist, title, label, options) {
     .map((track) => ({ track, score: scoreTrack(track, { artist, title, label }) }))
     .sort((a, b) => b.score - a.score);
   const best = scored[0];
-  const body = best && best.score >= 0.75
+  const found = best && best.score >= 0.75
     ? mapTrack(best.track, best.score)
     : { matched: false, candidates: scored.slice(0, 5).map((item) => candidate(item.track, item.score)), cached: false };
+  const body = found.matched === false ? found : resolveTrackRecord(normalizeTrackRecord(identity, found));
   const type = body.matched === false ? 'miss' : 'track';
   const expiresAt = type === 'miss' ? Date.now() + MISS_TTL_SECONDS * 1000 : 0;
 
