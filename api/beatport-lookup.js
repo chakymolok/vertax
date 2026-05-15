@@ -166,7 +166,9 @@ async function beatportSearch(token, artist, title, label) {
     throw err;
   }
   const data = await response.json();
-  return Array.isArray(data.results) ? data.results : [];
+  if (Array.isArray(data.tracks)) return data.tracks;
+  if (Array.isArray(data.results)) return data.results;
+  return [];
 }
 
 module.exports = async function beatportLookup(req, res) {
