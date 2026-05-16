@@ -1169,3 +1169,45 @@ window.startVertaxClockTicker = startVertaxClockTicker;
   setTimeout(wrapRender, 500);
   console.log('RUNT-01 PATCH-34 loaded: Beatport first BPM/Key source');
 })();
+
+(function(){ 'use strict';
+  if (window.__vertaxCamelotBeatportAfterAppInstalled) return;
+  window.__vertaxCamelotBeatportAfterAppInstalled = true;
+
+  function run(){
+    if (typeof window.vertaxApplyCamelotOnlyListenPatch === 'function') {
+      window.vertaxApplyCamelotOnlyListenPatch();
+    }
+  }
+
+  function wrap(){
+    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxCamelotBeatportBuckRenderWrapped) {
+      var oldBuck = window.laisoBuck.render;
+      window.laisoBuck.render = function(){
+        oldBuck();
+        setTimeout(run, 80);
+      };
+      window.__vertaxCamelotBeatportBuckRenderWrapped = true;
+    }
+    try {
+      if (typeof render === 'function' && !window.__vertaxCamelotBeatportGlobalRenderWrapped) {
+        var oldRender = render;
+        render = function(){
+          oldRender();
+          setTimeout(run, 80);
+        };
+        window.__vertaxCamelotBeatportGlobalRenderWrapped = true;
+      }
+    } catch(_) {}
+  }
+
+  wrap();
+  var app = document.getElementById('laiso-app');
+  if (app && window.MutationObserver) {
+    new MutationObserver(function(){
+      clearTimeout(window.__vertaxCamelotBeatportAfterAppTimer);
+      window.__vertaxCamelotBeatportAfterAppTimer = setTimeout(run, 120);
+    }).observe(app, { childList:true, subtree:true });
+  }
+  setTimeout(function(){ wrap(); run(); }, 300);
+})();
