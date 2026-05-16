@@ -1136,6 +1136,10 @@ body #laiso-app .vertax-set-duration-note {
   text-transform: uppercase;
 }
 
+body #laiso-app .runt18c-safe-build {
+  display: none !important;
+}
+
 body #laiso-app .vertax-set-genre-panel label {
   display: block;
   margin-bottom: 8px;
