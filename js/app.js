@@ -292,30 +292,9 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
 (function installVertaxTelegramChromeSync(){
   if (window.__vertaxTelegramChromeSyncInstalled) return;
   window.__vertaxTelegramChromeSyncInstalled = true;
-  function wrapRenderForTelegramChrome(){
-    installTelegramWebAppChrome();
-    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxTelegramChromeBuckWrapped) {
-      var oldBuckRender = window.laisoBuck.render;
-      window.laisoBuck.render = function(){
-        oldBuckRender();
-        syncTelegramChrome();
-      };
-      window.__vertaxTelegramChromeBuckWrapped = true;
-    }
-    try {
-      if (typeof render === 'function' && !window.__vertaxTelegramChromeGlobalWrapped) {
-        var oldRender = render;
-        render = function(){
-          oldRender();
-          syncTelegramChrome();
-        };
-        window.__vertaxTelegramChromeGlobalWrapped = true;
-      }
-    } catch(_) {}
-    syncTelegramChrome();
-  }
-  wrapRenderForTelegramChrome();
-  setTimeout(wrapRenderForTelegramChrome, 300);
+  installTelegramWebAppChrome();
+  syncTelegramChrome();
+  setTimeout(syncTelegramChrome, 300);
 })();
 
 /* ============================================================
@@ -590,6 +569,7 @@ function vertaxRunAfterRenderCallbacks(){
 function vertaxAfterRender(){
   if (typeof state === 'undefined') return;
   vertaxApplyCamelotOnlyUi();
+  syncTelegramChrome();
   vertaxRunAfterRenderCallbacks();
   if (state.view !== 'home') return;
   var display = document.getElementById('vertax-display');
