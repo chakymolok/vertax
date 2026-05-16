@@ -576,9 +576,21 @@ function vertaxApplyCamelotOnlyUi(root){
   });
 }
 
+var vertaxAfterRenderCallbacks = [];
+function vertaxRegisterAfterRender(fn){
+  if (typeof fn !== 'function') return;
+  if (vertaxAfterRenderCallbacks.indexOf(fn) >= 0) return;
+  vertaxAfterRenderCallbacks.push(fn);
+}
+function vertaxRunAfterRenderCallbacks(){
+  vertaxAfterRenderCallbacks.slice().forEach(function(fn){
+    try { fn(); } catch(e) { console.warn('vertax after-render callback failed', e); }
+  });
+}
 function vertaxAfterRender(){
   if (typeof state === 'undefined') return;
   vertaxApplyCamelotOnlyUi();
+  vertaxRunAfterRenderCallbacks();
   if (state.view !== 'home') return;
   var display = document.getElementById('vertax-display');
   if (!display) return;
@@ -590,6 +602,7 @@ function vertaxAfterRender(){
   if (!display.dataset.vertaxBoot) startVertaxClockTicker();
 }
 window.vertaxAfterRender = vertaxAfterRender;
+window.vertaxRegisterAfterRender = vertaxRegisterAfterRender;
 window.startVertaxClockTicker = startVertaxClockTicker;
 window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
 
@@ -1025,28 +1038,6 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
     injectDeezerBadges();
   }
 
-  function wrapRender(){
-    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxDeezerBuckRenderWrapped) {
-      var oldBuck = window.laisoBuck.render;
-      window.laisoBuck.render = function(){
-        oldBuck();
-        setTimeout(afterRender, 0);
-      };
-      window.__vertaxDeezerBuckRenderWrapped = true;
-    }
-    try {
-      if (typeof render === 'function' && !window.__vertaxDeezerGlobalRenderWrapped) {
-        var oldRender = render;
-        render = function(){
-          oldRender();
-          setTimeout(afterRender, 0);
-        };
-        window.__vertaxDeezerGlobalRenderWrapped = true;
-      }
-    } catch(_) {}
-    afterRender();
-  }
-
   var style = document.createElement('style');
   style.textContent = [
     '#laiso-app .vertax-source-deezer{display:block;font-family:var(--font-mono);font-size:8px;color:var(--text-tertiary);letter-spacing:.04em;margin-top:1px;line-height:1;text-transform:uppercase;}',
@@ -1056,8 +1047,9 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   ].join('\n');
   document.head.appendChild(style);
 
-  wrapRender();
-  setTimeout(wrapRender, 300);
+  if (typeof window.vertaxRegisterAfterRender === 'function') window.vertaxRegisterAfterRender(afterRender);
+  afterRender();
+  setTimeout(afterRender, 300);
   console.log('RUNT-01 PATCH-33 loaded: Deezer BPM source');
 })();
 
@@ -1225,28 +1217,6 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
     injectBeatportBadges();
   }
 
-  function wrapRender(){
-    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxBeatportBuckRenderWrapped) {
-      var oldBuck = window.laisoBuck.render;
-      window.laisoBuck.render = function(){
-        oldBuck();
-        setTimeout(afterRender, 0);
-      };
-      window.__vertaxBeatportBuckRenderWrapped = true;
-    }
-    try {
-      if (typeof render === 'function' && !window.__vertaxBeatportGlobalRenderWrapped) {
-        var oldRender = render;
-        render = function(){
-          oldRender();
-          setTimeout(afterRender, 0);
-        };
-        window.__vertaxBeatportGlobalRenderWrapped = true;
-      }
-    } catch(_) {}
-    afterRender();
-  }
-
   var style = document.createElement('style');
   style.textContent = [
     '#laiso-app .vertax-source-beatport{display:block;font-family:var(--font-mono);font-size:8px;color:var(--text-tertiary);letter-spacing:.04em;margin-top:1px;line-height:1;text-transform:uppercase;}',
@@ -1255,7 +1225,8 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   ].join('\n');
   document.head.appendChild(style);
 
-  wrapRender();
-  setTimeout(wrapRender, 500);
+  if (typeof window.vertaxRegisterAfterRender === 'function') window.vertaxRegisterAfterRender(afterRender);
+  afterRender();
+  setTimeout(afterRender, 500);
   console.log('RUNT-01 PATCH-34 loaded: Beatport first BPM/Key source');
 })();
