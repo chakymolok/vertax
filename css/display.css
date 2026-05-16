@@ -1065,3 +1065,108 @@ body #laiso-app .runt19-play-btn:not(:disabled) * {
   -webkit-text-fill-color: #FFFFFF !important;
   text-shadow: none !important;
 }
+
+/* Set builder UX controls */
+body #laiso-app .vertax-set-ux-controls {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+body #laiso-app .vertax-set-ux-panel {
+  background: var(--runt-card, #FFFFFF) !important;
+  border: 1px solid var(--runt-line, #D2D6D3) !important;
+  border-radius: 18px;
+  padding: 14px;
+  color: var(--runt-text, #101010) !important;
+}
+
+body #laiso-app .vertax-set-ux-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+}
+
+body #laiso-app .vertax-set-ux-head span,
+body #laiso-app .vertax-set-genre-panel label {
+  color: var(--runt-faint, #8A908A) !important;
+  font-size: 11px;
+}
+
+body #laiso-app .vertax-set-ux-head strong {
+  color: var(--runt-text, #101010) !important;
+  font-size: 13px;
+}
+
+body #laiso-app .vertax-set-target-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  gap: 8px;
+  align-items: center;
+}
+
+body #laiso-app .vertax-set-step,
+body #laiso-app .vertax-set-target-chips button {
+  border: 1px solid var(--runt-line, #D2D6D3);
+  background: var(--runt-card-soft, #F4F6F4);
+  color: var(--runt-text, #101010);
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  min-height: 42px;
+}
+
+body #laiso-app .vertax-set-target-input {
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--runt-line, #D2D6D3);
+  background: var(--runt-card-soft, #F4F6F4);
+  color: var(--runt-text, #101010);
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 18px;
+  font-weight: 700;
+  caret-color: var(--runt-accent, #C8FF2E);
+}
+
+body #laiso-app .vertax-set-target-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+body #laiso-app .vertax-set-target-chips button.is-active {
+  background: linear-gradient(180deg, var(--runt-accent, #C8FF2E), var(--runt-accent-dark, #A7E600)) !important;
+  border-color: var(--runt-accent-dark, #A7E600) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+body #laiso-app .vertax-set-genre-panel label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+}
+
+body #laiso-app .vertax-set-add-vinyl,
+body #laiso-app .vertax-live-save {
+  margin-top: 10px !important;
+}
+
+body #laiso-app .laiso-btn[data-action="set-add-vinyl"]:not(:disabled),
+body #laiso-app .laiso-btn[data-action="set-add-vinyl"]:hover:not(:disabled),
+body #laiso-app .laiso-btn.vertax-live-save:not(:disabled),
+body #laiso-app .laiso-btn.vertax-live-save:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--runt-lcd-2, #1A1B18), var(--runt-lcd, #10110F)) !important;
+  border-color: var(--runt-lcd-2, #1A1B18) !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}

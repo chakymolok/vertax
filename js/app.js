@@ -704,6 +704,20 @@ window.startVertaxClockTicker = startVertaxClockTicker;
     if (!track || !vinyl || !meta) return false;
     var changed = false;
     var src = sourceName(meta);
+    if (meta.beatport) {
+      if (!track.genre && meta.beatport.genre) {
+        track.genre = meta.beatport.genre;
+        changed = true;
+      }
+      if (!track.subGenre && meta.beatport.subGenre) {
+        track.subGenre = meta.beatport.subGenre;
+        changed = true;
+      }
+      if (!track.beatportUrl && meta.beatport.url) {
+        track.beatportUrl = meta.beatport.url;
+        changed = true;
+      }
+    }
     if (!track.bpm && meta.bpm) {
       track.bpm = meta.bpm;
       track.bpmSource = meta.bpmSource || src || null;

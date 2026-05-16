@@ -664,3 +664,411 @@ function installVertaxBackupFeature(){
   }
   boot();
 })();
+
+/* VERTAX set-builder UX: target length, genre filter, one-vinyl guard */
+(function installVertaxSetBuilderUxPatch(){
+  if (window.__vertaxSetBuilderUxPatchInstalled) return;
+  window.__vertaxSetBuilderUxPatchInstalled = true;
+
+  function boot(){
+    if (!window.laisoBuck || !window.laisoBuck.state || !window.laisoBuck.render) {
+      setTimeout(boot, 200);
+      return;
+    }
+    if (!window.__runtSetDndPatchInstalled) {
+      setTimeout(boot, 200);
+      return;
+    }
+    var state = window.laisoBuck.state;
+
+    function esc(s){
+      if (typeof window.esc === 'function') return window.esc(s);
+      if (s == null) return '';
+      return String(s).replace(/[&<>"']/g, function(c){
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+      });
+    }
+
+    function toast(msg){
+      if (typeof showToast === 'function') showToast(msg);
+      else console.log(msg);
+    }
+
+    function renderApp(){
+      try {
+        if (window.laisoBuck && typeof window.laisoBuck.render === 'function') window.laisoBuck.render();
+        else if (typeof render === 'function') render();
+      } catch(e) {
+        console.warn('set builder UX render error', e);
+      }
+    }
+
+    function setOptions(){
+      state.ui = state.ui || {};
+      state.ui.setOptions = state.ui.setOptions || {};
+      if (!state.ui.setOptions.targetLength) state.ui.setOptions.targetLength = 16;
+      return state.ui.setOptions;
+    }
+
+    function clampTarget(n){
+      n = parseInt(n, 10);
+      if (!isFinite(n)) n = 16;
+      return Math.max(2, Math.min(64, n));
+    }
+
+    function targetLength(){
+      return clampTarget(setOptions().targetLength || 16);
+    }
+
+    function norm(s){
+      return String(s || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function normKey(s){
+      return norm(s).toLowerCase();
+    }
+
+    function getAllVinyls(){
+      var out = [];
+      var seen = {};
+      (state.vinyls || []).concat(state.collection || []).forEach(function(v){
+        if (!v || !v.id || seen[v.id]) return;
+        seen[v.id] = true;
+        out.push(v);
+      });
+      return out;
+    }
+
+    function genreFromVinyl(v){
+      var values = [];
+      ['genre','style'].forEach(function(k){
+        var val = v && v[k];
+        if (Array.isArray(val)) values = values.concat(val);
+        else if (val) values.push(val);
+      });
+      return values.map(norm).filter(Boolean);
+    }
+
+    function genresForTrack(t){
+      var values = [];
+      ['genre','subGenre','sub_genre','style'].forEach(function(k){
+        var val = t && t[k];
+        if (Array.isArray(val)) values = values.concat(val);
+        else if (val) values.push(val);
+      });
+      if (t && t.recordId) {
+        var v = getAllVinyls().find(function(x){ return String(x.id) === String(t.recordId); });
+        values = values.concat(genreFromVinyl(v));
+      }
+      return values.map(norm).filter(Boolean);
+    }
+
+    function trackMatchesGenre(t, selected){
+      if (!selected) return true;
+      selected = normKey(selected);
+      return genresForTrack(t).some(function(g){ return normKey(g) === selected; });
+    }
+
+    function genreOptions(){
+      var map = {};
+      function add(v){
+        var label = norm(v);
+        if (!label) return;
+        map[normKey(label)] = label;
+      }
+      getAllVinyls().forEach(function(v){
+        genreFromVinyl(v).forEach(add);
+        (v.tracklist || []).forEach(function(t){ genresForTrack(Object.assign({ recordId:v.id }, t)).forEach(add); });
+      });
+      return Object.keys(map).sort().map(function(k){ return map[k]; });
+    }
+
+    function enrichTracksWithGenre(tracks){
+      return (tracks || []).map(function(t){
+        if (!t || (t.genre || t.subGenre || t.sub_genre)) return t;
+        var copy = Object.assign({}, t);
+        if (t.recordId) {
+          var v = getAllVinyls().find(function(x){ return String(x.id) === String(t.recordId); });
+          if (v) {
+            if (v.genre) copy.genre = Array.isArray(v.genre) ? v.genre[0] : v.genre;
+            if (v.style) copy.subGenre = Array.isArray(v.style) ? v.style[0] : v.style;
+          }
+        }
+        return copy;
+      });
+    }
+
+    function installTrackScopeWrapper(){
+      if (typeof window.runtGetTracksByScope === 'function' && !window.__vertaxSetUxScopeWrapped) {
+        var oldScope = window.runtGetTracksByScope;
+        window.runtGetTracksByScope = function(scope, opts){
+          var tracks = enrichTracksWithGenre(oldScope.call(this, scope, opts));
+          var filter = setOptions().genreFilter || '';
+          if (state.view === 'set' && scope === 'collection' && filter) {
+            tracks = tracks.filter(function(t){ return trackMatchesGenre(t, filter); });
+          }
+          return tracks;
+        };
+        window.__vertaxSetUxScopeWrapped = true;
+      }
+
+      if (typeof getAllSessionTracks === 'function' && !window.__vertaxSetUxGetAllWrapped) {
+        var oldGetAll = getAllSessionTracks;
+        getAllSessionTracks = window.getAllSessionTracks = function(opts){
+          var tracks = enrichTracksWithGenre(oldGetAll.call(this, opts));
+          var filter = setOptions().genreFilter || '';
+          if (state.view === 'set' && (state.ui && state.ui.setScope) === 'collection' && filter) {
+            tracks = tracks.filter(function(t){ return trackMatchesGenre(t, filter); });
+          }
+          return tracks;
+        };
+        window.__vertaxSetUxGetAllWrapped = true;
+      }
+    }
+
+    function installGenerateWrapper(){
+      if (typeof generateSetAlgo !== 'function' || window.__vertaxSetUxGenerateWrapped) return;
+      var oldGenerate = generateSetAlgo;
+      generateSetAlgo = window.generateSetAlgo = function(allTracks, mode, opts, length){
+        var desired = targetLength();
+        var requested = length || desired;
+        if (!length || length === 8 || length === 16) requested = desired;
+        requested = Math.min(clampTarget(requested), (allTracks || []).length || requested);
+        return oldGenerate.call(this, allTracks, mode, opts, requested);
+      };
+      window.__vertaxSetUxGenerateWrapped = true;
+    }
+
+    function uniqueRecordCount(tracks){
+      var seen = {};
+      (tracks || []).forEach(function(t){
+        var key = t && (t.recordId || t.recordKey || t.vinylTitle || t.vinylArtist);
+        if (key) seen[String(key)] = true;
+      });
+      return Object.keys(seen).length;
+    }
+
+    function currentPoolTracks(){
+      try {
+        if (typeof window.runtGetTracksByScope === 'function') {
+          return window.runtGetTracksByScope((state.ui && state.ui.setScope) || 'session');
+        }
+        if (typeof getAllSessionTracks === 'function') return getAllSessionTracks();
+      } catch(_) {}
+      return [];
+    }
+
+    function selectedVinylCount(){
+      var selected = state.ui && state.ui.runt26SelectedVinyls || {};
+      return Object.keys(selected).filter(function(id){ return selected[id]; }).length;
+    }
+
+    function oneVinylMessage(){
+      toast('Из одной пластинки сет собрать нельзя. Добавьте ещё пластинку.');
+    }
+
+    function targetControlsHtml(){
+      var current = targetLength();
+      var options = [8, 12, 16, 24];
+      return '<div class="vertax-set-ux-panel vertax-set-target-panel">' +
+        '<div class="vertax-set-ux-head"><span>цель сета</span><strong>' + esc(current) + ' треков</strong></div>' +
+        '<div class="vertax-set-target-row">' +
+          '<button type="button" class="vertax-set-step" data-action="set-target-step" data-d="-1">−</button>' +
+          '<input class="vertax-set-target-input" type="number" inputmode="numeric" min="2" max="64" data-action="set-target-input" value="' + esc(current) + '">' +
+          '<button type="button" class="vertax-set-step" data-action="set-target-step" data-d="1">+</button>' +
+        '</div>' +
+        '<div class="vertax-set-target-chips">' + options.map(function(n){
+          return '<button type="button" class="' + (n === current ? 'is-active' : '') + '" data-action="set-target-pick" data-value="' + n + '">' + n + '</button>';
+        }).join('') + '</div>' +
+      '</div>';
+    }
+
+    function genreFilterHtml(){
+      var genres = genreOptions();
+      if (!genres.length) return '';
+      var current = setOptions().genreFilter || '';
+      return '<div class="vertax-set-ux-panel vertax-set-genre-panel">' +
+        '<label for="vertax-set-genre">жанр</label>' +
+        '<select id="vertax-set-genre" class="laiso-select" data-action="set-genre-filter">' +
+          '<option value="">Все жанры</option>' +
+          genres.map(function(g){
+            return '<option value="' + esc(g) + '"' + (normKey(g) === normKey(current) ? ' selected' : '') + '>' + esc(g) + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>';
+    }
+
+    function setExtrasHtml(){
+      return '<div class="vertax-set-ux-controls">' + targetControlsHtml() + genreFilterHtml() + '</div>';
+    }
+
+    function injectIntoSetHtml(html){
+      if (html.indexOf('vertax-set-ux-controls') < 0) {
+        var extras = setExtrasHtml();
+        var generateIdx = html.indexOf('data-action="set-generate"');
+        if (generateIdx >= 0) {
+          var buttonStart = html.lastIndexOf('<button', generateIdx);
+          if (buttonStart >= 0) html = html.slice(0, buttonStart) + extras + html.slice(buttonStart);
+          else html += extras;
+        } else {
+          html += extras;
+        }
+      }
+      if (html.indexOf('data-action="set-add-vinyl"') < 0) {
+        var addBtn = '<button class="laiso-btn laiso-btn-secondary laiso-btn-block vertax-set-add-vinyl" data-action="set-add-vinyl">+ Добавить ещё одну пластинку</button>';
+        var sourceIdx = html.indexOf('data-action="runt26-open-source"');
+        if (sourceIdx < 0) sourceIdx = html.indexOf('data-action="runt28-open-source"');
+        if (sourceIdx >= 0) {
+          var btnStart = html.lastIndexOf('<button', sourceIdx);
+          var btnEnd = html.indexOf('</button>', sourceIdx);
+          if (btnStart >= 0 && btnEnd >= 0) html = html.slice(0, btnEnd + 9) + addBtn + html.slice(btnEnd + 9);
+          else html += addBtn;
+        } else {
+          html += addBtn;
+        }
+      }
+      return html;
+    }
+
+    function removeCollectionDuplicateBlock(){
+      var root = document.getElementById('laiso-root');
+      if (!root || state.view !== 'collection') return;
+      root.querySelectorAll('.laiso-panel, .laiso-card, section, div').forEach(function(el){
+        if (!el.parentNode) return;
+        var text = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (text.indexOf('собрать сет из коллекции') >= 0 && text.indexOf('+ собрать сет') < 0) {
+          el.parentNode.removeChild(el);
+        }
+      });
+    }
+
+    function injectLiveSaveButton(){
+      var root = document.getElementById('laiso-root');
+      if (!root || state.view !== 'live-set' || root.querySelector('[data-action="set-save"].vertax-live-save')) return;
+      var controls = root.querySelector('.runt19-live-controls') || root.querySelector('.laiso-stack') || root;
+      controls.insertAdjacentHTML('beforeend', '<button class="laiso-btn laiso-btn-secondary vertax-live-save" data-action="set-save">Сохранить сет</button>');
+    }
+
+    function afterRender(){
+      installTrackScopeWrapper();
+      installGenerateWrapper();
+      removeCollectionDuplicateBlock();
+      injectLiveSaveButton();
+    }
+
+    if (typeof window.viewSet === 'function' && !window.__vertaxSetUxViewSetWrapped) {
+      var oldViewSet = window.viewSet;
+      window.viewSet = viewSet = function(){
+        return injectIntoSetHtml(oldViewSet.apply(this, arguments));
+      };
+      window.__vertaxSetUxViewSetWrapped = true;
+    }
+
+    if (typeof handlers !== 'undefined' && handlers && !window.__vertaxSetUxHandlersWrapped) {
+      var oldSetGenerate = handlers['set-generate'];
+      handlers['set-generate'] = function(e, el){
+        var tracks = currentPoolTracks();
+        if (tracks.length && uniqueRecordCount(tracks) < 2) {
+          state.ui = state.ui || {};
+          state.ui.setLastWarning = 'one-vinyl';
+          oneVinylMessage();
+          renderApp();
+          return;
+        }
+        return oldSetGenerate && oldSetGenerate.apply(this, arguments);
+      };
+      window.__vertaxSetUxHandlersWrapped = true;
+    }
+
+    document.addEventListener('click', function(e){
+      var app = document.getElementById('laiso-app');
+      if (!app || !e.target.closest || !e.target.closest('#laiso-app')) return;
+      var el = e.target.closest('[data-action]');
+      if (!el) return;
+      var action = el.dataset.action;
+
+      if (action === 'set-add-vinyl') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        state.view = 'add';
+        state.modal = null;
+        renderApp();
+        return;
+      }
+
+      if (action === 'set-target-pick') {
+        e.preventDefault();
+        setOptions().targetLength = clampTarget(el.dataset.value);
+        renderApp();
+        return;
+      }
+
+      if (action === 'set-target-step') {
+        e.preventDefault();
+        setOptions().targetLength = clampTarget(targetLength() + parseInt(el.dataset.d || '0', 10));
+        renderApp();
+        return;
+      }
+
+      if (action === 'runt26-build-selected' || action === 'runt30-build-selected') {
+        var count = selectedVinylCount();
+        if (count > 0 && count < 2) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+          oneVinylMessage();
+        }
+      }
+    }, true);
+
+    document.addEventListener('input', function(e){
+      var app = document.getElementById('laiso-app');
+      if (!app || !e.target.closest || !e.target.closest('#laiso-app')) return;
+      var action = e.target.dataset && e.target.dataset.action;
+      if (action === 'set-target-input') {
+        setOptions().targetLength = clampTarget(e.target.value);
+      }
+    }, true);
+
+    document.addEventListener('change', function(e){
+      var app = document.getElementById('laiso-app');
+      if (!app || !e.target.closest || !e.target.closest('#laiso-app')) return;
+      var action = e.target.dataset && e.target.dataset.action;
+      if (action === 'set-target-input') {
+        setOptions().targetLength = clampTarget(e.target.value);
+        renderApp();
+      }
+      if (action === 'set-genre-filter') {
+        setOptions().genreFilter = e.target.value || '';
+        state.ui.generatedSet = [];
+        renderApp();
+      }
+    }, true);
+
+    if (!window.__vertaxSetUxRenderWrapped) {
+      var oldRender = window.laisoBuck.render;
+      window.laisoBuck.render = function(){
+        oldRender();
+        setTimeout(afterRender, 60);
+      };
+      window.__vertaxSetUxRenderWrapped = true;
+    }
+
+    try {
+      if (typeof render === 'function' && !window.__vertaxSetUxGlobalRenderWrapped) {
+        var oldGlobalRender = render;
+        render = function(){
+          oldGlobalRender();
+          setTimeout(afterRender, 60);
+        };
+        window.__vertaxSetUxGlobalRenderWrapped = true;
+      }
+    } catch(_) {}
+
+    afterRender();
+    console.log('VERTAX set-builder UX patch loaded');
+  }
+
+  boot();
+})();
