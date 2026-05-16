@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
 
-BASE="https://vertax-one.vercel.app"
-ADMIN_TOKEN="462f82f9381490ea2e9eb5525a3dbe7da67880cb5bece45cb01da75e1cec3c34"
-OFFSET=0
-LIMIT=20
+BASE="${BASE:-https://vertax-one.vercel.app}"
+: "${ADMIN_TOKEN:?Set ADMIN_TOKEN in your shell before running this script}"
+
+OFFSET="${OFFSET:-0}"
+LIMIT="${LIMIT:-20}"
 
 while true; do
   echo "Batch starting at offset $OFFSET..."
