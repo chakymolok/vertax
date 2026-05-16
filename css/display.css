@@ -1163,51 +1163,8 @@ body #laiso-app .laiso-btn.vertax-live-save:hover:not(:disabled) {
   -webkit-text-fill-color: #FFFFFF !important;
 }
 
-body #laiso-app .vertax-beatport-link {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px !important;
-  padding: 6px 11px !important;
-  border-radius: 999px !important;
-  font-size: 10px !important;
-  line-height: 1 !important;
-  letter-spacing: .14em !important;
-  text-transform: uppercase !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
-}
-
-body #laiso-app .laiso-vinyl-actions .vertax-beatport-link,
-body #laiso-app .runt-set-actions .vertax-beatport-link,
-body #laiso-app .laiso-set-pills .vertax-beatport-link,
-body #laiso-app .runt19-live-pills .vertax-beatport-link {
-  margin-left: 6px !important;
-  margin-top: 6px !important;
-}
-
 body #laiso-app .laiso-track-key.vertax-camelot-only {
   color: var(--runt-accent, #C8FF2E) !important;
   font-family: var(--font-mono, monospace) !important;
   font-weight: 700 !important;
-}
-
-body #laiso-app .vertax-beatport-track-link {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-width: 28px !important;
-  min-height: 22px !important;
-  margin-top: 4px !important;
-  padding: 4px 6px !important;
-  border: 1px solid var(--runt-line, #D2D6D3) !important;
-  border-radius: 999px !important;
-  background: var(--runt-card-soft, #F4F6F4) !important;
-  color: var(--runt-text, #101010) !important;
-  -webkit-text-fill-color: var(--runt-text, #101010) !important;
-  font-family: var(--font-mono, monospace) !important;
-  font-size: 8px !important;
-  font-weight: 800 !important;
-  letter-spacing: .12em !important;
-  text-decoration: none !important;
 }

@@ -78,13 +78,6 @@
   if (window.__vertaxCamelotOnlyListenPatchInstalled) return;
   window.__vertaxCamelotOnlyListenPatchInstalled = true;
 
-  function escAttr(s){
-    if (s == null) return '';
-    return String(s).replace(/[&<>"']/g, function(c){
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
-    });
-  }
-
   function normText(s){
     return String(s || '')
       .replace(/KEY\s*:\s*/ig, '')
@@ -119,20 +112,6 @@
       }
     } catch(_) {}
     return null;
-  }
-
-  function beatportSearchUrl(parts){
-    var q = (parts || []).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-    return 'https://www.beatport.com/search?q=' + encodeURIComponent(q || 'vinyl record');
-  }
-
-  function cardText(card, selectors){
-    for (var i = 0; i < selectors.length; i++) {
-      var el = card.querySelector(selectors[i]);
-      var text = el && (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (text) return text;
-    }
-    return '';
   }
 
   function normalizeCamelotUi(root){
@@ -187,54 +166,10 @@
     });
   }
 
-  function addListenLinks(root){
-    root.querySelectorAll('.laiso-vinyl-card').forEach(function(card){
-      if (card.querySelector('.vertax-beatport-link')) return;
-      var title = cardText(card, ['.laiso-vinyl-title', '.runt-set-title']);
-      var artist = cardText(card, ['.laiso-vinyl-artist', '.runt-set-release']);
-      if (!title || title === '—') return;
-      var target = card.querySelector('.laiso-vinyl-actions') || card.querySelector('.runt-set-actions') || card;
-      target.insertAdjacentHTML('beforeend',
-        '<a class="laiso-btn laiso-btn-sm laiso-btn-secondary vertax-beatport-link" target="_blank" rel="noopener" href="' +
-        escAttr(beatportSearchUrl([artist, title])) + '">Beatport</a>'
-      );
-    });
-    root.querySelectorAll('.runt-set-card,.laiso-set-card,.runt19-live-card').forEach(function(card){
-      if (card.querySelector('.vertax-beatport-link')) return;
-      var title = cardText(card, ['.runt-set-title', '.laiso-set-title', '.runt19-live-title']);
-      var release = cardText(card, ['.runt-set-release', '.laiso-set-meta', '.runt19-live-release']);
-      if (!title || title === '—') return;
-      var target = card.querySelector('.runt-set-actions') || card.querySelector('.laiso-set-pills') || card.querySelector('.runt19-live-pills') || card;
-      target.insertAdjacentHTML('beforeend',
-        '<a class="laiso-btn laiso-btn-sm laiso-btn-secondary vertax-beatport-link" target="_blank" rel="noopener" href="' +
-        escAttr(beatportSearchUrl([release, title])) + '">Beatport</a>'
-      );
-    });
-    root.querySelectorAll('.laiso-track[data-track-id]').forEach(function(row){
-      if (row.querySelector('.vertax-beatport-link')) return;
-      var titleEl = row.querySelector('.laiso-track-title');
-      var title = titleEl && (titleEl.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!title || title === '—') return;
-      var artist = '';
-      try {
-        if (typeof state !== 'undefined' && typeof findVinyl === 'function') {
-          var vinyl = findVinyl(state.ui && state.ui.currentVinylId);
-          artist = vinyl && vinyl.artist || '';
-        }
-      } catch(_) {}
-      var target = row.querySelector('.laiso-track-bpm') || titleEl || row;
-      target.insertAdjacentHTML('beforeend',
-        '<a class="vertax-beatport-link vertax-beatport-track-link" target="_blank" rel="noopener" href="' +
-        escAttr(beatportSearchUrl([artist, title])) + '">BP</a>'
-      );
-    });
-  }
-
   function applyPatch(){
     var root = document.getElementById('laiso-root') || document.getElementById('laiso-app');
     if (!root) return;
     normalizeCamelotUi(root);
-    addListenLinks(root);
   }
 
   window.vertaxApplyCamelotOnlyListenPatch = applyPatch;
@@ -249,11 +184,6 @@
     if (typeof prevAfterRender === 'function') prevAfterRender.apply(this, arguments);
     schedulePatch();
   };
-
-  document.addEventListener('click', function(e){
-    var link = e.target && e.target.closest && e.target.closest('.vertax-beatport-link');
-    if (link) e.stopPropagation();
-  }, true);
 
   var app = document.getElementById('laiso-app');
   if (app && window.MutationObserver) {
