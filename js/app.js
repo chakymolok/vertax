@@ -488,8 +488,99 @@ function runVertaxBootSequence(display){
   });
 }
 
+function vertaxNormalizeCamelotText(s){
+  return String(s || '')
+    .replace(/KEY\s*:\s*/ig, '')
+    .replace(/ТОНАЛЬНОСТЬ\s*:\s*/ig, '')
+    .replace(/♯/g, '#')
+    .replace(/♭/g, 'b')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function vertaxCamelotFromText(text){
+  var raw = vertaxNormalizeCamelotText(text);
+  if (!raw) return null;
+  var direct = raw.toUpperCase().match(/^([1-9]|1[0-2])[AB]$/);
+  if (direct) return direct[0];
+  try {
+    if (typeof KEY_TO_CAMELOT !== 'undefined') {
+      var low = raw.toLowerCase();
+      for (var k in KEY_TO_CAMELOT) {
+        if (Object.prototype.hasOwnProperty.call(KEY_TO_CAMELOT, k) && String(k).toLowerCase() === low) {
+          return KEY_TO_CAMELOT[k];
+        }
+      }
+    }
+    if (typeof normalizeKeyName === 'function') {
+      var nk = normalizeKeyName(raw);
+      if (nk && typeof KEY_TO_CAMELOT !== 'undefined') return KEY_TO_CAMELOT[nk] || null;
+    }
+    if (typeof normalizeKey === 'function') {
+      var nk2 = normalizeKey(raw);
+      if (nk2 && typeof KEY_TO_CAMELOT !== 'undefined') return KEY_TO_CAMELOT[nk2] || null;
+    }
+  } catch(_) {}
+  return null;
+}
+
+function vertaxApplyCamelotOnlyUi(root){
+  root = root || document.getElementById('laiso-root') || document.getElementById('laiso-app');
+  if (!root) return;
+  root.querySelectorAll('.laiso-set-big-key').forEach(function(el){ el.remove(); });
+  root.querySelectorAll('#et-cam option, #et-key option').forEach(function(opt){
+    var cam = vertaxCamelotFromText(opt.value || opt.textContent);
+    if (cam) opt.textContent = cam;
+  });
+  root.querySelectorAll('.laiso-label').forEach(function(label){
+    if (!/тональность|key/i.test(label.textContent || '')) return;
+    var panel = label.closest && label.closest('.laiso-panel');
+    if (panel && panel.querySelector('#et-key')) panel.style.display = 'none';
+  });
+  root.querySelectorAll('.runt19-live-pill.soft').forEach(function(el){
+    var cam = vertaxCamelotFromText(el.textContent);
+    if (cam && /key|major|minor/i.test(el.textContent || '')) el.textContent = cam;
+  });
+  root.querySelectorAll('.laiso-track').forEach(function(row){
+    var keyEl = row.querySelector('.laiso-track-key');
+    var camEl = row.querySelector('.laiso-track-cam');
+    var cam = camEl ? vertaxCamelotFromText(camEl.textContent) : null;
+    if (!cam && keyEl) cam = vertaxCamelotFromText(keyEl.textContent);
+    if (camEl && cam) camEl.textContent = cam;
+    if (keyEl) {
+      if (cam) {
+        keyEl.textContent = cam;
+        keyEl.classList.add('vertax-camelot-only');
+      } else if (/\b(major|minor)\b/i.test(keyEl.textContent || '')) {
+        keyEl.textContent = '—';
+      }
+    }
+  });
+  root.querySelectorAll('.laiso-lcd-cell').forEach(function(cell){
+    var label = cell.querySelector('.laiso-lcd-label');
+    var value = cell.querySelector('.laiso-lcd-m');
+    if (!label || !value) return;
+    if (/^key$/i.test((label.textContent || '').trim())) {
+      var cam = vertaxCamelotFromText(value.textContent);
+      if (cam) {
+        label.textContent = 'CAMELOT';
+        value.textContent = cam;
+      } else {
+        cell.style.display = 'none';
+      }
+    }
+  });
+  root.querySelectorAll('.runt-chip,.runt25-pill,.laiso-pill,.laiso-chip,.laiso-badge').forEach(function(el){
+    var text = el.textContent || '';
+    if (!/\b(major|minor)\b/i.test(text)) return;
+    var cam = vertaxCamelotFromText(text);
+    if (cam) el.textContent = cam;
+  });
+}
+
 function vertaxAfterRender(){
   if (typeof state === 'undefined') return;
+  vertaxApplyCamelotOnlyUi();
   if (state.view !== 'home') return;
   var display = document.getElementById('vertax-display');
   if (!display) return;
@@ -502,6 +593,7 @@ function vertaxAfterRender(){
 }
 window.vertaxAfterRender = vertaxAfterRender;
 window.startVertaxClockTicker = startVertaxClockTicker;
+window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
 
 /* RUNT-01 PATCH 33 — Deezer BPM source (client-side, no keys) */
 (function installVertaxDeezerBpmPatch(){
@@ -1168,46 +1260,4 @@ window.startVertaxClockTicker = startVertaxClockTicker;
   wrapRender();
   setTimeout(wrapRender, 500);
   console.log('RUNT-01 PATCH-34 loaded: Beatport first BPM/Key source');
-})();
-
-(function(){ 'use strict';
-  if (window.__vertaxCamelotBeatportAfterAppInstalled) return;
-  window.__vertaxCamelotBeatportAfterAppInstalled = true;
-
-  function run(){
-    if (typeof window.vertaxApplyCamelotOnlyListenPatch === 'function') {
-      window.vertaxApplyCamelotOnlyListenPatch();
-    }
-  }
-
-  function wrap(){
-    if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxCamelotBeatportBuckRenderWrapped) {
-      var oldBuck = window.laisoBuck.render;
-      window.laisoBuck.render = function(){
-        oldBuck();
-        setTimeout(run, 80);
-      };
-      window.__vertaxCamelotBeatportBuckRenderWrapped = true;
-    }
-    try {
-      if (typeof render === 'function' && !window.__vertaxCamelotBeatportGlobalRenderWrapped) {
-        var oldRender = render;
-        render = function(){
-          oldRender();
-          setTimeout(run, 80);
-        };
-        window.__vertaxCamelotBeatportGlobalRenderWrapped = true;
-      }
-    } catch(_) {}
-  }
-
-  wrap();
-  var app = document.getElementById('laiso-app');
-  if (app && window.MutationObserver) {
-    new MutationObserver(function(){
-      clearTimeout(window.__vertaxCamelotBeatportAfterAppTimer);
-      window.__vertaxCamelotBeatportAfterAppTimer = setTimeout(run, 120);
-    }).observe(app, { childList:true, subtree:true });
-  }
-  setTimeout(function(){ wrap(); run(); }, 300);
 })();
