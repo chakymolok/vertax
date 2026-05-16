@@ -74,7 +74,7 @@ function isHalfTimeGenre(genre, subGenre) {
 function normalizeBeatportPayload(payload) {
   if (!payload || payload.matched === false) return payload || { matched: false };
   const out = Object.assign({}, payload);
-  const bpm = Number(out.bpm);
+  const bpm = out.bpm == null || out.bpm === '' ? NaN : Number(out.bpm);
   if (Number.isFinite(bpm)) {
     out.bpm = Math.round(bpm);
     if (isHalfTimeGenre(out.genre, out.sub_genre) && out.bpm < 100) {
@@ -116,10 +116,19 @@ function beatportPayloadFromRecord(record) {
     beatport_url: flat.beatport_url || null,
     beatport_track_id: flat.beatport_track_id || flat.id || null,
     confidence: flat.confidence == null ? null : flat.confidence,
-    source: 'beatport',
+    source: flat.source || 'beatport',
+    sources: compactArray(flat.sources || flat.source || 'beatport'),
     slug: flat.slug || null,
     original_bpm: flat.original_bpm == null ? null : flat.original_bpm,
     halftime_corrected: flat.halftime_corrected || false,
+    duration: flat.duration || null,
+    discogs_release_id: flat.discogs_release_id || null,
+    discogs_position: flat.discogs_position || null,
+    discogs_catno: flat.discogs_catno || null,
+    discogs_label: flat.discogs_label || null,
+    discogs_genres: compactArray(flat.discogs_genres),
+    discogs_styles: compactArray(flat.discogs_styles),
+    discogsSavedAt: flat.discogsSavedAt || null,
     savedAt: flat.savedAt || new Date().toISOString()
   });
 }
@@ -133,6 +142,13 @@ function normalizeTrackRecord(identity, body) {
     redis_key: identity.trackKey,
     savedAt: new Date().toISOString()
   });
+}
+
+function hasBeatportPayload(record) {
+  const flat = readTrack(record) || {};
+  const sources = compactArray(flat.sources || flat.source);
+  return sources.indexOf('beatport') >= 0
+    || !!(flat.beatport_track_id || flat.beatport_url || flat.bpm || flat.camelot || flat.key_name);
 }
 
 function resolveTrackRecord(record) {
@@ -180,6 +196,7 @@ async function getBeatportCache(identity) {
     try {
       const parsed = JSON.parse(trackRaw);
       const record = normalizeTrackRecord(identity, parsed);
+      if (!hasBeatportPayload(record)) return null;
       if (parsed && parsed.beatport) {
         await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
       }
@@ -210,15 +227,94 @@ async function setBeatportCache(identity, body) {
     return;
   }
 
-  const record = Object.assign({}, beatportPayloadFromRecord(body) || {}, {
+  let existing = null;
+  const existingRaw = await safeRedis('GET', [identity.trackKey], null);
+  if (existingRaw) {
+    try { existing = JSON.parse(existingRaw); } catch (_) {}
+  }
+  const existingFlat = readTrack(existing) || {};
+  const beatport = beatportPayloadFromRecord(body) || {};
+  const record = Object.assign({}, existingFlat, beatport, {
     matched: true,
     track_key: body.track_key || identity.normalized,
     redis_key: identity.trackKey,
     source: 'beatport',
+    sources: mergeArrays(existingFlat.sources || existingFlat.source, 'beatport'),
+    duration: existingFlat.duration || beatport.duration || null,
+    discogs_release_id: existingFlat.discogs_release_id || null,
+    discogs_position: existingFlat.discogs_position || null,
+    discogs_catno: existingFlat.discogs_catno || null,
+    discogs_label: existingFlat.discogs_label || null,
+    discogs_genres: compactArray(existingFlat.discogs_genres),
+    discogs_styles: compactArray(existingFlat.discogs_styles),
+    discogsSavedAt: existingFlat.discogsSavedAt || null,
     savedAt: new Date().toISOString()
   });
   await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
   await safeRedis('SADD', [TRACK_SET_KEY, identity.trackKey], null);
+}
+
+function compactArray(value) {
+  const list = Array.isArray(value) ? value : (value ? [value] : []);
+  const seen = new Set();
+  return list
+    .map((item) => String(item || '').trim())
+    .filter((item) => {
+      const key = item.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function mergeArrays(a, b) {
+  return compactArray([].concat(a || [], b || []));
+}
+
+function mergeDiscogsPayload(record, discogs) {
+  const current = readTrack(record) || {};
+  const sources = mergeArrays(current.sources || current.source, 'discogs');
+  const out = Object.assign({}, current, {
+    matched: current.matched !== false,
+    artist_original: current.artist_original || discogs.artist_original || null,
+    title_original: current.title_original || discogs.title_original || null,
+    label: current.label || discogs.label || null,
+    release_year: current.release_year || discogs.release_year || null,
+    duration: current.duration || discogs.duration || null,
+    discogs_release_id: discogs.discogs_release_id || current.discogs_release_id || null,
+    discogs_position: discogs.discogs_position || current.discogs_position || null,
+    discogs_catno: discogs.discogs_catno || current.discogs_catno || null,
+    discogs_label: discogs.discogs_label || current.discogs_label || null,
+    discogs_genres: mergeArrays(current.discogs_genres, discogs.discogs_genres),
+    discogs_styles: mergeArrays(current.discogs_styles, discogs.discogs_styles),
+    sources,
+    source: current.source || 'discogs',
+    savedAt: current.savedAt || new Date().toISOString(),
+    discogsSavedAt: new Date().toISOString()
+  });
+  return out;
+}
+
+async function upsertDiscogsTrackCache(track) {
+  const artist = String(track && track.artist_original || '').trim();
+  const title = String(track && track.title_original || '').trim();
+  const label = String(track && (track.label || track.discogs_label) || '').trim();
+  if (!artist || !title) return { ok: false, skipped: true, reason: 'missing_artist_or_title' };
+
+  const identity = makeBeatportCacheIdentity(artist, title, label);
+  let parsed = null;
+  const raw = await safeRedis('GET', [identity.trackKey], null);
+  if (raw) {
+    try { parsed = JSON.parse(raw); } catch (_) {}
+  }
+
+  const record = Object.assign(mergeDiscogsPayload(parsed, track), {
+    track_key: parsed && parsed.track_key || identity.normalized,
+    redis_key: identity.trackKey
+  });
+  await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
+  await safeRedis('SADD', [TRACK_SET_KEY, identity.trackKey], null);
+  return { ok: true, created: !parsed, redis_key: identity.trackKey };
 }
 
 async function deleteBeatportCache(identity) {
@@ -292,6 +388,7 @@ module.exports = {
   beatportPayloadFromRecord,
   getBeatportCache,
   setBeatportCache,
+  upsertDiscogsTrackCache,
   deleteBeatportCache,
   getCacheStats,
   exportBeatportCache
