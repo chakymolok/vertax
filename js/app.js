@@ -162,7 +162,6 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
     installRuntSourceSelectionPage,
     installRuntBackButtonCopy,
     installRuntSourceEntryButtons,
-    installRuntSourceSelectionControls,
     installRuntSourceSelectionHardFix,
     installRuntAscendingTempoMode,
     installVertaxBackupFeature
