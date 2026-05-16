@@ -858,8 +858,6 @@ body #laiso-app .laiso-btn[data-action="discogs-search"],
 body #laiso-app .laiso-btn[data-action="discogs-search"]:hover,
 body #laiso-app .laiso-btn[data-action="search-pick"],
 body #laiso-app .laiso-btn[data-action="search-pick"]:hover,
-body #laiso-app .laiso-btn[data-action="ocr-search"],
-body #laiso-app .laiso-btn[data-action="ocr-search"]:hover,
 body #laiso-app .laiso-btn[data-action="done-add"],
 body #laiso-app .laiso-btn[data-action="done-add"]:hover {
   background: linear-gradient(180deg, var(--runt-accent, #C8FF2E), var(--runt-accent-dark, #A7E600)) !important;
@@ -873,28 +871,10 @@ body #laiso-app .laiso-btn[data-action="discogs-search"] *,
 body #laiso-app .laiso-btn[data-action="discogs-search"]:hover *,
 body #laiso-app .laiso-btn[data-action="search-pick"] *,
 body #laiso-app .laiso-btn[data-action="search-pick"]:hover *,
-body #laiso-app .laiso-btn[data-action="ocr-search"] *,
-body #laiso-app .laiso-btn[data-action="ocr-search"]:hover *,
 body #laiso-app .laiso-btn[data-action="done-add"] *,
 body #laiso-app .laiso-btn[data-action="done-add"]:hover * {
   color: #101010 !important;
   -webkit-text-fill-color: #101010 !important;
-}
-
-body #laiso-app .laiso-btn[data-action="photo-reset"],
-body #laiso-app .laiso-btn[data-action="photo-reset"]:hover {
-  background: var(--runt-card, #FFFFFF) !important;
-  border-color: var(--runt-line, #D2D6D3) !important;
-  color: var(--runt-text, #101010) !important;
-  -webkit-text-fill-color: var(--runt-text, #101010) !important;
-}
-
-body.vertax-theme-dark #laiso-app .laiso-btn[data-action="photo-reset"],
-body.vertax-theme-dark #laiso-app .laiso-btn[data-action="photo-reset"]:hover {
-  background: var(--runt-card-soft, #1D201E) !important;
-  border-color: var(--runt-line, #2E332F) !important;
-  color: var(--runt-text, #F2F4F2) !important;
-  -webkit-text-fill-color: var(--runt-text, #F2F4F2) !important;
 }
 
 /* Final collection CTA contrast: lime buttons must keep graphite text. */
