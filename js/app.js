@@ -156,7 +156,6 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
     installRuntCollectionPickModal,
     installRuntCollectionBpmPanel,
     installRuntLiveMode,
-    installRuntSetTargetNote,
     installRuntLiveSuggestions,
     installRuntDiagnosticsPanel,
     installRuntSourceSelectionPage,

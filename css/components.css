@@ -175,7 +175,7 @@
 }
 
 /* style block 22 */
-/* PATCH-31: hide bulky top controls in source picker */
+/* Source picker: hide bulky top controls */
 #laiso-app .runt26-source-page .runt26-tools{ display:none!important;
 }
 /* Give the list a bit more breathing room after intro */

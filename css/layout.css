@@ -212,7 +212,7 @@
 }
 
 /* style block 15 */
-/* PATCH-20: orange CTA system */
+/* orange CTA system */
 #laiso-app{ --runt-orange-cta:#F26B2F; --runt-orange-cta-dark:#D9541D; --runt-orange-cta-soft:rgba(242,107,47,.18);
 }
 /* main CTA buttons */
@@ -246,10 +246,6 @@
 /* live mode active stays lime because it is a state, not CTA */
 #laiso-app .runt19-wakelock-on{ background:var(--accent-lime,#C4F542)!important; color:#111!important; border-color:var(--accent-lime,#C4F542)!important;
 }
-/* PATCH-20: small label for longer target */
-#laiso-app .runt20-set-target-note{ margin:8px 2px 14px; font-family:var(--font-mono); font-size:10px; line-height:1.45; letter-spacing:.12em; text-transform:uppercase; color:var(--text-tertiary,#8A847B);
-}
-
 /* style block 16 */
 /* ============================================================ PATCH-21: scrollable modals / popups ============================================================ */
 #laiso-app .laiso-modal-bg{ position:fixed!important; inset:0!important; z-index:99999!important; display:flex!important; align-items:flex-start!important; justify-content:center!important; padding:22px 14px!important; overflow-y:auto!important; -webkit-overflow-scrolling:touch!important; overscroll-behavior:contain!important;
