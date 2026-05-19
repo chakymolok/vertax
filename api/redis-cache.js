@@ -403,6 +403,7 @@ async function submitTrackProposal(track, userContext) {
   }
   const created = !proposal;
   proposal = proposal || {
+    proposal_hash: identity.hash,
     track_key: identity.normalized,
     redis_key: identity.trackKey,
     proposal_key: proposalKey,
@@ -423,6 +424,7 @@ async function submitTrackProposal(track, userContext) {
       return;
     }
     proposal.pending_fields[field] = proposal.pending_fields[field] || { candidates: {} };
+    proposal.pending_fields[field].current_value = currentValue == null ? null : currentValue;
     const valueKey = String(value);
     const candidate = proposal.pending_fields[field].candidates[valueKey] || {
       count: 0,
@@ -467,9 +469,9 @@ async function listTrackProposals(limit) {
 }
 
 async function approveTrackProposal(input) {
-  const proposalKey = String(input && input.proposal_key || '').trim();
+  const proposalKey = String(input && input.proposal_key || (input && input.proposal_hash ? 'vertax:proposal:' + input.proposal_hash : '')).trim();
   const field = String(input && input.field || '').trim();
-  const value = input && input.value;
+  const value = normalizeProposalValue(field, input && input.value);
   if (!proposalKey || !field) return { ok: false, error: 'proposal_key and field are required' };
   const raw = await safeRedis('GET', [proposalKey], null);
   if (!raw) return { ok: false, error: 'proposal not found' };
@@ -507,6 +509,40 @@ async function approveTrackProposal(input) {
     await safeRedis('SET', [proposalKey, JSON.stringify(proposal)], null);
   }
   return { ok: true, record, proposal_remaining: proposal.pending_fields || null };
+}
+
+function normalizeProposalValue(field, value) {
+  if (field === 'bpm') {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.round(n * 10) / 10 : value;
+  }
+  if (field === 'camelot') return String(value || '').trim().toUpperCase();
+  return value;
+}
+
+async function rejectTrackProposal(input) {
+  const proposalKey = String(input && input.proposal_key || (input && input.proposal_hash ? 'vertax:proposal:' + input.proposal_hash : '')).trim();
+  const field = String(input && input.field || '').trim();
+  const valueKey = String(input && input.value == null ? '' : input.value);
+  if (!proposalKey || !field) return { ok: false, error: 'proposal_key and field are required' };
+  const raw = await safeRedis('GET', [proposalKey], null);
+  if (!raw) return { ok: false, error: 'proposal not found' };
+  let proposal;
+  try { proposal = JSON.parse(raw); } catch (_) { return { ok: false, error: 'bad proposal JSON' }; }
+  const fieldEntry = proposal.pending_fields && proposal.pending_fields[field];
+  if (!fieldEntry) return { ok: true, skipped: true, reason: 'field already resolved' };
+  if (valueKey && fieldEntry.candidates) delete fieldEntry.candidates[valueKey];
+  if (!valueKey || !fieldEntry.candidates || !Object.keys(fieldEntry.candidates).length) {
+    delete proposal.pending_fields[field];
+  }
+  if (!proposal.pending_fields || !Object.keys(proposal.pending_fields).length) {
+    await safeRedis('DEL', [proposalKey], null);
+    await safeRedis('SREM', [PROPOSAL_SET_KEY, proposalKey], null);
+  } else {
+    proposal.updated_at = new Date().toISOString();
+    await safeRedis('SET', [proposalKey, JSON.stringify(proposal)], null);
+  }
+  return { ok: true, proposal_remaining: proposal.pending_fields || null };
 }
 
 async function deleteBeatportCache(identity) {
@@ -586,6 +622,7 @@ module.exports = {
   submitTrackProposal,
   listTrackProposals,
   approveTrackProposal,
+  rejectTrackProposal,
   deleteBeatportCache,
   getCacheStats,
   exportBeatportCache

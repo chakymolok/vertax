@@ -61,21 +61,27 @@ async function notifyNewProposal(proposal) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
   if (!token || !chatId || !proposal) return;
-  const fields = Object.entries(proposal.pending_fields || {})
-    .map(([field, item]) => {
-      const candidates = Object.entries((item && item.candidates) || {})
-        .map(([value, candidate]) => escapeHtml(value) + ' от ' + Number(candidate.count || 0))
-        .join(', ');
-      return '<b>' + escapeHtml(field) + '</b>: ' + candidates;
-    })
-    .join('\n');
+  const hash = String(proposal.proposal_hash || String(proposal.proposal_key || '').replace(/^vertax:proposal:/, ''));
+  const rows = [];
+  const lines = [];
+  Object.entries(proposal.pending_fields || {}).forEach(([field, item]) => {
+    const oldValue = item && item.current_value != null && item.current_value !== '' ? item.current_value : 'пусто';
+    Object.entries((item && item.candidates) || {}).forEach(([value, candidate]) => {
+      const count = Number(candidate && candidate.count || 0);
+      lines.push('<b>' + escapeHtml(field) + '</b>: ' + escapeHtml(oldValue) + ' → ' + escapeHtml(value) + ' от ' + count);
+      rows.push([
+        { text: '✅ ' + field + ': ' + value, callback_data: buildProposalCallback('approve', hash, field, value) },
+        { text: '❌', callback_data: buildProposalCallback('reject', hash, field, value) }
+      ]);
+    });
+  });
   const message = [
     '📝 Новое предложение в Vertax',
     '',
     '<b>' + escapeHtml(proposal.artist_original || '') + ' — ' + escapeHtml(proposal.title_original || '') + '</b>',
     proposal.label ? 'Label: ' + escapeHtml(proposal.label) : '',
     '',
-    fields,
+    lines.join('\n'),
     '',
     'Ключ: <code>' + escapeHtml(proposal.track_key || '') + '</code>'
   ].filter(Boolean).join('\n');
@@ -88,7 +94,8 @@ async function notifyNewProposal(proposal) {
         chat_id: chatId,
         text: message,
         parse_mode: 'HTML',
-        disable_web_page_preview: true
+        disable_web_page_preview: true,
+        reply_markup: rows.length ? { inline_keyboard: rows } : undefined
       })
     });
   } catch (error) {
@@ -96,8 +103,46 @@ async function notifyNewProposal(proposal) {
   }
 }
 
+function fieldToCode(field) {
+  return ({ bpm: 'b', camelot: 'c', key_name: 'k', label: 'l', genre: 'g', sub_genre: 's', release_year: 'y' })[field] || field;
+}
+
+function codeToField(code) {
+  return ({ b: 'bpm', c: 'camelot', k: 'key_name', l: 'label', g: 'genre', s: 'sub_genre', y: 'release_year' })[code] || code;
+}
+
+function buildProposalCallback(action, hash, field, value) {
+  const actionCode = action === 'approve' ? 'a' : 'r';
+  return ['vtx', actionCode, String(hash || '').slice(0, 40), fieldToCode(field), encodeURIComponent(String(value == null ? '' : value))].join(':').slice(0, 64);
+}
+
+function parseProposalCallback(data) {
+  const parts = String(data || '').split(':');
+  if (parts[0] !== 'vtx' || parts.length < 5) return null;
+  return {
+    action: parts[1] === 'a' ? 'approve' : parts[1] === 'r' ? 'reject' : null,
+    proposal_hash: parts[2],
+    field: codeToField(parts[3]),
+    value: decodeURIComponent(parts.slice(4).join(':'))
+  };
+}
+
+async function callTelegram(method, body) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return null;
+  const response = await fetch('https://api.telegram.org/bot' + token + '/' + method, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  return response.json().catch(() => null);
+}
+
 module.exports = {
   getTelegramUserFromRequest,
   isAdminTelegramUser,
-  notifyNewProposal
+  notifyNewProposal,
+  parseProposalCallback,
+  callTelegram,
+  escapeHtml
 };
