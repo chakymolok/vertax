@@ -175,20 +175,16 @@ module.exports = async function discogsIngest(req, res) {
         const proposal = await submitTrackProposal(payload, userContext);
         if (proposal && proposal.ok && !proposal.skipped) {
           proposed += 1;
-          if (proposal.created) {
-            const notice = await notifyNewProposal(proposal.proposal);
-            if (notice && notice.ok) telegram_notified += 1;
-            else {
-              telegram_skipped += 1;
-              if (telegram_errors.length < 10) {
-                telegram_errors.push({
-                  title: payload.title_original,
-                  reason: notice && (notice.reason || notice.error) || 'telegram_notification_failed'
-                });
-              }
-            }
-          } else {
+          const notice = await notifyNewProposal(proposal.proposal);
+          if (notice && notice.ok) telegram_notified += 1;
+          else {
             telegram_skipped += 1;
+            if (telegram_errors.length < 10) {
+              telegram_errors.push({
+                title: payload.title_original,
+                reason: notice && (notice.reason || notice.error) || 'telegram_notification_failed'
+              });
+            }
           }
         }
       } else if (manual && isAdmin && result && result.ok) {
