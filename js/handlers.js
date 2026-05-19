@@ -75,21 +75,37 @@
 
   function sendDiscogsIngest(v){
     var payload = compactVinylForIngest(v);
-    if (!payload || !payload.tracklist.length) return;
+    if (!payload || !payload.tracklist.length) {
+      window.__vertaxLastIngest = { ok:false, skipped:true, reason:'empty_payload', at:new Date().toISOString() };
+      return;
+    }
     try {
-      if (!window.location || !/^https?:$/.test(window.location.protocol)) return;
+      if (!window.location || !/^https?:$/.test(window.location.protocol)) {
+        window.__vertaxLastIngest = { ok:false, skipped:true, reason:'non_http_origin', at:new Date().toISOString() };
+        return;
+      }
       var headers = { 'Content-Type': 'application/json' };
       var initData = getTelegramInitData();
       var clientId = getVertaxClientId();
       if (initData) headers['X-Telegram-Init-Data'] = initData;
       if (clientId) headers['X-Vertax-Client-Id'] = clientId;
-      fetch('/api/discogs-ingest', {
+      var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname || '');
+      var apiUrl = (isLocal ? 'https://vertax-one.vercel.app' : '') + '/api/discogs-ingest';
+      window.__vertaxLastIngest = { ok:null, status:'sending', url:apiUrl, tracks:payload.tracklist.length, at:new Date().toISOString() };
+      fetch(apiUrl, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ vinyl: payload }),
-        keepalive: true
-      }).catch(function(e){ console.warn('Discogs ingest skipped', e); });
+        body: JSON.stringify({ vinyl: payload, clientId: clientId, telegramInitData: initData })
+      }).then(function(res){
+        return res.json().catch(function(){ return {}; }).then(function(body){
+          window.__vertaxLastIngest = { ok:res.ok, httpStatus:res.status, body:body, url:apiUrl, tracks:payload.tracklist.length, at:new Date().toISOString() };
+        });
+      }).catch(function(e){
+        window.__vertaxLastIngest = { ok:false, error:e && e.message ? e.message : String(e), url:apiUrl, tracks:payload.tracklist.length, at:new Date().toISOString() };
+        console.warn('Discogs ingest skipped', e);
+      });
     } catch(e) {
+      window.__vertaxLastIngest = { ok:false, error:e && e.message ? e.message : String(e), at:new Date().toISOString() };
       console.warn('Discogs ingest skipped', e);
     }
   }
