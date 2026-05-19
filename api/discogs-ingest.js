@@ -1,6 +1,7 @@
 const {
   upsertDiscogsTrackCache,
   hasManualFields,
+  markAdminManualFields,
   stripManualFields,
   submitTrackProposal
 } = require('./redis-cache');
@@ -156,7 +157,10 @@ module.exports = async function discogsIngest(req, res) {
     }
     try {
       const manual = hasManualFields(payload);
-      const result = await upsertDiscogsTrackCache(manual && !isAdmin ? stripManualFields(payload) : payload);
+      const writePayload = manual && isAdmin
+        ? markAdminManualFields(payload)
+        : (manual ? stripManualFields(payload) : payload);
+      const result = await upsertDiscogsTrackCache(writePayload);
       if (result && result.ok) {
         upserted += 1;
         if (result.created) created += 1;

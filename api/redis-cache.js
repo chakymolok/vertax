@@ -280,10 +280,24 @@ function isManualSource(value) {
   return String(value || '').trim().toLowerCase() === 'manual';
 }
 
+function isAdminSource(value) {
+  return String(value || '').trim().toLowerCase() === 'admin';
+}
+
 function hasManualFields(track) {
   return isManualSource(track && track.bpm_source)
     || isManualSource(track && track.key_source)
     || String(track && track.meta_status || '').trim().toLowerCase() === 'manual';
+}
+
+function markAdminManualFields(track) {
+  const out = Object.assign({}, track || {});
+  const manualBpm = isManualSource(out.bpm_source) || String(out.meta_status || '').toLowerCase() === 'manual';
+  const manualKey = isManualSource(out.key_source) || String(out.meta_status || '').toLowerCase() === 'manual';
+  if (manualBpm) out.bpm_source = 'admin';
+  if (manualKey) out.key_source = 'admin';
+  if (manualBpm || manualKey) out.meta_status = 'admin';
+  return out;
 }
 
 function stripManualFields(track) {
@@ -310,7 +324,11 @@ function stripManualFields(track) {
 
 function mergeDiscogsPayload(record, discogs) {
   const current = readTrack(record) || {};
-  const sources = mergeArrays(current.sources || current.source, 'discogs');
+  const adminMeta = isAdminSource(discogs.bpm_source)
+    || isAdminSource(discogs.key_source)
+    || String(discogs.meta_status || '').trim().toLowerCase() === 'admin';
+  const incomingSources = adminMeta ? ['discogs', 'admin'] : ['discogs'];
+  const sources = mergeArrays(current.sources || current.source, incomingSources);
   const out = Object.assign({}, current, {
     matched: current.matched !== false,
     artist_original: current.artist_original || discogs.artist_original || null,
@@ -334,7 +352,7 @@ function mergeDiscogsPayload(record, discogs) {
     original_bpm: preferIncoming(discogs.original_bpm, current.original_bpm),
     halftime_corrected: preferIncoming(discogs.halftime_corrected, current.halftime_corrected),
     sources,
-    source: current.source || 'discogs',
+    source: adminMeta ? 'admin' : (current.source || 'discogs'),
     savedAt: current.savedAt || new Date().toISOString(),
     discogsSavedAt: new Date().toISOString(),
     vertaxSavedAt: new Date().toISOString()
@@ -492,11 +510,19 @@ async function approveTrackProposal(input) {
     title_original: proposal.title_original || record.title_original || null,
     label: proposal.label || record.label || null,
     [field]: value,
-    source: record.source || 'curated',
+    source: 'curated',
     sources: mergeArrays(record.sources || record.source, 'curated'),
     curatedSavedAt: new Date().toISOString(),
     savedAt: record.savedAt || new Date().toISOString()
   });
+  if (field === 'bpm') {
+    record.bpm_source = 'curated';
+    record.meta_status = 'curated';
+  }
+  if (field === 'camelot' || field === 'key_name') {
+    record.key_source = 'curated';
+    record.meta_status = 'curated';
+  }
   await safeRedis('SET', [trackKey, JSON.stringify(record)], null);
   await safeRedis('SADD', [TRACK_SET_KEY, trackKey], null);
 
@@ -618,6 +644,7 @@ module.exports = {
   setBeatportCache,
   upsertDiscogsTrackCache,
   hasManualFields,
+  markAdminManualFields,
   stripManualFields,
   submitTrackProposal,
   listTrackProposals,
