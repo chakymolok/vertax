@@ -1,4 +1,4 @@
-const { callTelegram } = require('../telegram-auth');
+const { callTelegram } = require('../../lib/telegram-auth');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

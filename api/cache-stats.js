@@ -1,4 +1,4 @@
-const { getCacheStats } = require('./redis-cache');
+const { getCacheStats } = require('../lib/redis-cache');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

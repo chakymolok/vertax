@@ -1,7 +1,7 @@
 const {
   markAdminManualFields,
   upsertDiscogsTrackCache
-} = require('../redis-cache');
+} = require('../../lib/redis-cache');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

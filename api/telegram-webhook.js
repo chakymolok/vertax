@@ -1,12 +1,12 @@
 const {
   approveTrackProposal,
   rejectTrackProposal
-} = require('./redis-cache');
+} = require('../lib/redis-cache');
 const {
   parseProposalCallback,
   callTelegram,
   escapeHtml
-} = require('./telegram-auth');
+} = require('../lib/telegram-auth');
 
 function send(res, status, body) {
   res.statusCode = status;

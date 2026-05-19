@@ -1,10 +1,10 @@
-const { getAccessToken } = require('../beatport-auth');
+const { getAccessToken } = require('../../lib/beatport-auth');
 const {
   scanKeys,
   readTrack,
   safeRedis,
   setBeatportCache
-} = require('../redis-cache');
+} = require('../../lib/redis-cache');
 const {
   enrichTrackFromBeatport,
   fetchBeatportTrack,

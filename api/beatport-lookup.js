@@ -1,4 +1,4 @@
-const { getAccessToken } = require('./beatport-auth');
+const { getAccessToken } = require('../lib/beatport-auth');
 const {
   makeBeatportCacheIdentity,
   getBeatportCache,
@@ -6,7 +6,7 @@ const {
   deleteBeatportCache,
   normalizeBeatportPayload,
   MISS_TTL_SECONDS
-} = require('./redis-cache');
+} = require('../lib/redis-cache');
 
 const API_BASE = 'https://api.beatport.com/v4';
 const lookupCache = new Map();

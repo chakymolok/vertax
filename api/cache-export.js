@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { exportBeatportCache, getCacheStats } = require('./redis-cache');
+const { exportBeatportCache, getCacheStats } = require('../lib/redis-cache');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

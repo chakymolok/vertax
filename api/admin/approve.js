@@ -1,4 +1,4 @@
-const { approveTrackProposal } = require('../redis-cache');
+const { approveTrackProposal } = require('../../lib/redis-cache');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

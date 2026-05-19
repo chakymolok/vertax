@@ -4,13 +4,13 @@ const {
   markAdminManualFields,
   stripManualFields,
   submitTrackProposal
-} = require('./redis-cache');
+} = require('../lib/redis-cache');
 const {
   getTelegramUserFromRequest,
   isAdminTelegramUser,
   notifyNewProposal,
   notifyAdminTrackEdit
-} = require('./telegram-auth');
+} = require('../lib/telegram-auth');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
