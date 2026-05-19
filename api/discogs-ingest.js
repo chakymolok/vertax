@@ -8,7 +8,8 @@ const {
 const {
   getTelegramUserFromRequest,
   isAdminTelegramUser,
-  notifyNewProposal
+  notifyNewProposal,
+  notifyAdminTrackEdit
 } = require('./telegram-auth');
 
 function setCors(res) {
@@ -173,6 +174,8 @@ module.exports = async function discogsIngest(req, res) {
           proposed += 1;
           if (proposal.created) await notifyNewProposal(proposal.proposal);
         }
+      } else if (manual && isAdmin && result && result.ok) {
+        await notifyAdminTrackEdit(payload, result.previous, result.record, userContext);
       }
     } catch (error) {
       if (errors.length < 20) {

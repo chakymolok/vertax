@@ -103,6 +103,49 @@ async function notifyNewProposal(proposal) {
   }
 }
 
+async function notifyAdminTrackEdit(track, previous, saved, userContext) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+  if (!token || !chatId || !track) return;
+  const rows = [];
+  function addRow(field, oldValue, newValue) {
+    if (newValue === null || newValue === undefined || newValue === '') return;
+    const oldText = oldValue !== null && oldValue !== undefined && oldValue !== '' ? oldValue : 'пусто';
+    if (String(oldText) === String(newValue)) return;
+    rows.push('<b>' + escapeHtml(field) + '</b>: ' + escapeHtml(oldText) + ' → ' + escapeHtml(newValue));
+  }
+  addRow('bpm', previous && previous.bpm, saved && saved.bpm);
+  addRow('camelot', previous && previous.camelot, saved && saved.camelot);
+  addRow('key_name', previous && previous.key_name, saved && saved.key_name);
+  if (!rows.length) return;
+  const user = userContext && userContext.telegramUserId ? 'Telegram ID: <code>' + escapeHtml(userContext.telegramUserId) + '</code>' : '';
+  const message = [
+    '✅ Правка Vertax применена',
+    '',
+    '<b>' + escapeHtml(track.artist_original || '') + ' — ' + escapeHtml(track.title_original || '') + '</b>',
+    track.label ? 'Label: ' + escapeHtml(track.label) : '',
+    '',
+    rows.join('\n'),
+    '',
+    user,
+    'Ключ: <code>' + escapeHtml(saved && (saved.track_key || saved.redis_key) || '') + '</code>'
+  ].filter(Boolean).join('\n');
+  try {
+    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+  } catch (error) {
+    console.warn('Telegram admin edit notification failed', error && error.message ? error.message : error);
+  }
+}
+
 function fieldToCode(field) {
   return ({ bpm: 'b', camelot: 'c', key_name: 'k', label: 'l', genre: 'g', sub_genre: 's', release_year: 'y' })[field] || field;
 }
@@ -142,6 +185,7 @@ module.exports = {
   getTelegramUserFromRequest,
   isAdminTelegramUser,
   notifyNewProposal,
+  notifyAdminTrackEdit,
   parseProposalCallback,
   callTelegram,
   escapeHtml

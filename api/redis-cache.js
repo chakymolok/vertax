@@ -373,13 +373,14 @@ async function upsertDiscogsTrackCache(track) {
     try { parsed = JSON.parse(raw); } catch (_) {}
   }
 
+  const previous = readTrack(parsed);
   const record = Object.assign(mergeDiscogsPayload(parsed, track), {
     track_key: parsed && parsed.track_key || identity.normalized,
     redis_key: identity.trackKey
   });
   await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
   await safeRedis('SADD', [TRACK_SET_KEY, identity.trackKey], null);
-  return { ok: true, created: !parsed, redis_key: identity.trackKey };
+  return { ok: true, created: !parsed, redis_key: identity.trackKey, previous, record };
 }
 
 function proposalFieldsFromTrack(track) {
