@@ -51,14 +51,41 @@
     };
   }
 
+  function getVertaxClientId(){
+    try {
+      var key = 'vertax_uid';
+      var value = localStorage.getItem(key);
+      if (!value) {
+        value = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(16).slice(2);
+        localStorage.setItem(key, value);
+      }
+      return value;
+    } catch(_) {
+      return '';
+    }
+  }
+
+  function getTelegramInitData(){
+    try {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) return window.Telegram.WebApp.initData;
+      if (window.WebApp && window.WebApp.initData) return window.WebApp.initData;
+    } catch(_) {}
+    return '';
+  }
+
   function sendDiscogsIngest(v){
     var payload = compactVinylForIngest(v);
     if (!payload || !payload.tracklist.length) return;
     try {
       if (!window.location || !/^https?:$/.test(window.location.protocol)) return;
+      var headers = { 'Content-Type': 'application/json' };
+      var initData = getTelegramInitData();
+      var clientId = getVertaxClientId();
+      if (initData) headers['X-Telegram-Init-Data'] = initData;
+      if (clientId) headers['X-Vertax-Client-Id'] = clientId;
       fetch('/api/discogs-ingest', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ vinyl: payload }),
         keepalive: true
       }).catch(function(e){ console.warn('Discogs ingest skipped', e); });

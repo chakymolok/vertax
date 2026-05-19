@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 
 const TRACK_SET_KEY = 'vertax:beatport:tracks';
+const PROPOSAL_SET_KEY = 'vertax:proposals';
 const MISS_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 function getRedisUrl() {
@@ -275,6 +276,38 @@ function preferIncoming(incoming, current) {
   return incoming !== null && incoming !== undefined && incoming !== '' ? incoming : current;
 }
 
+function isManualSource(value) {
+  return String(value || '').trim().toLowerCase() === 'manual';
+}
+
+function hasManualFields(track) {
+  return isManualSource(track && track.bpm_source)
+    || isManualSource(track && track.key_source)
+    || String(track && track.meta_status || '').trim().toLowerCase() === 'manual';
+}
+
+function stripManualFields(track) {
+  const out = Object.assign({}, track || {});
+  const manualBpm = isManualSource(out.bpm_source) || String(out.meta_status || '').toLowerCase() === 'manual';
+  const manualKey = isManualSource(out.key_source) || String(out.meta_status || '').toLowerCase() === 'manual';
+  if (manualBpm) {
+    delete out.bpm;
+    delete out.bpm_source;
+    delete out.original_bpm;
+    delete out.halftime_corrected;
+  }
+  if (manualKey) {
+    delete out.key_name;
+    delete out.camelot;
+    delete out.key_source;
+  }
+  if (manualBpm || manualKey) {
+    delete out.confidence;
+    delete out.meta_status;
+  }
+  return out;
+}
+
 function mergeDiscogsPayload(record, discogs) {
   const current = readTrack(record) || {};
   const sources = mergeArrays(current.sources || current.source, 'discogs');
@@ -329,6 +362,151 @@ async function upsertDiscogsTrackCache(track) {
   await safeRedis('SET', [identity.trackKey, JSON.stringify(record)], null);
   await safeRedis('SADD', [TRACK_SET_KEY, identity.trackKey], null);
   return { ok: true, created: !parsed, redis_key: identity.trackKey };
+}
+
+function proposalFieldsFromTrack(track) {
+  const fields = {};
+  const manualBpm = isManualSource(track && track.bpm_source) || String(track && track.meta_status || '').toLowerCase() === 'manual';
+  const manualKey = isManualSource(track && track.key_source) || String(track && track.meta_status || '').toLowerCase() === 'manual';
+  if (manualBpm && track.bpm !== null && track.bpm !== undefined && track.bpm !== '') fields.bpm = track.bpm;
+  if (manualKey && track.camelot) fields.camelot = track.camelot;
+  if (manualKey && track.key_name) fields.key_name = track.key_name;
+  return fields;
+}
+
+async function submitTrackProposal(track, userContext) {
+  const artist = String(track && track.artist_original || '').trim();
+  const title = String(track && track.title_original || '').trim();
+  const label = String(track && (track.label || track.discogs_label) || '').trim();
+  if (!artist || !title) return { ok: false, skipped: true, reason: 'missing_artist_or_title' };
+
+  const fields = proposalFieldsFromTrack(track);
+  if (!Object.keys(fields).length) return { ok: true, skipped: true, reason: 'no_manual_fields' };
+
+  const identity = makeBeatportCacheIdentity(artist, title, label);
+  let current = null;
+  const currentRaw = await safeRedis('GET', [identity.trackKey], null);
+  if (currentRaw) {
+    try { current = readTrack(JSON.parse(currentRaw)); } catch (_) {}
+  }
+
+  const userId = String(
+    userContext && (userContext.telegramUserId || userContext.clientId || userContext.userId)
+    || 'anonymous'
+  ).slice(0, 160);
+  const now = new Date().toISOString();
+  const proposalKey = 'vertax:proposal:' + identity.hash;
+  let proposal = null;
+  const raw = await safeRedis('GET', [proposalKey], null);
+  if (raw) {
+    try { proposal = JSON.parse(raw); } catch (_) {}
+  }
+  const created = !proposal;
+  proposal = proposal || {
+    track_key: identity.normalized,
+    redis_key: identity.trackKey,
+    proposal_key: proposalKey,
+    artist_original: artist,
+    title_original: title,
+    label: label || null,
+    pending_fields: {},
+    created_at: now,
+    updated_at: now
+  };
+
+  let changed = false;
+  let skippedAlreadyInBase = 0;
+  Object.entries(fields).forEach(([field, value]) => {
+    const currentValue = current && current[field];
+    if (String(currentValue == null ? '' : currentValue) === String(value == null ? '' : value)) {
+      skippedAlreadyInBase += 1;
+      return;
+    }
+    proposal.pending_fields[field] = proposal.pending_fields[field] || { candidates: {} };
+    const valueKey = String(value);
+    const candidate = proposal.pending_fields[field].candidates[valueKey] || {
+      count: 0,
+      first_at: now,
+      user_ids: []
+    };
+    if (candidate.user_ids.indexOf(userId) < 0) {
+      candidate.user_ids.push(userId);
+      candidate.count = candidate.user_ids.length;
+      candidate.last_at = now;
+      changed = true;
+    }
+    proposal.pending_fields[field].candidates[valueKey] = candidate;
+  });
+
+  if (!changed) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: skippedAlreadyInBase ? 'already_in_base' : 'duplicate_vote',
+      proposal,
+      created: false
+    };
+  }
+
+  proposal.updated_at = now;
+  await safeRedis('SET', [proposalKey, JSON.stringify(proposal)], null);
+  await safeRedis('SADD', [PROPOSAL_SET_KEY, proposalKey], null);
+  return { ok: true, created, proposal };
+}
+
+async function listTrackProposals(limit) {
+  const keys = await safeRedis('SMEMBERS', [PROPOSAL_SET_KEY], []) || [];
+  const out = [];
+  for (const key of keys.slice(0, Math.max(1, Math.min(500, limit || 100)))) {
+    const raw = await safeRedis('GET', [key], null);
+    if (!raw) continue;
+    try { out.push(JSON.parse(raw)); } catch (_) {}
+  }
+  out.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+  return out;
+}
+
+async function approveTrackProposal(input) {
+  const proposalKey = String(input && input.proposal_key || '').trim();
+  const field = String(input && input.field || '').trim();
+  const value = input && input.value;
+  if (!proposalKey || !field) return { ok: false, error: 'proposal_key and field are required' };
+  const raw = await safeRedis('GET', [proposalKey], null);
+  if (!raw) return { ok: false, error: 'proposal not found' };
+  let proposal;
+  try { proposal = JSON.parse(raw); } catch (_) { return { ok: false, error: 'bad proposal JSON' }; }
+  const trackKey = proposal.redis_key;
+  if (!trackKey) return { ok: false, error: 'proposal has no redis_key' };
+  let record = {};
+  const trackRaw = await safeRedis('GET', [trackKey], null);
+  if (trackRaw) {
+    try { record = JSON.parse(trackRaw) || {}; } catch (_) { record = {}; }
+  }
+  record = Object.assign({}, readTrack(record) || {}, {
+    matched: true,
+    track_key: proposal.track_key,
+    redis_key: trackKey,
+    artist_original: proposal.artist_original || record.artist_original || null,
+    title_original: proposal.title_original || record.title_original || null,
+    label: proposal.label || record.label || null,
+    [field]: value,
+    source: record.source || 'curated',
+    sources: mergeArrays(record.sources || record.source, 'curated'),
+    curatedSavedAt: new Date().toISOString(),
+    savedAt: record.savedAt || new Date().toISOString()
+  });
+  await safeRedis('SET', [trackKey, JSON.stringify(record)], null);
+  await safeRedis('SADD', [TRACK_SET_KEY, trackKey], null);
+
+  if (proposal.pending_fields) delete proposal.pending_fields[field];
+  if (!proposal.pending_fields || !Object.keys(proposal.pending_fields).length) {
+    await safeRedis('DEL', [proposalKey], null);
+    await safeRedis('SREM', [PROPOSAL_SET_KEY, proposalKey], null);
+  } else {
+    proposal.updated_at = new Date().toISOString();
+    await safeRedis('SET', [proposalKey, JSON.stringify(proposal)], null);
+  }
+  return { ok: true, record, proposal_remaining: proposal.pending_fields || null };
 }
 
 async function deleteBeatportCache(identity) {
@@ -403,6 +581,11 @@ module.exports = {
   getBeatportCache,
   setBeatportCache,
   upsertDiscogsTrackCache,
+  hasManualFields,
+  stripManualFields,
+  submitTrackProposal,
+  listTrackProposals,
+  approveTrackProposal,
   deleteBeatportCache,
   getCacheStats,
   exportBeatportCache

@@ -1,9 +1,19 @@
-const { upsertDiscogsTrackCache } = require('./redis-cache');
+const {
+  upsertDiscogsTrackCache,
+  hasManualFields,
+  stripManualFields,
+  submitTrackProposal
+} = require('./redis-cache');
+const {
+  getTelegramUserFromRequest,
+  isAdminTelegramUser,
+  notifyNewProposal
+} = require('./telegram-auth');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Telegram-Init-Data,X-Vertax-Client-Id');
 }
 
 function send(res, status, body) {
@@ -126,8 +136,16 @@ module.exports = async function discogsIngest(req, res) {
 
   let upserted = 0;
   let created = 0;
+  let proposed = 0;
   let skipped = 0;
   const errors = [];
+  const auth = getTelegramUserFromRequest(req, body);
+  const isAdmin = isAdminTelegramUser(auth);
+  const clientId = String((req.headers && (req.headers['x-vertax-client-id'] || req.headers['X-Vertax-Client-Id'])) || body.clientId || '').trim();
+  const userContext = {
+    telegramUserId: auth && auth.user && auth.user.id != null ? String(auth.user.id) : '',
+    clientId
+  };
 
   for (const track of tracks.slice(0, 200)) {
     const payload = normalizeTrack(vinyl, track || {});
@@ -136,12 +154,20 @@ module.exports = async function discogsIngest(req, res) {
       continue;
     }
     try {
-      const result = await upsertDiscogsTrackCache(payload);
+      const manual = hasManualFields(payload);
+      const result = await upsertDiscogsTrackCache(manual && !isAdmin ? stripManualFields(payload) : payload);
       if (result && result.ok) {
         upserted += 1;
         if (result.created) created += 1;
       } else {
         skipped += 1;
+      }
+      if (manual && !isAdmin) {
+        const proposal = await submitTrackProposal(payload, userContext);
+        if (proposal && proposal.ok && !proposal.skipped) {
+          proposed += 1;
+          if (proposal.created) await notifyNewProposal(proposal.proposal);
+        }
       }
     } catch (error) {
       if (errors.length < 20) {
@@ -157,8 +183,10 @@ module.exports = async function discogsIngest(req, res) {
     ok: true,
     source: 'discogs',
     discogs_release_id: vinyl.discogsId || null,
+    admin_write: isAdmin,
     upserted,
     created,
+    proposed,
     skipped,
     errors
   });
