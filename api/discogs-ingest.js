@@ -141,7 +141,10 @@ module.exports = async function discogsIngest(req, res) {
   let created = 0;
   let proposed = 0;
   let skipped = 0;
+  let telegram_notified = 0;
+  let telegram_skipped = 0;
   const errors = [];
+  const telegram_errors = [];
   const auth = getTelegramUserFromRequest(req, body);
   const isAdmin = isAdminTelegramUser(auth);
   const clientId = String((req.headers && (req.headers['x-vertax-client-id'] || req.headers['X-Vertax-Client-Id'])) || body.clientId || '').trim();
@@ -172,10 +175,34 @@ module.exports = async function discogsIngest(req, res) {
         const proposal = await submitTrackProposal(payload, userContext);
         if (proposal && proposal.ok && !proposal.skipped) {
           proposed += 1;
-          if (proposal.created) await notifyNewProposal(proposal.proposal);
+          if (proposal.created) {
+            const notice = await notifyNewProposal(proposal.proposal);
+            if (notice && notice.ok) telegram_notified += 1;
+            else {
+              telegram_skipped += 1;
+              if (telegram_errors.length < 10) {
+                telegram_errors.push({
+                  title: payload.title_original,
+                  reason: notice && (notice.reason || notice.error) || 'telegram_notification_failed'
+                });
+              }
+            }
+          } else {
+            telegram_skipped += 1;
+          }
         }
       } else if (manual && isAdmin && result && result.ok) {
-        await notifyAdminTrackEdit(payload, result.previous, result.record, userContext);
+        const notice = await notifyAdminTrackEdit(payload, result.previous, result.record, userContext);
+        if (notice && notice.ok) telegram_notified += 1;
+        else {
+          telegram_skipped += 1;
+          if (notice && notice.reason !== 'no_changed_fields' && telegram_errors.length < 10) {
+            telegram_errors.push({
+              title: payload.title_original,
+              reason: notice && (notice.reason || notice.error) || 'telegram_notification_failed'
+            });
+          }
+        }
       }
     } catch (error) {
       if (errors.length < 20) {
@@ -196,6 +223,9 @@ module.exports = async function discogsIngest(req, res) {
     created,
     proposed,
     skipped,
+    telegram_notified,
+    telegram_skipped,
+    telegram_errors,
     errors
   });
 };

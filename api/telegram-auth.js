@@ -60,7 +60,9 @@ function escapeHtml(value) {
 async function notifyNewProposal(proposal) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
-  if (!token || !chatId || !proposal) return;
+  if (!token || !chatId || !proposal) {
+    return { ok: false, skipped: true, reason: !token ? 'missing_bot_token' : !chatId ? 'missing_admin_chat_id' : 'missing_proposal' };
+  }
   const hash = String(proposal.proposal_hash || String(proposal.proposal_key || '').replace(/^vertax:proposal:/, ''));
   const rows = [];
   const lines = [];
@@ -87,7 +89,7 @@ async function notifyNewProposal(proposal) {
   ].filter(Boolean).join('\n');
 
   try {
-    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    const response = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -98,15 +100,27 @@ async function notifyNewProposal(proposal) {
         reply_markup: rows.length ? { inline_keyboard: rows } : undefined
       })
     });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data && data.ok === false) {
+      return {
+        ok: false,
+        status: response.status,
+        error: data && (data.description || data.error_code) || 'telegram_send_failed'
+      };
+    }
+    return { ok: true, status: response.status };
   } catch (error) {
     console.warn('Telegram proposal notification failed', error && error.message ? error.message : error);
+    return { ok: false, error: error && error.message ? error.message : String(error) };
   }
 }
 
 async function notifyAdminTrackEdit(track, previous, saved, userContext) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
-  if (!token || !chatId || !track) return;
+  if (!token || !chatId || !track) {
+    return { ok: false, skipped: true, reason: !token ? 'missing_bot_token' : !chatId ? 'missing_admin_chat_id' : 'missing_track' };
+  }
   const rows = [];
   function addRow(field, oldValue, newValue) {
     if (newValue === null || newValue === undefined || newValue === '') return;
@@ -117,7 +131,7 @@ async function notifyAdminTrackEdit(track, previous, saved, userContext) {
   addRow('bpm', previous && previous.bpm, saved && saved.bpm);
   addRow('camelot', previous && previous.camelot, saved && saved.camelot);
   addRow('key_name', previous && previous.key_name, saved && saved.key_name);
-  if (!rows.length) return;
+  if (!rows.length) return { ok: false, skipped: true, reason: 'no_changed_fields' };
   const user = userContext && userContext.telegramUserId ? 'Telegram ID: <code>' + escapeHtml(userContext.telegramUserId) + '</code>' : '';
   const message = [
     '✅ Правка Vertax применена',
@@ -131,7 +145,7 @@ async function notifyAdminTrackEdit(track, previous, saved, userContext) {
     'Ключ: <code>' + escapeHtml(saved && (saved.track_key || saved.redis_key) || '') + '</code>'
   ].filter(Boolean).join('\n');
   try {
-    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    const response = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -141,8 +155,18 @@ async function notifyAdminTrackEdit(track, previous, saved, userContext) {
         disable_web_page_preview: true
       })
     });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data && data.ok === false) {
+      return {
+        ok: false,
+        status: response.status,
+        error: data && (data.description || data.error_code) || 'telegram_send_failed'
+      };
+    }
+    return { ok: true, status: response.status };
   } catch (error) {
     console.warn('Telegram admin edit notification failed', error && error.message ? error.message : error);
+    return { ok: false, error: error && error.message ? error.message : String(error) };
   }
 }
 
