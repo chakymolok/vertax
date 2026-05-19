@@ -17,6 +17,11 @@
 
   function compactVinylForIngest(v){
     if (!v || !v.discogsId || !Array.isArray(v.tracklist) || !v.tracklist.length) return null;
+    function cleanNumber(value){
+      if (value === null || value === undefined || value === '') return null;
+      var n = Number(value);
+      return isFinite(n) ? Math.round(n * 10) / 10 : null;
+    }
     return {
       discogsId: v.discogsId,
       artist: v.artist || '',
@@ -31,7 +36,16 @@
           position: t && t.position || '',
           title: t && t.title || '',
           artist: t && (t.artist || t.vinylArtist) || '',
-          duration: t && t.duration || ''
+          duration: t && t.duration || '',
+          bpm: t ? cleanNumber(t.bpm) : null,
+          key: t && t.key || '',
+          camelot: t && t.camelot || '',
+          bpmSource: t && t.bpmSource || '',
+          keySource: t && t.keySource || '',
+          confidence: t && t.confidence || '',
+          metaStatus: t && t.metaStatus || '',
+          originalBpm: t ? cleanNumber(t.originalBpm) : null,
+          halftimeCorrected: !!(t && t.halftimeCorrected)
         };
       }).filter(function(t){ return t.title; })
     };

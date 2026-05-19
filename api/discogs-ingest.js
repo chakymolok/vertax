@@ -51,6 +51,26 @@ function cleanArray(value) {
     .slice(0, 20);
 }
 
+function cleanNumber(value, min, max) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < min || n > max) return null;
+  return Math.round(n * 10) / 10;
+}
+
+function cleanString(value, maxLength) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  return text.slice(0, maxLength || 120);
+}
+
+function cleanCamelot(value) {
+  const text = cleanString(value, 4);
+  if (!text) return null;
+  const upper = text.toUpperCase();
+  return /^([1-9]|1[0-2])[AB]$/.test(upper) ? upper : null;
+}
+
 function normalizeTrack(vinyl, track) {
   const artist = String(track.artist || track.vinylArtist || vinyl.artist || '').trim();
   const title = String(track.title || '').trim();
@@ -67,6 +87,15 @@ function normalizeTrack(vinyl, track) {
     discogs_label: vinyl.label ? String(vinyl.label).trim() : null,
     discogs_genres: cleanArray(vinyl.genre || vinyl.genres),
     discogs_styles: cleanArray(vinyl.style || vinyl.styles),
+    bpm: cleanNumber(track.bpm, 40, 240),
+    key_name: cleanString(track.key || track.key_name, 80),
+    camelot: cleanCamelot(track.camelot),
+    bpm_source: cleanString(track.bpmSource || track.bpm_source, 40),
+    key_source: cleanString(track.keySource || track.key_source, 40),
+    confidence: cleanString(track.confidence, 40),
+    meta_status: cleanString(track.metaStatus || track.meta_status, 40),
+    original_bpm: cleanNumber(track.originalBpm || track.original_bpm, 40, 240),
+    halftime_corrected: Boolean(track.halftimeCorrected || track.halftime_corrected),
   };
 }
 

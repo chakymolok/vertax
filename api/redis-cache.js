@@ -271,6 +271,10 @@ function mergeArrays(a, b) {
   return compactArray([].concat(a || [], b || []));
 }
 
+function preferIncoming(incoming, current) {
+  return incoming !== null && incoming !== undefined && incoming !== '' ? incoming : current;
+}
+
 function mergeDiscogsPayload(record, discogs) {
   const current = readTrack(record) || {};
   const sources = mergeArrays(current.sources || current.source, 'discogs');
@@ -287,10 +291,20 @@ function mergeDiscogsPayload(record, discogs) {
     discogs_label: discogs.discogs_label || current.discogs_label || null,
     discogs_genres: mergeArrays(current.discogs_genres, discogs.discogs_genres),
     discogs_styles: mergeArrays(current.discogs_styles, discogs.discogs_styles),
+    bpm: preferIncoming(discogs.bpm, current.bpm),
+    key_name: preferIncoming(discogs.key_name, current.key_name),
+    camelot: preferIncoming(discogs.camelot, current.camelot),
+    bpm_source: preferIncoming(discogs.bpm_source, current.bpm_source),
+    key_source: preferIncoming(discogs.key_source, current.key_source),
+    confidence: preferIncoming(discogs.confidence, current.confidence),
+    meta_status: preferIncoming(discogs.meta_status, current.meta_status),
+    original_bpm: preferIncoming(discogs.original_bpm, current.original_bpm),
+    halftime_corrected: preferIncoming(discogs.halftime_corrected, current.halftime_corrected),
     sources,
     source: current.source || 'discogs',
     savedAt: current.savedAt || new Date().toISOString(),
-    discogsSavedAt: new Date().toISOString()
+    discogsSavedAt: new Date().toISOString(),
+    vertaxSavedAt: new Date().toISOString()
   });
   return out;
 }
