@@ -148,8 +148,12 @@ module.exports = async function discogsIngest(req, res) {
   const auth = getTelegramUserFromRequest(req, body);
   const isAdmin = isAdminTelegramUser(auth);
   const clientId = String((req.headers && (req.headers['x-vertax-client-id'] || req.headers['X-Vertax-Client-Id'])) || body.clientId || '').trim();
+  const telegramUser = auth && auth.user ? auth.user : null;
   const userContext = {
-    telegramUserId: auth && auth.user && auth.user.id != null ? String(auth.user.id) : '',
+    telegramUserId: telegramUser && telegramUser.id != null ? String(telegramUser.id) : '',
+    telegramUsername: telegramUser && telegramUser.username ? String(telegramUser.username) : '',
+    telegramFirstName: telegramUser && telegramUser.first_name ? String(telegramUser.first_name) : '',
+    telegramLastName: telegramUser && telegramUser.last_name ? String(telegramUser.last_name) : '',
     clientId
   };
 
@@ -175,7 +179,7 @@ module.exports = async function discogsIngest(req, res) {
         const proposal = await submitTrackProposal(payload, userContext);
         if (proposal && proposal.ok && !proposal.skipped) {
           proposed += 1;
-          const notice = await notifyNewProposal(proposal.proposal);
+          const notice = await notifyNewProposal(proposal.proposal, userContext);
           if (notice && notice.ok) telegram_notified += 1;
           else {
             telegram_skipped += 1;
