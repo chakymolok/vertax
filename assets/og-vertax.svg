@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Vertax - Vinyl DJ Tool</title>
+  <desc id="desc">Dark Open Graph image for Vertax with a vinyl record and product tagline.</desc>
+  <defs>
+    <radialGradient id="limeGlow" cx="15%" cy="8%" r="70%">
+      <stop offset="0" stop-color="#c8ff4d" stop-opacity=".26"/>
+      <stop offset=".58" stop-color="#c8ff4d" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#090b0a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cyanGlow" cx="90%" cy="18%" r="60%">
+      <stop offset="0" stop-color="#54d8ff" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#090b0a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#090b0a"/>
+  <rect width="1200" height="630" fill="url(#limeGlow)"/>
+  <rect width="1200" height="630" fill="url(#cyanGlow)"/>
+  <g transform="translate(730 102)">
+    <rect x="0" y="0" width="350" height="350" rx="18" fill="#151a17" stroke="#314035"/>
+    <circle cx="145" cy="174" r="118" fill="#050605"/>
+    <circle cx="145" cy="174" r="102" fill="none" stroke="#1b211d" stroke-width="10"/>
+    <circle cx="145" cy="174" r="72" fill="none" stroke="#151915" stroke-width="8"/>
+    <circle cx="145" cy="174" r="32" fill="#c8ff4d"/>
+    <circle cx="145" cy="174" r="10" fill="#090b0a"/>
+    <rect x="236" y="70" width="122" height="12" rx="6" transform="rotate(35 236 70)" fill="#cbd6ce"/>
+    <circle cx="298" cy="62" r="28" fill="#202822" stroke="#556159"/>
+    <rect x="54" y="294" width="240" height="34" rx="5" fill="#111610" stroke="#3a513a"/>
+    <text x="174" y="316" fill="#c8ff4d" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="15" text-anchor="middle">BPM / KEY / FLOW</text>
+  </g>
+  <text x="92" y="142" fill="#c8ff4d" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="24" letter-spacing="2">VINYL DJ TOOL</text>
+  <text x="88" y="300" fill="#f0f5ef" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="126" letter-spacing="-2">VERTAX</text>
+  <text x="96" y="366" fill="#c8ff4d" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="38">DIG. PLAY. SHARE.</text>
+  <text x="96" y="438" fill="#d9e2da" font-family="Inter, system-ui, sans-serif" font-size="30">BPM finder, key finder, Discogs import</text>
+  <text x="96" y="484" fill="#a8b2aa" font-family="Inter, system-ui, sans-serif" font-size="30">and DJ set builder for vinyl-only DJs.</text>
+</svg>
