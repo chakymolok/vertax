@@ -73,6 +73,13 @@
     return '';
   }
 
+  function getVkLaunchParams(){
+    try {
+      if (typeof window.getVkLaunchParamsString === 'function') return window.getVkLaunchParamsString();
+    } catch(_) {}
+    return '';
+  }
+
   function sendDiscogsIngest(v){
     var payload = compactVinylForIngest(v);
     if (!payload || !payload.tracklist.length) {
@@ -86,8 +93,10 @@
       }
       var headers = { 'Content-Type': 'application/json' };
       var initData = getTelegramInitData();
+      var vkLaunchParams = getVkLaunchParams();
       var clientId = getVertaxClientId();
       if (initData) headers['X-Telegram-Init-Data'] = initData;
+      if (vkLaunchParams) headers['X-VK-Launch-Params'] = vkLaunchParams;
       if (clientId) headers['X-Vertax-Client-Id'] = clientId;
       var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname || '');
       var apiUrl = (isLocal ? 'https://vertax-one.vercel.app' : '') + '/api/discogs-ingest';
@@ -95,7 +104,7 @@
       fetch(apiUrl, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ vinyl: payload, clientId: clientId, telegramInitData: initData })
+        body: JSON.stringify({ vinyl: payload, clientId: clientId, telegramInitData: initData, vkLaunchParams: vkLaunchParams })
       }).then(function(res){
         return res.json().catch(function(){ return {}; }).then(function(body){
           window.__vertaxLastIngest = { ok:res.ok, httpStatus:res.status, body:body, url:apiUrl, tracks:payload.tracklist.length, at:new Date().toISOString() };

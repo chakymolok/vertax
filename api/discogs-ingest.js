@@ -11,11 +11,15 @@ const {
   notifyNewProposal,
   notifyAdminTrackEdit
 } = require('../lib/telegram-auth');
+const {
+  getVkUserFromRequest,
+  isAdminVkUser
+} = require('../lib/vk-auth');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Telegram-Init-Data,X-Vertax-Client-Id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Telegram-Init-Data,X-VK-Launch-Params,X-Vertax-Client-Id');
   res.setHeader('Access-Control-Max-Age', '86400');
 }
 
@@ -146,14 +150,19 @@ module.exports = async function discogsIngest(req, res) {
   const errors = [];
   const telegram_errors = [];
   const auth = getTelegramUserFromRequest(req, body);
-  const isAdmin = isAdminTelegramUser(auth);
+  const vkAuth = getVkUserFromRequest(req, body);
+  const isAdmin = isAdminTelegramUser(auth) || isAdminVkUser(vkAuth);
   const clientId = String((req.headers && (req.headers['x-vertax-client-id'] || req.headers['X-Vertax-Client-Id'])) || body.clientId || '').trim();
   const telegramUser = auth && auth.user ? auth.user : null;
+  const vkUser = vkAuth && vkAuth.user ? vkAuth.user : null;
   const userContext = {
     telegramUserId: telegramUser && telegramUser.id != null ? String(telegramUser.id) : '',
     telegramUsername: telegramUser && telegramUser.username ? String(telegramUser.username) : '',
     telegramFirstName: telegramUser && telegramUser.first_name ? String(telegramUser.first_name) : '',
     telegramLastName: telegramUser && telegramUser.last_name ? String(telegramUser.last_name) : '',
+    vkUserId: vkUser && vkUser.id != null ? String(vkUser.id) : '',
+    vkAppId: vkUser && vkUser.app_id != null ? String(vkUser.app_id) : '',
+    userId: vkUser && vkUser.id != null ? 'vk:' + String(vkUser.id) : '',
     clientId
   };
 

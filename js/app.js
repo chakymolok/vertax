@@ -19,7 +19,94 @@
 
 document.addEventListener("gesturestart",function(e){e.preventDefault();},{passive:false});document.addEventListener("touchmove",function(e){if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
 
-/* Telegram Haptic Feedback wrapper. No-op outside Telegram WebApp. */
+function getVkLaunchParamsString(){
+  try {
+    var search = window.location && window.location.search ? window.location.search.replace(/^\?/, '') : '';
+    var hash = window.location && window.location.hash ? window.location.hash.replace(/^#/, '').replace(/^\?/, '') : '';
+    var raw = search || hash || '';
+    if (!raw) return '';
+    var params = new URLSearchParams(raw);
+    var vk = [];
+    params.forEach(function(value, key){
+      if (key === 'sign' || key.indexOf('vk_') === 0) vk.push([key, value]);
+    });
+    if (!vk.length) return '';
+    return vk.map(function(pair){
+      return encodeURIComponent(pair[0]) + '=' + encodeURIComponent(pair[1]);
+    }).join('&');
+  } catch(_) {
+    return '';
+  }
+}
+
+function getVkBridge(){
+  try {
+    return window.vkBridge || window.VKBridge || null;
+  } catch(_) {
+    return null;
+  }
+}
+
+function isVkMiniApp(){
+  if (getVkLaunchParamsString()) return true;
+  return !!getVkBridge();
+}
+
+function callVkBridge(method, params){
+  var bridge = getVkBridge();
+  if (!bridge || typeof bridge.send !== 'function') return Promise.resolve(null);
+  try {
+    return bridge.send(method, params || {}).catch(function(){ return null; });
+  } catch(_) {
+    return Promise.resolve(null);
+  }
+}
+
+function makeVkWebAppAdapter(){
+  if (!isVkMiniApp()) return null;
+  if (window.__vertaxVkWebAppAdapter) return window.__vertaxVkWebAppAdapter;
+  var adapter = {
+    platform: 'vk',
+    initData: getVkLaunchParamsString(),
+    initDataUnsafe: { user: null },
+    ready: function(){ callVkBridge('VKWebAppInit'); },
+    expand: function(){},
+    disableVerticalSwipes: function(){},
+    HapticFeedback: {
+      impactOccurred: function(style){
+        callVkBridge('VKWebAppTapticImpactOccurred', { style: style || 'light' });
+      },
+      notificationOccurred: function(type){
+        callVkBridge('VKWebAppTapticNotificationOccurred', { type: type || 'success' });
+      }
+    },
+    BackButton: {
+      show: function(){ callVkBridge('VKWebAppSetViewSettings', { status_bar_style: 'light', action_bar_color: '#0B0D0C' }); },
+      hide: function(){},
+      onClick: function(fn){
+        var bridge = getVkBridge();
+        if (!bridge || typeof bridge.subscribe !== 'function') return;
+        bridge.subscribe(function(event){
+          var type = event && event.detail && event.detail.type;
+          if (type === 'VKWebAppViewHide' || type === 'VKWebAppBackButtonClicked') fn();
+        });
+      }
+    },
+    onEvent: function(name, fn){
+      if (name === 'backButtonClicked' && adapter.BackButton) adapter.BackButton.onClick(fn);
+    }
+  };
+  try {
+    var params = new URLSearchParams(adapter.initData || '');
+    var vkUserId = params.get('vk_user_id');
+    if (vkUserId) adapter.initDataUnsafe.user = { id: vkUserId, username: 'vk' + vkUserId };
+  } catch(_) {}
+  window.__vertaxVkWebAppAdapter = adapter;
+  return adapter;
+}
+window.getVkLaunchParamsString = getVkLaunchParamsString;
+
+/* Host Haptic Feedback wrapper. No-op outside Mini App hosts. */
 function haptic(type){
   var tg = getHostWebApp();
   var h = tg && tg.HapticFeedback;
@@ -34,6 +121,8 @@ window.haptic = haptic;
 function getHostWebApp(){
   if (window.Telegram && window.Telegram.WebApp) return window.Telegram.WebApp;
   if (window.WebApp) return window.WebApp;
+  var vk = makeVkWebAppAdapter();
+  if (vk) return vk;
   return null;
 }
 
@@ -324,6 +413,10 @@ function getVertaxUserName(){
     var max = window.WebApp;
     var maxUser = max && max.initDataUnsafe && max.initDataUnsafe.user;
     if (maxUser && maxUser.username) { debug.source = 'max.username'; window.__vertaxNameDebug = debug; return String(maxUser.username).toUpperCase(); }
+    var vk = makeVkWebAppAdapter();
+    var vkUser = vk && vk.initDataUnsafe && vk.initDataUnsafe.user;
+    if (vkUser && vkUser.username) { debug.source = 'vk.username'; window.__vertaxNameDebug = debug; return String(vkUser.username).toUpperCase(); }
+    if (vkUser && vkUser.id) { debug.source = 'vk.id'; window.__vertaxNameDebug = debug; return 'VK' + String(vkUser.id); }
   } catch(e) {}
   debug.source = 'fallback';
   window.__vertaxNameDebug = debug;
