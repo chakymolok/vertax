@@ -10,6 +10,7 @@
   var isTranslating = false;
   var observer = null;
   var observerTimer = null;
+  var heartbeat = null;
 
   var text = {
     en: {
@@ -339,6 +340,180 @@
     }
   };
 
+  var extraText = {
+    en: {
+      'Назад': 'Back',
+      '+ ДОБАВИТЬ ПЛАСТИНКУ': '+ Add record',
+      '+ СОБРАТЬ СЕТ': '+ Build set',
+      'A–Z ПО АРТИСТУ': 'A-Z by artist',
+      'A–Z ПО НАЗВАНИЮ': 'A-Z by title',
+      'БЫСТРЫЕ ДЕЙСТВИЯ': 'Quick actions',
+      'КАТАЛОГ': 'Catalog',
+      'НЕДАВНИЕ': 'Recent',
+      'НАЙДЕНА': 'Found',
+      'РУЧ': 'MAN',
+      'ЦЕЛЬ СЕТА': 'Set target',
+      'ТРЕК.': 'tracks',
+      'СЕРВИС': 'Service',
+      '🗂 РЕЗЕРВНАЯ КОПИЯ': 'Backup',
+      '+ ДОБАВИТЬ ТРЕК': '+ Add track',
+      'Ввести BPM/Key…': 'Enter BPM/Key...',
+      'Не использовать в сете': 'Do not use in set',
+      'ОБНОВИТЬ ТРЕКЛИСТ ИЗ DISCOGS': 'Refresh tracklist from Discogs',
+      'ПОДТВЕРДИТЬ ТРЕКЛИСТ': 'Confirm tracklist',
+      'ПОЗ НАЗВАНИЕ BPM KEY': 'POS TITLE BPM KEY',
+      'Поз Название BPM Key': 'POS TITLE BPM KEY',
+      'ПОЗ': 'POS',
+      'НАЗВАНИЕ': 'TITLE',
+      'Переименовать': 'Rename',
+      'Править BPM/Key': 'Edit BPM/Key',
+      'СТОРОНА A': 'Side A',
+      'СТОРОНА B': 'Side B',
+      'СТОРОНА C': 'Side C',
+      'СТОРОНА D': 'Side D',
+      'СТОРОНА E': 'Side E',
+      'СТОРОНА F': 'Side F',
+      'Сменить сторону': 'Change side',
+      'Треклист': 'Tracklist',
+      '+ ДОБАВИТЬ ЕЩЁ ОДНУ ПЛАСТИНКУ': '+ Add another record',
+      '+ ДОБАВИТЬ ТРЕК ИЗ КОЛЛЕКЦИИ': '+ Add track from collection',
+      'ТРЕБУЮТ ПРОВЕРКИ': 'need review',
+      'ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ': 'Possible next tracks',
+      'ВСЯ КОЛЛЕКЦИЯ': 'Full collection',
+      'ДОБАВЛЕННЫЕ': 'Added',
+      'ЖАНР': 'Genre',
+      'ИГРАТЬ СЕТ': 'Play set',
+      'ИСТОЧНИК ТРЕКОВ': 'Track source',
+      'НА ПЛАСТИНКЕ': 'On record',
+      '↕ ПЕРЕТАЩИТЬ': 'Drag',
+      'CAMELOT (ПЕРЕОПРЕДЕЛИТЬ)': 'Camelot (override)',
+      'ВРУЧНУЮ': 'Manual',
+      'ИСТОЧНИК': 'Source',
+      'КОММЕНТАРИЙ': 'Comment',
+      'Править трек': 'Edit track',
+      'Тональность (KEY)': 'Key',
+      'УВЕРЕННОСТЬ': 'Confidence',
+      'УДАЛИТЬ ТРЕК': 'Delete track',
+      'by Михаил Проскурин': 'by Michael Proskurin',
+      'Михаил Проскурин': 'Michael Proskurin',
+      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».': 'Search a release in Discogs, load its tracklist, fill BPM/Key and build a set without two tracks from the same record in a row.'
+    },
+    zh: {
+      'Назад': '返回',
+      '+ ДОБАВИТЬ ПЛАСТИНКУ': '+ 添加唱片',
+      '+ СОБРАТЬ СЕТ': '+ 生成 Set',
+      'A–Z ПО АРТИСТУ': '按艺人 A-Z',
+      'A–Z ПО НАЗВАНИЮ': '按标题 A-Z',
+      'БЫСТРЫЕ ДЕЙСТВИЯ': '快捷操作',
+      'КАТАЛОГ': '目录',
+      'НЕДАВНИЕ': '最近',
+      'НАЙДЕНА': '已找到',
+      'РУЧ': '手动',
+      'ЦЕЛЬ СЕТА': 'Set 目标',
+      'ТРЕК.': '首',
+      'СЕРВИС': '服务',
+      '🗂 РЕЗЕРВНАЯ КОПИЯ': '备份',
+      '+ ДОБАВИТЬ ТРЕК': '+ 添加曲目',
+      'Ввести BPM/Key…': '输入 BPM/Key...',
+      'Не использовать в сете': '不用于 Set',
+      'ОБНОВИТЬ ТРЕКЛИСТ ИЗ DISCOGS': '从 Discogs 刷新曲目列表',
+      'ПОДТВЕРДИТЬ ТРЕКЛИСТ': '确认曲目列表',
+      'ПОЗ НАЗВАНИЕ BPM KEY': '位置 标题 BPM KEY',
+      'Поз Название BPM Key': '位置 标题 BPM KEY',
+      'ПОЗ': '位置',
+      'НАЗВАНИЕ': '标题',
+      'Переименовать': '重命名',
+      'Править BPM/Key': '编辑 BPM/Key',
+      'СТОРОНА A': 'A 面',
+      'СТОРОНА B': 'B 面',
+      'СТОРОНА C': 'C 面',
+      'СТОРОНА D': 'D 面',
+      'СТОРОНА E': 'E 面',
+      'СТОРОНА F': 'F 面',
+      'Сменить сторону': '更改面',
+      'Треклист': '曲目列表',
+      '+ ДОБАВИТЬ ЕЩЁ ОДНУ ПЛАСТИНКУ': '+ 再添加一张唱片',
+      '+ ДОБАВИТЬ ТРЕК ИЗ КОЛЛЕКЦИИ': '+ 从收藏库添加曲目',
+      'ТРЕБУЮТ ПРОВЕРКИ': '需要检查',
+      'ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ': '可能的下一首',
+      'ВСЯ КОЛЛЕКЦИЯ': '全部收藏',
+      'ДОБАВЛЕННЫЕ': '已添加',
+      'ЖАНР': '风格',
+      'ИГРАТЬ СЕТ': '播放 Set',
+      'ИСТОЧНИК ТРЕКОВ': '曲目来源',
+      'НА ПЛАСТИНКЕ': '唱片位置',
+      '↕ ПЕРЕТАЩИТЬ': '拖动',
+      'CAMELOT (ПЕРЕОПРЕДЕЛИТЬ)': 'Camelot（覆盖）',
+      'ВРУЧНУЮ': '手动',
+      'ИСТОЧНИК': '来源',
+      'КОММЕНТАРИЙ': '备注',
+      'Править трек': '编辑曲目',
+      'Тональность (KEY)': 'Key / 调性',
+      'УВЕРЕННОСТЬ': '置信度',
+      'УДАЛИТЬ ТРЕК': '删除曲目',
+      'by Михаил Проскурин': 'by Michael Proskurin',
+      'Михаил Проскурин': 'Michael Proskurin',
+      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».': '在 Discogs 搜索发行，加载曲目列表，填写 BPM/Key，并按规则生成 Set。'
+    },
+    ja: {
+      'Назад': '戻る',
+      '+ ДОБАВИТЬ ПЛАСТИНКУ': '+ レコードを追加',
+      '+ СОБРАТЬ СЕТ': '+ セットを作る',
+      'A–Z ПО АРТИСТУ': 'アーティスト A-Z',
+      'A–Z ПО НАЗВАНИЮ': 'タイトル A-Z',
+      'БЫСТРЫЕ ДЕЙСТВИЯ': 'クイック操作',
+      'КАТАЛОГ': 'カタログ',
+      'НЕДАВНИЕ': '最近',
+      'НАЙДЕНА': '検出済み',
+      'РУЧ': '手動',
+      'ЦЕЛЬ СЕТА': 'セット目標',
+      'ТРЕК.': '曲',
+      'СЕРВИС': 'サービス',
+      '🗂 РЕЗЕРВНАЯ КОПИЯ': 'バックアップ',
+      '+ ДОБАВИТЬ ТРЕК': '+ 曲を追加',
+      'Ввести BPM/Key…': 'BPM/Key を入力...',
+      'Не использовать в сете': 'セットで使わない',
+      'ОБНОВИТЬ ТРЕКЛИСТ ИЗ DISCOGS': 'Discogs から更新',
+      'ПОДТВЕРДИТЬ ТРЕКЛИСТ': 'トラックリストを確認',
+      'ПОЗ НАЗВАНИЕ BPM KEY': 'POS TITLE BPM KEY',
+      'Поз Название BPM Key': 'POS TITLE BPM KEY',
+      'ПОЗ': 'POS',
+      'НАЗВАНИЕ': 'TITLE',
+      'Переименовать': '名前を変更',
+      'Править BPM/Key': 'BPM/Key を編集',
+      'СТОРОНА A': 'Side A',
+      'СТОРОНА B': 'Side B',
+      'СТОРОНА C': 'Side C',
+      'СТОРОНА D': 'Side D',
+      'СТОРОНА E': 'Side E',
+      'СТОРОНА F': 'Side F',
+      'Сменить сторону': 'Side を変更',
+      'Треклист': 'トラックリスト',
+      '+ ДОБАВИТЬ ЕЩЁ ОДНУ ПЛАСТИНКУ': '+ もう1枚追加',
+      '+ ДОБАВИТЬ ТРЕК ИЗ КОЛЛЕКЦИИ': '+ コレクションから曲を追加',
+      'ТРЕБУЮТ ПРОВЕРКИ': '確認が必要',
+      'ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ': '次の候補',
+      'ВСЯ КОЛЛЕКЦИЯ': '全コレクション',
+      'ДОБАВЛЕННЫЕ': '追加済み',
+      'ЖАНР': 'ジャンル',
+      'ИГРАТЬ СЕТ': 'セットを再生',
+      'ИСТОЧНИК ТРЕКОВ': '曲のソース',
+      'НА ПЛАСТИНКЕ': 'レコード上',
+      '↕ ПЕРЕТАЩИТЬ': 'ドラッグ',
+      'CAMELOT (ПЕРЕОПРЕДЕЛИТЬ)': 'Camelot（上書き）',
+      'ВРУЧНУЮ': '手動',
+      'ИСТОЧНИК': 'ソース',
+      'КОММЕНТАРИЙ': 'コメント',
+      'Править трек': '曲を編集',
+      'Тональность (KEY)': 'Key',
+      'УВЕРЕННОСТЬ': '信頼度',
+      'УДАЛИТЬ ТРЕК': '曲を削除',
+      'by Михаил Проскурин': 'by Michael Proskurin',
+      'Михаил Проскурин': 'Michael Proskurin',
+      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».': 'Discogs でリリースを検索し、トラックリストを読み込み、BPM/Key を入力してセットを作成します。'
+    }
+  };
+
   var placeholders = {
     en: {
       'Артист, релиз или трек…': 'Artist, release or track...',
@@ -359,6 +534,17 @@
 
   function normalize(s){
     return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  }
+
+  function getDict(lang){
+    var source = Object.assign({}, text[lang] || {}, extraText[lang] || {});
+    var out = {};
+    Object.keys(source).forEach(function(key){
+      out[key] = source[key];
+      out[key.toLowerCase()] = source[key];
+      out[key.toUpperCase()] = source[key];
+    });
+    return out;
   }
 
   function getLang(){
@@ -445,13 +631,52 @@
       node.nodeValue = node.nodeValue.replace(raw, dict[raw]);
       return;
     }
+    var lowerHit = dict[raw.toLowerCase()];
+    if (lowerHit) {
+      node.nodeValue = node.nodeValue.replace(raw, lowerHit);
+      return;
+    }
     var translated = raw
       .replace(/^Пластинки \((\d+)\)$/i, function(_, n){ return (dict['Пластинки'] || 'Records') + ' (' + n + ')'; })
       .replace(/^Сеты \((\d+)\)$/i, function(_, n){ return (dict['Сеты'] || 'Sets') + ' (' + n + ')'; })
       .replace(/^сет · (\d+) трек\.$/i, function(_, n){ return (dict['сет'] || 'set') + ' · ' + n + ' ' + (dict['трек.'] || 'tracks'); })
       .replace(/^сессия · (\d+)\/(\d+)$/i, function(_, a, b){ return (dict['сессия'] || 'session') + ' · ' + a + '/' + b; })
-      .replace(/^Диапазон темпа ± (\d+) BPM$/i, function(_, n){ return (dict['Диапазон темпа'] || 'Tempo range') + ' ± ' + n + ' BPM'; });
+      .replace(/^Диапазон темпа ± (\d+) BPM$/i, function(_, n){ return (dict['Диапазон темпа'] || 'Tempo range') + ' ± ' + n + ' BPM'; })
+      .replace(/^(ВСЯ КОЛЛЕКЦИЯ|ДОБАВЛЕННЫЕ) · (\d+)$/i, function(_, label, n){
+        return (dict[label.toUpperCase()] || label) + ' · ' + n;
+      })
+      .replace(/^НА ПЛАСТИНКЕ (.+)$/i, function(_, pos){
+        return (dict['НА ПЛАСТИНКЕ'] || 'On record') + ' ' + pos;
+      })
+      .replace(/^(\d+) ТРЕБУЮТ ПРОВЕРКИ$/i, function(_, n){
+        return n + ' ' + (dict['ТРЕБУЮТ ПРОВЕРКИ'] || 'need review');
+      })
+      .replace(/^(\d+) ТРЕК\.$/i, function(_, n){
+        return n + ' ' + (dict['ТРЕК.'] || 'tracks');
+      })
+      .replace(/^(\d+) мин$/i, function(_, n){
+        var unit = dict.__minutes || 'min';
+        return n + ' ' + unit;
+      });
+    Object.keys(dict).sort(function(a, b){ return b.length - a.length; }).some(function(key){
+      if (!/[А-Яа-яЁё]/.test(key) || key.length < 4 || translated.indexOf(key) < 0) return false;
+      translated = translated.split(key).join(dict[key]);
+      return false;
+    });
     if (translated !== raw) node.nodeValue = node.nodeValue.replace(raw, translated);
+  }
+
+  function postProcessElements(root, lang, dict){
+    if (lang === 'ru') return;
+    root.querySelectorAll('[data-action="back"]').forEach(function(el){
+      el.textContent = dict['← Назад'] || dict['Назад'] || 'Back';
+    });
+    root.querySelectorAll('.laiso-track > div, .laiso-track-head, .laiso-track-header').forEach(function(el){
+      var value = normalize(el.textContent);
+      if (/^ПОЗ НАЗВАНИЕ BPM KEY$/i.test(value) || /^Поз Название BPM Key$/i.test(value)) {
+        el.textContent = dict['ПОЗ НАЗВАНИЕ BPM KEY'] || 'POS TITLE BPM KEY';
+      }
+    });
   }
 
   function translateApp(){
@@ -473,7 +698,8 @@
       isTranslating = false;
       return;
     }
-    var dict = text[lang] || {};
+    var dict = getDict(lang);
+    dict.__minutes = lang === 'en' ? 'min' : lang === 'zh' ? '分钟' : '分';
     var ph = placeholders[lang] || {};
     root.querySelectorAll('input, textarea').forEach(function(el){
       var p = el.getAttribute('placeholder');
@@ -491,6 +717,7 @@
     var nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(function(node){ translateTextNode(node, dict); });
+    postProcessElements(root, lang, dict);
     isTranslating = false;
   }
 
@@ -498,6 +725,38 @@
     if (isTranslating) return;
     clearTimeout(observerTimer);
     observerTimer = setTimeout(translateApp, delay || 80);
+  }
+
+  function scheduleTranslateBurst(){
+    setTimeout(translateApp, 0);
+    setTimeout(translateApp, 120);
+    setTimeout(translateApp, 360);
+  }
+
+  function installRenderHooks(){
+    try {
+      if (typeof render === 'function' && !window.__vertaxI18nRenderWrapped) {
+        var originalRender = render;
+        render = function(){
+          var result = originalRender.apply(this, arguments);
+          scheduleTranslateBurst();
+          return result;
+        };
+        window.__vertaxI18nRenderWrapped = true;
+        if (window.laisoBuck) window.laisoBuck.render = render;
+      }
+    } catch(_) {}
+    try {
+      if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxI18nBuckRenderWrapped) {
+        var originalBuckRender = window.laisoBuck.render;
+        window.laisoBuck.render = function(){
+          var result = originalBuckRender.apply(this, arguments);
+          scheduleTranslateBurst();
+          return result;
+        };
+        window.__vertaxI18nBuckRenderWrapped = true;
+      }
+    } catch(_) {}
   }
 
   function installObserver(){
@@ -524,10 +783,26 @@
     setLang(btn.getAttribute('data-lang') || 'ru');
   }, true);
 
+  document.addEventListener('click', function(e){
+    if (!e.target || !e.target.closest || !e.target.closest('#laiso-app')) return;
+    scheduleTranslateBurst();
+  }, false);
+
+  function installHeartbeat(){
+    if (heartbeat) return;
+    heartbeat = setInterval(function(){
+      if (getLang() === 'ru') return;
+      if (document.hidden) return;
+      translateApp();
+    }, 650);
+  }
+
   function boot(){
     if (typeof window.vertaxRegisterAfterRender === 'function') {
       window.vertaxRegisterAfterRender(function(){ setTimeout(translateApp, 0); setTimeout(translateApp, 140); });
       installObserver();
+      installRenderHooks();
+      installHeartbeat();
       setTimeout(translateApp, 0);
       return;
     }
