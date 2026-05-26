@@ -6,6 +6,10 @@
   var STORAGE_KEY = 'vertax-app-lang';
   var langs = ['ru', 'en', 'zh', 'ja'];
   var labels = { ru: 'RU', en: 'EN', zh: '中文', ja: '日本' };
+  var langNames = { ru: 'Русский', en: 'English', zh: '中文', ja: '日本語' };
+  var isTranslating = false;
+  var observer = null;
+  var observerTimer = null;
 
   var text = {
     en: {
@@ -367,11 +371,30 @@
     return 'ru';
   }
 
+  function hasExplicitLang(){
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (langs.indexOf(saved) >= 0) return true;
+      var queryLang = new URLSearchParams(window.location.search || '').get('lang');
+      return langs.indexOf(queryLang) >= 0;
+    } catch(_) {
+      return false;
+    }
+  }
+
+  function shouldShowLanguageGate(){
+    try {
+      if (navigator.webdriver) return false;
+    } catch(_) {}
+    return !hasExplicitLang();
+  }
+
   function setLang(lang){
     if (langs.indexOf(lang) < 0) lang = 'ru';
     try { localStorage.setItem(STORAGE_KEY, lang); } catch(_) {}
     window.__vertaxAppLang = lang;
     document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : lang);
+    removeLanguageGate();
     if (typeof render === 'function') render();
     else translateApp();
   }
@@ -391,6 +414,30 @@
     side.insertAdjacentHTML('afterbegin', renderSwitcher());
   }
 
+  function renderLanguageGate(root){
+    if (!shouldShowLanguageGate()) return;
+    if (root.querySelector('.vertax-lang-gate')) return;
+    root.insertAdjacentHTML('beforeend',
+      '<div class="vertax-lang-gate" role="dialog" aria-modal="true" aria-labelledby="vertax-lang-gate-title">' +
+        '<div class="vertax-lang-gate-card">' +
+          '<p class="vertax-lang-gate-kicker">VERTAX-01</p>' +
+          '<h2 class="vertax-lang-gate-title" id="vertax-lang-gate-title">Выберите язык</h2>' +
+          '<p class="vertax-lang-gate-copy">Choose the interface language. You can change it later in the top panel.</p>' +
+          '<div class="vertax-lang-gate-options">' +
+            langs.map(function(code){
+              return '<button class="vertax-lang-gate-btn" type="button" data-action="app-lang" data-lang="' + code + '">' + langNames[code] + '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function removeLanguageGate(){
+    var gate = document.querySelector('#laiso-app .vertax-lang-gate');
+    if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+  }
+
   function translateTextNode(node, dict){
     var raw = normalize(node.nodeValue);
     if (!raw) return;
@@ -408,9 +455,12 @@
   }
 
   function translateApp(){
+    if (isTranslating) return;
     var root = document.getElementById('laiso-root');
     if (!root) return;
+    isTranslating = true;
     ensureSwitcher(root);
+    renderLanguageGate(root);
     var lang = getLang();
     window.__vertaxAppLang = lang;
     document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : lang);
@@ -419,7 +469,10 @@
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-    if (lang === 'ru') return;
+    if (lang === 'ru') {
+      isTranslating = false;
+      return;
+    }
     var dict = text[lang] || {};
     var ph = placeholders[lang] || {};
     root.querySelectorAll('input, textarea').forEach(function(el){
@@ -438,6 +491,28 @@
     var nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(function(node){ translateTextNode(node, dict); });
+    isTranslating = false;
+  }
+
+  function scheduleTranslate(delay){
+    if (isTranslating) return;
+    clearTimeout(observerTimer);
+    observerTimer = setTimeout(translateApp, delay || 80);
+  }
+
+  function installObserver(){
+    var app = document.getElementById('laiso-app');
+    if (!app || !window.MutationObserver || observer) return;
+    observer = new MutationObserver(function(mutations){
+      if (isTranslating) return;
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
+          scheduleTranslate(90);
+          return;
+        }
+      }
+    });
+    observer.observe(app, { childList: true, subtree: true });
   }
 
   document.addEventListener('click', function(e){
@@ -451,7 +526,8 @@
 
   function boot(){
     if (typeof window.vertaxRegisterAfterRender === 'function') {
-      window.vertaxRegisterAfterRender(function(){ setTimeout(translateApp, 0); });
+      window.vertaxRegisterAfterRender(function(){ setTimeout(translateApp, 0); setTimeout(translateApp, 140); });
+      installObserver();
       setTimeout(translateApp, 0);
       return;
     }

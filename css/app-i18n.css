@@ -41,9 +41,99 @@
   outline-offset: 2px;
 }
 
+#laiso-app .vertax-lang-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(11, 13, 12, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+#laiso-app .vertax-lang-gate-card {
+  width: min(100%, 420px);
+  padding: 22px;
+  border: 1px solid rgba(200, 255, 77, 0.26);
+  border-radius: 18px;
+  background: #fffdf7;
+  color: #111;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.36);
+}
+
+#laiso-app .vertax-lang-gate-kicker {
+  margin: 0 0 8px;
+  color: #6d675f;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+#laiso-app .vertax-lang-gate-title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: -.03em;
+}
+
+#laiso-app .vertax-lang-gate-copy {
+  margin: 0 0 18px;
+  color: #6d675f;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+#laiso-app .vertax-lang-gate-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#laiso-app .vertax-lang-gate-btn {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid #e2d9cd;
+  border-radius: 12px;
+  background: #f8f3ea;
+  color: #111;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#laiso-app .vertax-lang-gate-btn:hover,
+#laiso-app .vertax-lang-gate-btn:focus-visible {
+  border-color: #111;
+  background: var(--accent-lime, #C4F542);
+  outline: none;
+}
+
 body.vertax-theme-dark #laiso-app .vertax-lang-switcher {
   background: rgba(0, 0, 0, 0.18);
   border-color: rgba(255, 255, 255, 0.16);
+}
+
+body.vertax-theme-dark #laiso-app .vertax-lang-gate-card {
+  background: #111513;
+  color: #f0f5ef;
+  border-color: rgba(200, 255, 77, 0.32);
+}
+
+body.vertax-theme-dark #laiso-app .vertax-lang-gate-kicker,
+body.vertax-theme-dark #laiso-app .vertax-lang-gate-copy {
+  color: #a8b2aa;
+}
+
+body.vertax-theme-dark #laiso-app .vertax-lang-gate-btn {
+  background: #171d19;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f0f5ef;
 }
 
 @media (max-width: 560px) {
