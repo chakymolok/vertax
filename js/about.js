@@ -1,7 +1,7 @@
 /**
  * about.js
  * Language switching, i18n, and links config for /about page.
- * Languages: ru (default), en, zh
+ * Languages: ru (default), en, zh, ja
  * Priority: ?lang= param > localStorage > 'ru'
  */
 
@@ -26,6 +26,9 @@ const LINKS = {
     "https://vk.com/karacha_me?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=karacha",
   michaelTelegram:
     "https://t.me/michael1994lab?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=contact_telegram",
+  mixesRu: "https://promodj.com/laisobuck",
+  mixesInternational:
+    "https://www.mixcloud.com/LaisoBuck/not-for-the-dancefloor-06-vinyl-only-uk-bass-ambient-flow/",
 };
 
 // ─── I18N DICTIONARY ─────────────────────────────────────────────────────────
@@ -42,13 +45,13 @@ const COPY = {
     navHow: "Как работает",
     navEcosystem: "Экосистема",
     navContact: "Контакты",
-    navCta: "Открыть Vertax",
+    navCta: "Запустить в Telegram",
     // hero
     heroEyebrow: "DIG. PLAY. SHARE.",
     heroH1: "Vertax - инструмент для виниловых DJ",
     heroSub:
       "BPM, Key, коллекция пластинок, Discogs-импорт и сборка сетов по совместимости. Для тех, кто играет с пластинок, копает релизы и не хочет превращать подготовку к сету в таблицу на коленке.",
-    heroCta1: "Открыть Vertax",
+    heroCta1: "Запустить в Telegram",
     heroCta2: "Запустить в Telegram",
     heroNote:
       "Сделано под себя. Местами ещё живое и шероховатое, зато уже помогает готовить vinyl-only сеты быстрее.",
@@ -111,8 +114,8 @@ const COPY = {
     ecosystemH2: "Больше, чем просто утилита",
     ecosystemText:
       "Vertax вырос из реальной музыкальной практики Laiso Buck: виниловые сеты, deep и atmospheric drum'n'bass, modern jungle, UK bass и серия Not for the Dancefloor. Это не абстрактный DJ-сервис, а инструмент, сделанный человеком, который сам копает, покупает, сортирует и играет пластинки.",
-    eco1Title: "Vertax Web App",
-    eco1Text: "Рабочая версия приложения: коллекция, BPM, Key, Discogs и сборка сетов.",
+    eco1Title: "Telegram Mini App",
+    eco1Text: "Vertax внутри Telegram: коллекция, BPM, Key, Discogs и сборка сетов.",
     eco2Title: "Telegram Mini App",
     eco2Text: "Vertax внутри Telegram. Удобно держать под рукой во время копания и подготовки.",
     eco3Title: "Laiso Buck",
@@ -143,7 +146,7 @@ const COPY = {
     // footer
     footerCopy: "Vertax by Laiso Buck / 1994lab",
     footerTagline: "DIG. PLAY. SHARE.",
-    footerLink1: "Открыть Vertax",
+    footerLink1: "Запустить в Telegram",
     footerLink2: "Telegram",
     footerLink3: "About",
     footerLink4: "Михаил Проскурин",
@@ -159,12 +162,12 @@ const COPY = {
     navHow: "How it works",
     navEcosystem: "Ecosystem",
     navContact: "Contact",
-    navCta: "Open Vertax",
+    navCta: "Launch in Telegram",
     heroEyebrow: "DIG. PLAY. SHARE.",
     heroH1: "Vertax - a tool for vinyl DJs",
     heroSub:
       "BPM, Key, record collection management, Discogs import and set building by compatibility. Built for DJs who play vinyl, dig records and do not want set preparation to turn into a messy spreadsheet.",
-    heroCta1: "Open Vertax",
+    heroCta1: "Launch in Telegram",
     heroCta2: "Launch in Telegram",
     heroNote:
       "Built for real vinyl practice. Still a bit rough in places, but already useful for preparing vinyl-only sets faster.",
@@ -221,8 +224,8 @@ const COPY = {
     ecosystemH2: "More than a utility",
     ecosystemText:
       "Vertax grew out of Laiso Buck's real vinyl practice: deep and atmospheric drum'n'bass, modern jungle, UK bass and the Not for the Dancefloor mix series. It is not an abstract DJ SaaS, but a tool built by someone who actually digs, buys, sorts and plays records.",
-    eco1Title: "Vertax Web App",
-    eco1Text: "The working app: collection, BPM, Key, Discogs and set building.",
+    eco1Title: "Telegram Mini App",
+    eco1Text: "Vertax inside Telegram: collection, BPM, Key, Discogs and set building.",
     eco2Title: "Telegram Mini App",
     eco2Text: "Vertax inside Telegram. Easy to keep close while digging and preparing sets.",
     eco3Title: "Laiso Buck",
@@ -251,7 +254,7 @@ const COPY = {
     contactBtn4: "1994lab",
     footerCopy: "Vertax by Laiso Buck / 1994lab",
     footerTagline: "DIG. PLAY. SHARE.",
-    footerLink1: "Open Vertax",
+    footerLink1: "Launch in Telegram",
     footerLink2: "Telegram",
     footerLink3: "About",
     footerLink4: "Michael Proskurin",
@@ -267,12 +270,12 @@ const COPY = {
     navHow: "如何使用",
     navEcosystem: "生态",
     navContact: "联系",
-    navCta: "打开 Vertax",
+    navCta: "在 Telegram 中启动",
     heroEyebrow: "DIG. PLAY. SHARE.",
     heroH1: "Vertax - 为黑胶 DJ 打造的工具",
     heroSub:
       "BPM、Key、黑胶收藏管理、Discogs 导入，以及基于 BPM、Camelot 和 flow 的 DJ set 编排。适合用黑胶演出的 DJ、挖唱片的人，以及不想把准备 set 变成混乱表格的人。",
-    heroCta1: "打开 Vertax",
+    heroCta1: "在 Telegram 中启动",
     heroCta2: "在 Telegram 中启动",
     heroNote:
       "这是从真实黑胶演出流程里做出来的工具。现在还有一些粗糙，但已经可以帮助更快准备 vinyl-only set。",
@@ -328,8 +331,8 @@ const COPY = {
     ecosystemH2: "不只是一个工具",
     ecosystemText:
       "Vertax 来自 Laiso Buck 的真实黑胶实践：deep / atmospheric drum'n'bass、modern jungle、UK bass，以及 Not for the Dancefloor 系列。它不是抽象的 DJ SaaS，而是由真正挖唱片、买唱片、整理唱片并演出的人做出来的工具。",
-    eco1Title: "Vertax Web App",
-    eco1Text: "当前可用的应用：收藏管理、BPM、Key、Discogs 和 set 编排。",
+    eco1Title: "Telegram Mini App",
+    eco1Text: "Telegram 内的 Vertax：收藏管理、BPM、Key、Discogs 和 set 编排。",
     eco2Title: "Telegram Mini App",
     eco2Text: "Telegram 内的 Vertax。挖唱片和准备 set 时可以随时打开。",
     eco3Title: "Laiso Buck",
@@ -358,7 +361,114 @@ const COPY = {
     contactBtn4: "1994lab",
     footerCopy: "Vertax by Laiso Buck / 1994lab",
     footerTagline: "DIG. PLAY. SHARE.",
-    footerLink1: "打开 Vertax",
+    footerLink1: "在 Telegram 中启动",
+    footerLink2: "Telegram",
+    footerLink3: "About",
+    footerLink4: "Michael Proskurin",
+    footerLink5: "1994lab",
+  },
+
+  ja: {
+    metaTitle: "Vertax - BPM、Key、Discogs インポート、セット構築のためのヴァイナルDJツール",
+    metaDesc:
+      "Vertax は、ヴァイナルDJが BPM と Key を調べ、レコードコレクションを管理し、Discogs からインポートして、BPM、Camelot、flow に基づく DJ セットを作るためのツールです。",
+    navWhat: "概要",
+    navFeatures: "機能",
+    navHow: "使い方",
+    navEcosystem: "エコシステム",
+    navContact: "連絡先",
+    navCta: "Telegram で起動",
+    heroEyebrow: "DIG. PLAY. SHARE.",
+    heroH1: "Vertax - ヴァイナルDJのためのツール",
+    heroSub:
+      "BPM、Key、レコードコレクション管理、Discogs インポート、互換性に基づくセット構築。レコードでプレイし、掘り、準備を雑な表計算にしたくないDJのために作られています。",
+    heroCta1: "Telegram で起動",
+    heroCta2: "Telegram で起動",
+    heroNote:
+      "実際のヴァイナル運用から生まれたツールです。まだ荒い部分はありますが、vinyl-only セットの準備をすでに速くしてくれます。",
+    problemKicker: "なぜ必要か",
+    problemH2: "ヴァイナルは生きている。メタデータはそうでもない。",
+    problemText:
+      "レコードでプレイすると、デジタルライブラリでは当たり前の情報が欠けていることがよくあります。BPM はジャケットにほとんど書かれていません。Key も別で探す必要があります。コレクションは棚、Discogs、メモ、写真に分散し、ライブ後のトラックリスト復元は考古学のようになります。Vertax はその日常的な穴を埋め、レコード整理、コレクション管理、流れの良いセット構築を助けます。",
+    pain1Title: "BPM が書かれていない",
+    pain1Text: "ヴァイナルにはテンポ表記がないことが多く、手で調べるか耳で思い出す必要があります。",
+    pain2Title: "Key は別の場所にある",
+    pain2Text: "harmonic mixing のためには、音楽的な Key を外部ソースから集める必要があります。",
+    pain3Title: "コレクションが散らかる",
+    pain3Text: "Discogs、棚、メモ、ジャケット写真、記憶がそれぞれ別々に存在します。",
+    pain4Title: "セット後にトラックリストが消える",
+    pain4Text: "録音やライブの後、何をプレイしたかをすぐに復元するのは簡単ではありません。",
+    featuresKicker: "Vertax の機能",
+    featuresH2: "掘る、整理する、プレイするために",
+    feat1Title: "BPM & Key Finder",
+    feat1Text: "アーティスト名と曲名からテンポと音楽的な Key を探します。",
+    feat2Title: "レコードコレクション",
+    feat2Text: "リリース、曲、レーベル、年、スタイル、メモを含む vinyl collection を整理できます。",
+    feat3Title: "Discogs Import",
+    feat3Text: "Discogs のコレクションをインポートし、手入力を減らします。",
+    feat4Title: "Set Builder",
+    feat4Text: "BPM、Camelot の互換性、全体の flow に基づいてセット順を作ります。",
+    feat5Title: "Vinyl-only Workflow",
+    feat5Text: "手でプレイする感覚は残しつつ、盲目的に準備したくない vinyl-only セットに向いています。",
+    feat6Title: "Telegram Mini App",
+    feat6Text: "Telegram 内で動くので、掘っている時やセット準備中にすぐ開けます。",
+    howKicker: "使い方",
+    howH2: "棚からセットへ",
+    step1Num: "01",
+    step1Title: "レコードを追加",
+    step1Text: "手動で追加するか、Discogs コレクションをインポートします。",
+    step2Num: "02",
+    step2Title: "BPM と Key を確認",
+    step2Text: "Vertax がレコードに必要なメタデータを補う手助けをします。",
+    step3Num: "03",
+    step3Title: "セットを作る",
+    step3Text: "レコードを選び、テンポ、Camelot、flow に基づく自然な順番を得ます。",
+    step4Num: "04",
+    step4Title: "プレイして共有",
+    step4Text: "ライブのキューとして使い、トラックリストを保存して共有できます。",
+    audienceKicker: "誰のためか",
+    audienceH2: "すべての人向けではない。わかる人のために。",
+    aud1: "ヴァイナルDJ",
+    aud2: "DnB / Jungle / UK Bass セレクター",
+    aud3: "レコードコレクター",
+    aud4: "Vinyl-only でプレイする人",
+    aud5: "Discogs で掘り、購入品を早く整理したい人",
+    aud6: "harmonic mixing は好きだが、雑な表計算は嫌いなDJ",
+    ecosystemKicker: "エコシステム",
+    ecosystemH2: "単なるユーティリティ以上",
+    ecosystemText:
+      "Vertax は Laiso Buck の実際のヴァイナル実践から生まれました。deep / atmospheric drum'n'bass、modern jungle、UK bass、Not for the Dancefloor シリーズ。抽象的な DJ SaaS ではなく、実際に掘り、買い、整理し、プレイする人が作ったツールです。",
+    eco1Title: "Vertax Web App",
+    eco1Text: "コレクション、BPM、Key、Discogs、セット構築の作業ツール。",
+    eco2Title: "Telegram Mini App",
+    eco2Text: "Telegram 内の Vertax。掘る時や準備中に手元に置きやすい形です。",
+    eco3Title: "Laiso Buck",
+    eco3Text:
+      "Michael Proskurin のヴァイナルDJプロジェクト。deep & atmospheric drum'n'bass、modern jungle、UK bass、leftfield。",
+    eco4Title: "Not for the Dancefloor",
+    eco4Text:
+      "ピークタイムではなく、空気感、質感、flow、丁寧なリスニングにフォーカスしたミックスシリーズです。",
+    eco5Title: "Karacha",
+    eco5Text: "Michael Proskurin と Ilya Romanenkov による drum'n'bass プロジェクト。",
+    eco6Title: "1994lab",
+    eco6Text:
+      "Michael Proskurin と Valery Fironov の digital agency。Webサイト、ブランディング、web apps、mini-apps、digital products。",
+    eco7Title: "Onedam",
+    eco7Text:
+      "Telegram / MAX mini-apps、web apps、実用的な digital services のためのプラットフォームと方向性。",
+    eco8Title: "Michael Proskurin",
+    eco8Text: "Digital producer、1994lab / Onedam CEO、ミュージシャン、DJ、Vertax 作者。",
+    contactKicker: "連絡",
+    contactH2: "フィードバック、バグ、アイデア、ブッキング",
+    contactText:
+      "ヴァイナルをプレイしている方、バグを見つけた方、機能提案、出演依頼、mini-app プロジェクトの相談がある方は連絡してください。Vertax は生きたツールとして育っているので、実際のフィードバックが何より大事です。",
+    contactBtn1: "Michael に連絡",
+    contactBtn2: "個人サイト",
+    contactBtn3: "Laiso Buck",
+    contactBtn4: "1994lab",
+    footerCopy: "Vertax by Laiso Buck / 1994lab",
+    footerTagline: "DIG. PLAY. SHARE.",
+    footerLink1: "Telegram で起動",
     footerLink2: "Telegram",
     footerLink3: "About",
     footerLink4: "Michael Proskurin",
@@ -368,7 +478,7 @@ const COPY = {
 
 // ─── VALID LANGUAGES ─────────────────────────────────────────────────────────
 
-const VALID_LANGS = ["ru", "en", "zh"];
+const VALID_LANGS = ["ru", "en", "zh", "ja"];
 const STORAGE_KEY = "vertax-lang";
 const BASE_URL = "https://vertax-one.vercel.app/about";
 
@@ -399,6 +509,17 @@ function setMeta(attr, name, content) {
   if (el) el.setAttribute("content", content);
 }
 
+function applyLocalizedLinks(lang) {
+  var mixesUrl = lang === "ru" ? LINKS.mixesRu : LINKS.mixesInternational;
+  var mixesHint = lang === "ru" ? "promodj.com/laisobuck" : "mixcloud.com/LaisoBuck";
+  document.querySelectorAll('[data-localized-link="mixes"]').forEach(function (el) {
+    el.setAttribute("href", mixesUrl);
+  });
+  document.querySelectorAll('[data-link-hint="mixes"]').forEach(function (el) {
+    el.textContent = mixesHint;
+  });
+}
+
 // ─── APPLY LANGUAGE ──────────────────────────────────────────────────────────
 
 function applyLang(lang) {
@@ -419,6 +540,7 @@ function applyLang(lang) {
 
   var ogUrl = lang === "ru" ? BASE_URL : BASE_URL + "?lang=" + lang;
   setMeta("property", "og:url", ogUrl);
+  applyLocalizedLinks(lang);
 
   // text content
   document.querySelectorAll("[data-i18n]").forEach(function (el) {

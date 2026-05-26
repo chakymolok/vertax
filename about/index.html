@@ -17,6 +17,7 @@
   <link rel="alternate" hreflang="ru"       href="https://vertax-one.vercel.app/about?lang=ru">
   <link rel="alternate" hreflang="en"       href="https://vertax-one.vercel.app/about?lang=en">
   <link rel="alternate" hreflang="zh-CN"    href="https://vertax-one.vercel.app/about?lang=zh">
+  <link rel="alternate" hreflang="ja"       href="https://vertax-one.vercel.app/about?lang=ja">
   <link rel="alternate" hreflang="x-default" href="https://vertax-one.vercel.app/about">
 
   <!-- Open Graph -->
@@ -78,7 +79,7 @@
       <nav class="nav" aria-label="Основная навигация">
 
         <!-- Brand -->
-        <a class="brand" href="/" aria-label="Открыть Vertax">
+        <a class="brand" href="#main" aria-label="Vertax">
           <span class="brand-mark" aria-hidden="true"></span>
           <span class="brand-text">
             <span class="brand-name">Vertax</span>
@@ -102,10 +103,16 @@
             <button class="lang-btn active" data-lang="ru" aria-pressed="true"  title="Русский">RU</button>
             <button class="lang-btn"        data-lang="en" aria-pressed="false" title="English">EN</button>
             <button class="lang-btn"        data-lang="zh" aria-pressed="false" title="中文">中文</button>
+            <button class="lang-btn"        data-lang="ja" aria-pressed="false" title="日本語">日本</button>
           </div>
 
           <!-- Desktop CTA -->
-          <a class="nav-cta" href="/" data-i18n="navCta">Открыть Vertax</a>
+          <a class="nav-cta"
+             href="https://t.me/vertaksbot/app?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_launch&utm_content=nav_telegram"
+             target="_blank"
+             rel="noopener noreferrer"
+             data-i18n="navCta"
+          >Запустить в Telegram</a>
 
           <!-- Mobile hamburger -->
           <button
@@ -146,11 +153,6 @@
 
             <div class="cta-row">
               <a class="btn btn-primary"
-                 href="/"
-                 data-i18n="heroCta1"
-              >Открыть Vertax</a>
-
-              <a class="btn btn-secondary"
                  href="https://t.me/vertaksbot/app?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_launch&utm_content=hero_telegram"
                  target="_blank"
                  rel="noopener noreferrer"
@@ -472,17 +474,7 @@
 
           <div class="eco-grid">
 
-            <!-- 1. Vertax Web App -->
-            <a class="eco-card"
-               href="/"
-            >
-              <div class="eco-card-top"><span class="eco-tag">App</span></div>
-              <h3 data-i18n="eco1Title">Vertax Web App</h3>
-              <p data-i18n="eco1Text">Рабочая версия приложения: коллекция, BPM, Key, Discogs и сборка сетов.</p>
-              <span class="eco-link-hint">vertax-one.vercel.app</span>
-            </a>
-
-            <!-- 2. Telegram Mini App -->
+            <!-- 1. Telegram Mini App -->
             <a class="eco-card"
                href="https://t.me/vertaksbot/app?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=footer_telegram"
                target="_blank"
@@ -494,7 +486,7 @@
               <span class="eco-link-hint">t.me/vertaksbot/app</span>
             </a>
 
-            <!-- 3. Laiso Buck -->
+            <!-- 2. Laiso Buck -->
             <a class="eco-card"
                href="https://proskurin.online/laiso-buck?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=laiso_buck"
                target="_blank"
@@ -506,19 +498,20 @@
               <span class="eco-link-hint">proskurin.online</span>
             </a>
 
-            <!-- 4. Not for the Dancefloor -->
+            <!-- 3. Not for the Dancefloor -->
             <a class="eco-card"
-               href="https://proskurin.online/laiso-buck?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=laiso_buck"
+               href="https://promodj.com/laisobuck"
                target="_blank"
                rel="noopener noreferrer"
+               data-localized-link="mixes"
             >
               <div class="eco-card-top"><span class="eco-tag">Mixes</span></div>
               <h3 data-i18n="eco4Title">Not for the Dancefloor</h3>
               <p data-i18n="eco4Text">Серия сетов не про пик-тайм, а про атмосферу, фактуру, плавный поток и внимательное слушание.</p>
-              <span class="eco-link-hint">proskurin.online</span>
+              <span class="eco-link-hint" data-link-hint="mixes">promodj.com/laisobuck</span>
             </a>
 
-            <!-- 5. Karacha -->
+            <!-- 4. Karacha -->
             <a class="eco-card"
                href="https://vk.com/karacha_me?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=karacha"
                target="_blank"
@@ -530,7 +523,7 @@
               <span class="eco-link-hint">vk.com/karacha_me</span>
             </a>
 
-            <!-- 6. 1994lab -->
+            <!-- 5. 1994lab -->
             <a class="eco-card"
                href="https://1994lab.ru?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=1994lab"
                target="_blank"
@@ -542,7 +535,7 @@
               <span class="eco-link-hint">1994lab.ru</span>
             </a>
 
-            <!-- 7. Onedam -->
+            <!-- 6. Onedam -->
             <a class="eco-card"
                href="https://onedam.me?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=onedam"
                target="_blank"
@@ -554,7 +547,7 @@
               <span class="eco-link-hint">onedam.me</span>
             </a>
 
-            <!-- 8. Michael Proskurin -->
+            <!-- 7. Michael Proskurin -->
             <a class="eco-card"
                href="https://proskurin.online/proskurin-mikhail?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=personal_site"
                target="_blank"
@@ -638,10 +631,6 @@
         </div>
 
         <nav class="footer-nav" aria-label="Footer links">
-          <a href="/"
-             data-i18n="footerLink1"
-          >Открыть Vertax</a>
-
           <a href="https://t.me/vertaksbot/app?utm_source=vertax_about&utm_medium=website&utm_campaign=vertax_ecosystem&utm_content=footer_telegram"
              target="_blank"
              rel="noopener noreferrer"
