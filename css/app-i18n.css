@@ -1,0 +1,59 @@
+#laiso-app .vertax-lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin-right: 8px;
+  border: 1px solid var(--border, #E2D9CD);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.42);
+  vertical-align: middle;
+}
+
+#laiso-app .vertax-lang-btn {
+  min-width: 30px;
+  min-height: 24px;
+  padding: 0 7px;
+  border: 0;
+  border-right: 1px solid var(--border, #E2D9CD);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary, #5D5A54);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#laiso-app .vertax-lang-btn:last-child {
+  border-right: 0;
+}
+
+#laiso-app .vertax-lang-btn.is-active {
+  background: var(--accent-lime, #C4F542);
+  color: #111;
+}
+
+#laiso-app .vertax-lang-btn:focus-visible {
+  outline: 2px solid var(--accent-lime-dark, #8FB918);
+  outline-offset: 2px;
+}
+
+body.vertax-theme-dark #laiso-app .vertax-lang-switcher {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 560px) {
+  #laiso-app .vertax-lang-switcher {
+    margin-right: 4px;
+  }
+
+  #laiso-app .vertax-lang-btn {
+    min-width: 26px;
+    padding: 0 5px;
+    font-size: 8px;
+  }
+}
