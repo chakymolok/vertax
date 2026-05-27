@@ -1,5 +1,5 @@
 /* VERTAX app i18n overlay. Keeps the original Russian render code intact. */
-(function(){
+(function () {
   if (window.__vertaxAppI18nInstalled) return;
   window.__vertaxAppI18nInstalled = true;
 
@@ -17,20 +17,21 @@
       'by Laiso Buck / Михаил Проскурин': 'by Laiso Buck / Michael Proskurin',
       'главное меню': 'main menu',
       'Найти пластинку': 'Find a record',
-      'Коллекция': 'Collection',
+      Коллекция: 'Collection',
       'Собрать сет': 'Build a set',
       'Импорт из Discogs': 'Discogs import',
-      'service': 'service',
+      service: 'service',
       'Резервная копия': 'Backup',
       'сохранить коллекцию': 'save collection',
-      'about': 'about',
+      about: 'about',
       'О проекте': 'About',
       'О приложении': 'About the app',
       'что это за штука': 'what is this',
-      'support': 'support',
-      'Донат': 'Donate',
+      support: 'support',
+      Донат: 'Donate',
       'поддержать VERTAX-01': 'support VERTAX-01',
-      'VERTAX-01 · by Laiso Buck / Михаил Проскурин': 'VERTAX-01 · by Laiso Buck / Michael Proskurin',
+      'VERTAX-01 · by Laiso Buck / Михаил Проскурин':
+        'VERTAX-01 · by Laiso Buck / Michael Proskurin',
       'Telegram автору': 'Message author',
       'Поддержать проект': 'Support the project',
       '← Назад': '← Back',
@@ -41,10 +42,10 @@
       'Discogs · виниловые релизы': 'Discogs · vinyl releases',
       'Слот пуст': 'Empty slot',
       'Введи артиста, релиз или название трека выше': 'Enter artist, release or track title above',
-      'сессия': 'session',
+      сессия: 'session',
       'Готово → треклисты': 'Done → tracklists',
       'кандидат №1': 'candidate #1',
-      'варианты': 'variants',
+      варианты: 'variants',
       'Это моя пластинка': 'This is my record',
       'Открыть треклист': 'Open tracklist',
       'Открыть пластинку': 'Open record',
@@ -54,98 +55,104 @@
       'Править детали…': 'Edit details...',
       'Пропускать в сетах': 'Skip in sets',
       'Вернуть в сеты': 'Return to sets',
-      'Удалить': 'Delete',
-      'Подтверждение': 'Confirmation',
-      'Выбрать': 'Select',
-      'Отмена': 'Cancel',
-      'Отменить': 'Cancel',
-      'Сохранить': 'Save',
-      'Сохранено': 'Saved',
-      'Справка': 'Help',
-      'Пластинки': 'Records',
-      'Сеты': 'Sets',
+      Удалить: 'Delete',
+      Подтверждение: 'Confirmation',
+      Выбрать: 'Select',
+      Отмена: 'Cancel',
+      Отменить: 'Cancel',
+      Сохранить: 'Save',
+      Сохранено: 'Saved',
+      Справка: 'Help',
+      Пластинки: 'Records',
+      Сеты: 'Sets',
       'Сохранённые сеты': 'Saved sets',
       'Сохраненных сетов нет': 'No saved sets',
       'Сохранённых сетов нет': 'No saved sets',
       'Собрать сет из коллекции': 'Build a set from collection',
       'Выбрать пластинки / вся коллекция': 'Pick records / full collection',
-      'Настройки': 'Settings',
+      Настройки: 'Settings',
       'Экспорт коллекции (JSON)': 'Export collection (JSON)',
       'Импорт коллекции (JSON)': 'Import collection (JSON)',
       'Стереть все данные': 'Erase all data',
-      'Открыть': 'Open',
+      Открыть: 'Open',
       'Удал.': 'Del.',
       'Сборка сета': 'Set builder',
       'BEST FLOW': 'BEST FLOW',
       'ПО ТЕМПУ': 'BY TEMPO',
       'ПО CAMELOT': 'BY CAMELOT',
-      'ФИЛЬТР': 'FILTER',
-      'СВОЙ': 'CUSTOM',
+      ФИЛЬТР: 'FILTER',
+      СВОЙ: 'CUSTOM',
       'Диапазон темпа': 'Tempo range',
       'Стартовый Camelot': 'Starting Camelot',
       'Выбери Camelot': 'Pick Camelot',
       'Свой сет': 'Custom set',
       'Добавить трек из коллекции': 'Add track from collection',
-      'Сгенерировать': 'Generate',
-      'Пересобрать': 'Rebuild',
+      Сгенерировать: 'Generate',
+      Пересобрать: 'Rebuild',
       'Экспорт TXT': 'Export TXT',
       'Сохранить сет': 'Save set',
-      'сет': 'set',
+      сет: 'set',
       'трек.': 'tracks',
-      'треков': 'tracks',
-      'Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.': 'You need at least 2 tracks. Add records and fill BPM/Key.',
+      треков: 'tracks',
+      'Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.':
+        'You need at least 2 tracks. Add records and fill BPM/Key.',
       'Есть треки без BPM / Camelot': 'Some tracks have no BPM / Camelot',
       'требуют проверки': 'need review',
-      'Заполни значения вручную или исключи треки из сета.': 'Fill values manually or exclude tracks from the set.',
+      'Заполни значения вручную или исключи треки из сета.':
+        'Fill values manually or exclude tracks from the set.',
       'Показать и исправить': 'Show and fix',
       'Импорт из Discogs': 'Discogs import',
       'Загрузить коллекцию': 'Load collection',
       'Загружаем…': 'Loading...',
       'Загружено:': 'Loaded:',
       'пластинок...': 'records...',
-      'опции': 'options',
+      опции: 'options',
       'Сразу подтянуть треклисты': 'Load tracklists immediately',
       'И BPM / Key': 'And BPM / Key',
       'Найдено пластинок:': 'Records found:',
       'Как добавить в коллекцию?': 'How to add them to collection?',
       'Заменить текущую коллекцию': 'Replace current collection',
       'Объединить с текущей': 'Merge with current',
-      'Коллекция должна быть публичной в настройках профиля Discogs.': 'Collection must be public in Discogs profile settings.',
-      'Введите ваш Discogs username — и мы загрузим вашу коллекцию автоматически.': 'Enter your Discogs username and Vertax will load your collection automatically.',
+      'Коллекция должна быть публичной в настройках профиля Discogs.':
+        'Collection must be public in Discogs profile settings.',
+      'Введите ваш Discogs username — и мы загрузим вашу коллекцию автоматически.':
+        'Enter your Discogs username and Vertax will load your collection automatically.',
       'Трек добавлен': 'Track added',
       'BPM/Key сохранены': 'BPM/Key saved',
-      'править': 'edit',
-      'убрать': 'remove',
-      'перетащить': 'drag',
+      править: 'edit',
+      убрать: 'remove',
+      перетащить: 'drag',
       'на пластинке': 'on record',
       'Та же пластинка рядом': 'Same record nearby',
       'Та же пластинка, что предыдущий трек': 'Same record as previous track',
-      'Режим по темпу: сет строится от меньшего BPM к большему': 'Tempo mode: set goes from lower BPM to higher BPM',
-      'режим по темпу: сет строится от меньшего BPM к большему': 'tempo mode: set goes from lower BPM to higher BPM',
+      'Режим по темпу: сет строится от меньшего BPM к большему':
+        'Tempo mode: set goes from lower BPM to higher BPM',
+      'режим по темпу: сет строится от меньшего BPM к большему':
+        'tempo mode: set goes from lower BPM to higher BPM',
       'Выбери пластинки для сета': 'Pick records for the set',
       'Собрать из выбранных': 'Build from selected',
       'Вся коллекция': 'Full collection',
       'Текущая сессия': 'Current session',
       'Выбрать все видимые': 'Select all visible',
       'Снять видимые': 'Clear visible',
-      'Добавить выбранные': 'Add selected'
+      'Добавить выбранные': 'Add selected',
     },
     zh: {
       'by Laiso Buck / Михаил Проскурин': 'by Laiso Buck / Michael Proskurin',
       'главное меню': '主菜单',
       'Найти пластинку': '查找唱片',
-      'Коллекция': '收藏库',
+      Коллекция: '收藏库',
       'Собрать сет': '生成 DJ Set',
       'Импорт из Discogs': 'Discogs 导入',
-      'service': '服务',
+      service: '服务',
       'Резервная копия': '备份',
       'сохранить коллекцию': '保存收藏库',
-      'about': '关于',
+      about: '关于',
       'О проекте': '关于项目',
       'О приложении': '关于应用',
       'что это за штука': '这是什么',
-      'support': '支持',
-      'Донат': '捐助',
+      support: '支持',
+      Донат: '捐助',
       'поддержать VERTAX-01': '支持 VERTAX-01',
       'Telegram автору': '联系作者',
       'Поддержать проект': '支持项目',
@@ -157,10 +164,10 @@
       'Discogs · виниловые релизы': 'Discogs · 黑胶发行',
       'Слот пуст': '空槽位',
       'Введи артиста, релиз или название трека выше': '输入艺人、发行或曲名',
-      'сессия': '本次会话',
+      сессия: '本次会话',
       'Готово → треклисты': '完成 → 曲目列表',
       'кандидат №1': '候选 #1',
-      'варианты': '其他选项',
+      варианты: '其他选项',
       'Это моя пластинка': '这是我的唱片',
       'Открыть треклист': '打开曲目列表',
       'Открыть пластинку': '打开唱片',
@@ -170,40 +177,41 @@
       'Править детали…': '编辑详情...',
       'Пропускать в сетах': 'Set 中跳过',
       'Вернуть в сеты': '加入 Set',
-      'Удалить': '删除',
-      'Отмена': '取消',
-      'Отменить': '取消',
-      'Сохранить': '保存',
-      'Сохранено': '已保存',
-      'Справка': '帮助',
-      'Пластинки': '唱片',
-      'Сеты': 'Sets',
+      Удалить: '删除',
+      Отмена: '取消',
+      Отменить: '取消',
+      Сохранить: '保存',
+      Сохранено: '已保存',
+      Справка: '帮助',
+      Пластинки: '唱片',
+      Сеты: 'Sets',
       'Сохранённые сеты': '已保存 Sets',
       'Сохраненных сетов нет': '暂无保存的 Sets',
       'Сохранённых сетов нет': '暂无保存的 Sets',
       'Собрать сет из коллекции': '从收藏库生成 Set',
       'Выбрать пластинки / вся коллекция': '选择唱片 / 全部收藏',
-      'Настройки': '设置',
+      Настройки: '设置',
       'Экспорт коллекции (JSON)': '导出收藏库 (JSON)',
       'Импорт коллекции (JSON)': '导入收藏库 (JSON)',
       'Стереть все данные': '清除所有数据',
-      'Открыть': '打开',
+      Открыть: '打开',
       'Удал.': '删.',
       'Сборка сета': 'Set 生成器',
       'ПО ТЕМПУ': '按速度',
       'ПО CAMELOT': '按 Camelot',
-      'ФИЛЬТР': '筛选',
-      'СВОЙ': '自定义',
+      ФИЛЬТР: '筛选',
+      СВОЙ: '自定义',
       'Диапазон темпа': '速度范围',
       'Стартовый Camelot': '起始 Camelot',
       'Выбери Camelot': '选择 Camelot',
       'Свой сет': '自定义 Set',
       'Добавить трек из коллекции': '从收藏库添加曲目',
-      'Сгенерировать': '生成',
-      'Пересобрать': '重新生成',
+      Сгенерировать: '生成',
+      Пересобрать: '重新生成',
       'Экспорт TXT': '导出 TXT',
       'Сохранить сет': '保存 Set',
-      'Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.': '至少需要 2 首曲目。请添加唱片并填写 BPM/Key。',
+      'Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.':
+        '至少需要 2 首曲目。请添加唱片并填写 BPM/Key。',
       'Есть треки без BPM / Camelot': '有曲目缺少 BPM / Camelot',
       'требуют проверки': '需要检查',
       'Заполни значения вручную или исключи треки из сета.': '手动填写，或从 Set 中排除。',
@@ -212,18 +220,20 @@
       'Загружаем…': '加载中...',
       'Загружено:': '已加载:',
       'пластинок...': '张唱片...',
-      'опции': '选项',
+      опции: '选项',
       'Сразу подтянуть треклисты': '立即加载曲目列表',
       'И BPM / Key': '并加载 BPM / Key',
       'Найдено пластинок:': '找到唱片:',
       'Как добавить в коллекцию?': '如何加入收藏库？',
       'Заменить текущую коллекцию': '替换当前收藏库',
       'Объединить с текущей': '合并到当前收藏库',
-      'Коллекция должна быть публичной в настройках профиля Discogs.': 'Discogs 个人资料中的收藏库必须是公开的。',
-      'Введите ваш Discogs username — и мы загрузим вашу коллекцию автоматически.': '输入 Discogs 用户名，Vertax 会自动加载收藏库。',
-      'править': '编辑',
-      'убрать': '移除',
-      'перетащить': '拖动',
+      'Коллекция должна быть публичной в настройках профиля Discogs.':
+        'Discogs 个人资料中的收藏库必须是公开的。',
+      'Введите ваш Discogs username — и мы загрузим вашу коллекцию автоматически.':
+        '输入 Discogs 用户名，Vertax 会自动加载收藏库。',
+      править: '编辑',
+      убрать: '移除',
+      перетащить: '拖动',
       'на пластинке': '唱片位置',
       'Та же пластинка рядом': '相邻曲目来自同一唱片',
       'Выбери пластинки для сета': '选择用于 Set 的唱片',
@@ -232,24 +242,24 @@
       'Текущая сессия': '当前会话',
       'Выбрать все видимые': '选择所有可见项',
       'Снять видимые': '取消可见项',
-      'Добавить выбранные': '添加所选项'
+      'Добавить выбранные': '添加所选项',
     },
     ja: {
       'by Laiso Buck / Михаил Проскурин': 'by Laiso Buck / Michael Proskurin',
       'главное меню': 'メインメニュー',
       'Найти пластинку': 'レコードを探す',
-      'Коллекция': 'コレクション',
+      Коллекция: 'コレクション',
       'Собрать сет': 'セットを作る',
       'Импорт из Discogs': 'Discogs インポート',
-      'service': 'サービス',
+      service: 'サービス',
       'Резервная копия': 'バックアップ',
       'сохранить коллекцию': 'コレクションを保存',
-      'about': 'about',
+      about: 'about',
       'О проекте': 'プロジェクトについて',
       'О приложении': 'アプリについて',
       'что это за штука': 'これは何か',
-      'support': 'サポート',
-      'Донат': '寄付',
+      support: 'サポート',
+      Донат: '寄付',
       'поддержать VERTAX-01': 'VERTAX-01 を支援',
       'Telegram автору': '作者に連絡',
       'Поддержать проект': 'プロジェクトを支援',
@@ -261,10 +271,10 @@
       'Discogs · виниловые релизы': 'Discogs · vinyl releases',
       'Слот пуст': '空のスロット',
       'Введи артиста, релиз или название трека выше': 'アーティスト、リリース、曲名を入力',
-      'сессия': 'セッション',
+      сессия: 'セッション',
       'Готово → треклисты': '完了 → トラックリスト',
       'кандидат №1': '候補 #1',
-      'варианты': '候補',
+      варианты: '候補',
       'Это моя пластинка': 'このレコードです',
       'Открыть треклист': 'トラックリストを開く',
       'Открыть пластинку': 'レコードを開く',
@@ -274,60 +284,64 @@
       'Править детали…': '詳細を編集...',
       'Пропускать в сетах': 'セットで除外',
       'Вернуть в сеты': 'セットに戻す',
-      'Удалить': '削除',
-      'Отмена': 'キャンセル',
-      'Отменить': 'キャンセル',
-      'Сохранить': '保存',
-      'Сохранено': '保存しました',
-      'Справка': 'ヘルプ',
-      'Пластинки': 'レコード',
-      'Сеты': 'セット',
+      Удалить: '削除',
+      Отмена: 'キャンセル',
+      Отменить: 'キャンセル',
+      Сохранить: '保存',
+      Сохранено: '保存しました',
+      Справка: 'ヘルプ',
+      Пластинки: 'レコード',
+      Сеты: 'セット',
       'Сохранённые сеты': '保存済みセット',
       'Сохраненных сетов нет': '保存済みセットはありません',
       'Сохранённых сетов нет': '保存済みセットはありません',
       'Собрать сет из коллекции': 'コレクションからセットを作る',
       'Выбрать пластинки / вся коллекция': 'レコード選択 / 全コレクション',
-      'Настройки': '設定',
+      Настройки: '設定',
       'Экспорт коллекции (JSON)': 'コレクションを書き出す (JSON)',
       'Импорт коллекции (JSON)': 'コレクションを読み込む (JSON)',
       'Стереть все данные': 'すべてのデータを削除',
-      'Открыть': '開く',
+      Открыть: '開く',
       'Удал.': '削除',
       'Сборка сета': 'セットビルダー',
       'ПО ТЕМПУ': 'テンポ順',
       'ПО CAMELOT': 'Camelot',
-      'ФИЛЬТР': 'フィルター',
-      'СВОЙ': 'カスタム',
+      ФИЛЬТР: 'フィルター',
+      СВОЙ: 'カスタム',
       'Диапазон темпа': 'テンポ範囲',
       'Стартовый Camelot': '開始 Camelot',
       'Выбери Camelot': 'Camelot を選択',
       'Свой сет': 'カスタムセット',
       'Добавить трек из коллекции': 'コレクションから曲を追加',
-      'Сгенерировать': '生成',
-      'Пересобрать': '再生成',
+      Сгенерировать: '生成',
+      Пересобрать: '再生成',
       'Экспорт TXT': 'TXT 書き出し',
       'Сохранить сет': 'セットを保存',
-      'Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.': '最低 2 曲が必要です。レコードを追加し BPM/Key を入力してください。',
+      'Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.':
+        '最低 2 曲が必要です。レコードを追加し BPM/Key を入力してください。',
       'Есть треки без BPM / Camelot': 'BPM / Camelot がない曲があります',
       'требуют проверки': '確認が必要',
-      'Заполни значения вручную или исключи треки из сета.': '手動で入力するか、セットから除外してください。',
+      'Заполни значения вручную или исключи треки из сета.':
+        '手動で入力するか、セットから除外してください。',
       'Показать и исправить': '表示して修正',
       'Загрузить коллекцию': 'コレクションを読み込む',
       'Загружаем…': '読み込み中...',
       'Загружено:': '読み込み済み:',
       'пластинок...': '枚...',
-      'опции': 'オプション',
+      опции: 'オプション',
       'Сразу подтянуть треклисты': 'トラックリストも読み込む',
       'И BPM / Key': 'BPM / Key も読み込む',
       'Найдено пластинок:': '見つかったレコード:',
       'Как добавить в коллекцию?': 'コレクションへの追加方法',
       'Заменить текущую коллекцию': '現在のコレクションを置換',
       'Объединить с текущей': '現在のものと結合',
-      'Коллекция должна быть публичной в настройках профиля Discogs.': 'Discogs プロフィールでコレクションを公開にしてください。',
-      'Введите ваш Discogs username — и мы загрузим вашу коллекцию автоматически.': 'Discogs username を入力すると、Vertax が自動で読み込みます。',
-      'править': '編集',
-      'убрать': '外す',
-      'перетащить': 'ドラッグ',
+      'Коллекция должна быть публичной в настройках профиля Discogs.':
+        'Discogs プロフィールでコレクションを公開にしてください。',
+      'Введите ваш Discogs username — и мы загрузим вашу коллекцию автоматически.':
+        'Discogs username を入力すると、Vertax が自動で読み込みます。',
+      править: '編集',
+      убрать: '外す',
+      перетащить: 'ドラッグ',
       'на пластинке': 'レコード上',
       'Та же пластинка рядом': '隣の曲が同じレコードです',
       'Выбери пластинки для сета': 'セット用のレコードを選択',
@@ -336,25 +350,25 @@
       'Текущая сессия': '現在のセッション',
       'Выбрать все видимые': '表示中をすべて選択',
       'Снять видимые': '表示中を解除',
-      'Добавить выбранные': '選択を追加'
-    }
+      'Добавить выбранные': '選択を追加',
+    },
   };
 
   var extraText = {
     en: {
-      'Назад': 'Back',
+      Назад: 'Back',
       '+ ДОБАВИТЬ ПЛАСТИНКУ': '+ Add record',
       '+ СОБРАТЬ СЕТ': '+ Build set',
       'A–Z ПО АРТИСТУ': 'A-Z by artist',
       'A–Z ПО НАЗВАНИЮ': 'A-Z by title',
       'БЫСТРЫЕ ДЕЙСТВИЯ': 'Quick actions',
-      'КАТАЛОГ': 'Catalog',
-      'НЕДАВНИЕ': 'Recent',
-      'НАЙДЕНА': 'Found',
-      'РУЧ': 'MAN',
+      КАТАЛОГ: 'Catalog',
+      НЕДАВНИЕ: 'Recent',
+      НАЙДЕНА: 'Found',
+      РУЧ: 'MAN',
       'ЦЕЛЬ СЕТА': 'Set target',
       'ТРЕК.': 'tracks',
-      'СЕРВИС': 'Service',
+      СЕРВИС: 'Service',
       '🗂 РЕЗЕРВНАЯ КОПИЯ': 'Backup',
       '+ ДОБАВИТЬ ТРЕК': '+ Add track',
       'Ввести BPM/Key…': 'Enter BPM/Key...',
@@ -363,9 +377,9 @@
       'ПОДТВЕРДИТЬ ТРЕКЛИСТ': 'Confirm tracklist',
       'ПОЗ НАЗВАНИЕ BPM KEY': 'POS TITLE BPM KEY',
       'Поз Название BPM Key': 'POS TITLE BPM KEY',
-      'ПОЗ': 'POS',
-      'НАЗВАНИЕ': 'TITLE',
-      'Переименовать': 'Rename',
+      ПОЗ: 'POS',
+      НАЗВАНИЕ: 'TITLE',
+      Переименовать: 'Rename',
       'Править BPM/Key': 'Edit BPM/Key',
       'СТОРОНА A': 'Side A',
       'СТОРОНА B': 'Side B',
@@ -374,44 +388,45 @@
       'СТОРОНА E': 'Side E',
       'СТОРОНА F': 'Side F',
       'Сменить сторону': 'Change side',
-      'Треклист': 'Tracklist',
+      Треклист: 'Tracklist',
       '+ ДОБАВИТЬ ЕЩЁ ОДНУ ПЛАСТИНКУ': '+ Add another record',
       '+ ДОБАВИТЬ ТРЕК ИЗ КОЛЛЕКЦИИ': '+ Add track from collection',
       'ТРЕБУЮТ ПРОВЕРКИ': 'need review',
       'ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ': 'Possible next tracks',
       'ВСЯ КОЛЛЕКЦИЯ': 'Full collection',
-      'ДОБАВЛЕННЫЕ': 'Added',
-      'ЖАНР': 'Genre',
+      ДОБАВЛЕННЫЕ: 'Added',
+      ЖАНР: 'Genre',
       'ИГРАТЬ СЕТ': 'Play set',
       'ИСТОЧНИК ТРЕКОВ': 'Track source',
       'НА ПЛАСТИНКЕ': 'On record',
       '↕ ПЕРЕТАЩИТЬ': 'Drag',
       'CAMELOT (ПЕРЕОПРЕДЕЛИТЬ)': 'Camelot (override)',
-      'ВРУЧНУЮ': 'Manual',
-      'ИСТОЧНИК': 'Source',
-      'КОММЕНТАРИЙ': 'Comment',
+      ВРУЧНУЮ: 'Manual',
+      ИСТОЧНИК: 'Source',
+      КОММЕНТАРИЙ: 'Comment',
       'Править трек': 'Edit track',
       'Тональность (KEY)': 'Key',
-      'УВЕРЕННОСТЬ': 'Confidence',
+      УВЕРЕННОСТЬ: 'Confidence',
       'УДАЛИТЬ ТРЕК': 'Delete track',
       'by Михаил Проскурин': 'by Michael Proskurin',
       'Михаил Проскурин': 'Michael Proskurin',
-      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».': 'Search a release in Discogs, load its tracklist, fill BPM/Key and build a set without two tracks from the same record in a row.'
+      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».':
+        'Search a release in Discogs, load its tracklist, fill BPM/Key and build a set without two tracks from the same record in a row.',
     },
     zh: {
-      'Назад': '返回',
+      Назад: '返回',
       '+ ДОБАВИТЬ ПЛАСТИНКУ': '+ 添加唱片',
       '+ СОБРАТЬ СЕТ': '+ 生成 Set',
       'A–Z ПО АРТИСТУ': '按艺人 A-Z',
       'A–Z ПО НАЗВАНИЮ': '按标题 A-Z',
       'БЫСТРЫЕ ДЕЙСТВИЯ': '快捷操作',
-      'КАТАЛОГ': '目录',
-      'НЕДАВНИЕ': '最近',
-      'НАЙДЕНА': '已找到',
-      'РУЧ': '手动',
+      КАТАЛОГ: '目录',
+      НЕДАВНИЕ: '最近',
+      НАЙДЕНА: '已找到',
+      РУЧ: '手动',
       'ЦЕЛЬ СЕТА': 'Set 目标',
       'ТРЕК.': '首',
-      'СЕРВИС': '服务',
+      СЕРВИС: '服务',
       '🗂 РЕЗЕРВНАЯ КОПИЯ': '备份',
       '+ ДОБАВИТЬ ТРЕК': '+ 添加曲目',
       'Ввести BPM/Key…': '输入 BPM/Key...',
@@ -420,9 +435,9 @@
       'ПОДТВЕРДИТЬ ТРЕКЛИСТ': '确认曲目列表',
       'ПОЗ НАЗВАНИЕ BPM KEY': '位置 标题 BPM KEY',
       'Поз Название BPM Key': '位置 标题 BPM KEY',
-      'ПОЗ': '位置',
-      'НАЗВАНИЕ': '标题',
-      'Переименовать': '重命名',
+      ПОЗ: '位置',
+      НАЗВАНИЕ: '标题',
+      Переименовать: '重命名',
       'Править BPM/Key': '编辑 BPM/Key',
       'СТОРОНА A': 'A 面',
       'СТОРОНА B': 'B 面',
@@ -431,44 +446,45 @@
       'СТОРОНА E': 'E 面',
       'СТОРОНА F': 'F 面',
       'Сменить сторону': '更改面',
-      'Треклист': '曲目列表',
+      Треклист: '曲目列表',
       '+ ДОБАВИТЬ ЕЩЁ ОДНУ ПЛАСТИНКУ': '+ 再添加一张唱片',
       '+ ДОБАВИТЬ ТРЕК ИЗ КОЛЛЕКЦИИ': '+ 从收藏库添加曲目',
       'ТРЕБУЮТ ПРОВЕРКИ': '需要检查',
       'ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ': '可能的下一首',
       'ВСЯ КОЛЛЕКЦИЯ': '全部收藏',
-      'ДОБАВЛЕННЫЕ': '已添加',
-      'ЖАНР': '风格',
+      ДОБАВЛЕННЫЕ: '已添加',
+      ЖАНР: '风格',
       'ИГРАТЬ СЕТ': '播放 Set',
       'ИСТОЧНИК ТРЕКОВ': '曲目来源',
       'НА ПЛАСТИНКЕ': '唱片位置',
       '↕ ПЕРЕТАЩИТЬ': '拖动',
       'CAMELOT (ПЕРЕОПРЕДЕЛИТЬ)': 'Camelot（覆盖）',
-      'ВРУЧНУЮ': '手动',
-      'ИСТОЧНИК': '来源',
-      'КОММЕНТАРИЙ': '备注',
+      ВРУЧНУЮ: '手动',
+      ИСТОЧНИК: '来源',
+      КОММЕНТАРИЙ: '备注',
       'Править трек': '编辑曲目',
       'Тональность (KEY)': 'Key / 调性',
-      'УВЕРЕННОСТЬ': '置信度',
+      УВЕРЕННОСТЬ: '置信度',
       'УДАЛИТЬ ТРЕК': '删除曲目',
       'by Михаил Проскурин': 'by Michael Proskurin',
       'Михаил Проскурин': 'Michael Proskurin',
-      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».': '在 Discogs 搜索发行，加载曲目列表，填写 BPM/Key，并按规则生成 Set。'
+      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».':
+        '在 Discogs 搜索发行，加载曲目列表，填写 BPM/Key，并按规则生成 Set。',
     },
     ja: {
-      'Назад': '戻る',
+      Назад: '戻る',
       '+ ДОБАВИТЬ ПЛАСТИНКУ': '+ レコードを追加',
       '+ СОБРАТЬ СЕТ': '+ セットを作る',
       'A–Z ПО АРТИСТУ': 'アーティスト A-Z',
       'A–Z ПО НАЗВАНИЮ': 'タイトル A-Z',
       'БЫСТРЫЕ ДЕЙСТВИЯ': 'クイック操作',
-      'КАТАЛОГ': 'カタログ',
-      'НЕДАВНИЕ': '最近',
-      'НАЙДЕНА': '検出済み',
-      'РУЧ': '手動',
+      КАТАЛОГ: 'カタログ',
+      НЕДАВНИЕ: '最近',
+      НАЙДЕНА: '検出済み',
+      РУЧ: '手動',
       'ЦЕЛЬ СЕТА': 'セット目標',
       'ТРЕК.': '曲',
-      'СЕРВИС': 'サービス',
+      СЕРВИС: 'サービス',
       '🗂 РЕЗЕРВНАЯ КОПИЯ': 'バックアップ',
       '+ ДОБАВИТЬ ТРЕК': '+ 曲を追加',
       'Ввести BPM/Key…': 'BPM/Key を入力...',
@@ -477,9 +493,9 @@
       'ПОДТВЕРДИТЬ ТРЕКЛИСТ': 'トラックリストを確認',
       'ПОЗ НАЗВАНИЕ BPM KEY': 'POS TITLE BPM KEY',
       'Поз Название BPM Key': 'POS TITLE BPM KEY',
-      'ПОЗ': 'POS',
-      'НАЗВАНИЕ': 'TITLE',
-      'Переименовать': '名前を変更',
+      ПОЗ: 'POS',
+      НАЗВАНИЕ: 'TITLE',
+      Переименовать: '名前を変更',
       'Править BPM/Key': 'BPM/Key を編集',
       'СТОРОНА A': 'Side A',
       'СТОРОНА B': 'Side B',
@@ -488,58 +504,62 @@
       'СТОРОНА E': 'Side E',
       'СТОРОНА F': 'Side F',
       'Сменить сторону': 'Side を変更',
-      'Треклист': 'トラックリスト',
+      Треклист: 'トラックリスト',
       '+ ДОБАВИТЬ ЕЩЁ ОДНУ ПЛАСТИНКУ': '+ もう1枚追加',
       '+ ДОБАВИТЬ ТРЕК ИЗ КОЛЛЕКЦИИ': '+ コレクションから曲を追加',
       'ТРЕБУЮТ ПРОВЕРКИ': '確認が必要',
       'ВОЗМОЖНЫЕ СЛЕДУЮЩИЕ': '次の候補',
       'ВСЯ КОЛЛЕКЦИЯ': '全コレクション',
-      'ДОБАВЛЕННЫЕ': '追加済み',
-      'ЖАНР': 'ジャンル',
+      ДОБАВЛЕННЫЕ: '追加済み',
+      ЖАНР: 'ジャンル',
       'ИГРАТЬ СЕТ': 'セットを再生',
       'ИСТОЧНИК ТРЕКОВ': '曲のソース',
       'НА ПЛАСТИНКЕ': 'レコード上',
       '↕ ПЕРЕТАЩИТЬ': 'ドラッグ',
       'CAMELOT (ПЕРЕОПРЕДЕЛИТЬ)': 'Camelot（上書き）',
-      'ВРУЧНУЮ': '手動',
-      'ИСТОЧНИК': 'ソース',
-      'КОММЕНТАРИЙ': 'コメント',
+      ВРУЧНУЮ: '手動',
+      ИСТОЧНИК: 'ソース',
+      КОММЕНТАРИЙ: 'コメント',
       'Править трек': '曲を編集',
       'Тональность (KEY)': 'Key',
-      'УВЕРЕННОСТЬ': '信頼度',
+      УВЕРЕННОСТЬ: '信頼度',
       'УДАЛИТЬ ТРЕК': '曲を削除',
       'by Михаил Проскурин': 'by Michael Proskurin',
       'Михаил Проскурин': 'Michael Proskurin',
-      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».': 'Discogs でリリースを検索し、トラックリストを読み込み、BPM/Key を入力してセットを作成します。'
-    }
+      'Найди релиз в Discogs текстом, подтяни треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».':
+        'Discogs でリリースを検索し、トラックリストを読み込み、BPM/Key を入力してセットを作成します。',
+    },
   };
 
   var placeholders = {
     en: {
       'Артист, релиз или трек…': 'Artist, release or track...',
       'Поиск: артист / название / лейбл / каталог…': 'Search: artist / title / label / catalog...',
-      'Discogs username': 'Discogs username'
+      'Discogs username': 'Discogs username',
     },
     zh: {
       'Артист, релиз или трек…': '艺人、发行或曲名...',
       'Поиск: артист / название / лейбл / каталог…': '搜索：艺人 / 标题 / 厂牌 / 编号...',
-      'Discogs username': 'Discogs 用户名'
+      'Discogs username': 'Discogs 用户名',
     },
     ja: {
       'Артист, релиз или трек…': 'アーティスト、リリース、曲名...',
-      'Поиск: артист / название / лейбл / каталог…': '検索: アーティスト / タイトル / レーベル / カタログ...',
-      'Discogs username': 'Discogs username'
-    }
+      'Поиск: артист / название / лейбл / каталог…':
+        '検索: アーティスト / タイトル / レーベル / カタログ...',
+      'Discogs username': 'Discogs username',
+    },
   };
 
-  function normalize(s){
-    return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  function normalize(s) {
+    return String(s == null ? '' : s)
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
-  function getDict(lang){
+  function getDict(lang) {
     var source = Object.assign({}, text[lang] || {}, extraText[lang] || {});
     var out = {};
-    Object.keys(source).forEach(function(key){
+    Object.keys(source).forEach(function (key) {
       out[key] = source[key];
       out[key.toLowerCase()] = source[key];
       out[key.toUpperCase()] = source[key];
@@ -547,37 +567,39 @@
     return out;
   }
 
-  function getLang(){
+  function getLang() {
     try {
       var saved = localStorage.getItem(STORAGE_KEY);
       if (langs.indexOf(saved) >= 0) return saved;
       var queryLang = new URLSearchParams(window.location.search || '').get('lang');
       if (langs.indexOf(queryLang) >= 0) return queryLang;
-    } catch(_) {}
+    } catch (_) {}
     return 'ru';
   }
 
-  function hasExplicitLang(){
+  function hasExplicitLang() {
     try {
       var saved = localStorage.getItem(STORAGE_KEY);
       if (langs.indexOf(saved) >= 0) return true;
       var queryLang = new URLSearchParams(window.location.search || '').get('lang');
       return langs.indexOf(queryLang) >= 0;
-    } catch(_) {
+    } catch (_) {
       return false;
     }
   }
 
-  function shouldShowLanguageGate(){
+  function shouldShowLanguageGate() {
     try {
       if (navigator.webdriver) return false;
-    } catch(_) {}
+    } catch (_) {}
     return !hasExplicitLang();
   }
 
-  function setLang(lang){
+  function setLang(lang) {
     if (langs.indexOf(lang) < 0) lang = 'ru';
-    try { localStorage.setItem(STORAGE_KEY, lang); } catch(_) {}
+    try {
+      localStorage.setItem(STORAGE_KEY, lang);
+    } catch (_) {}
     window.__vertaxAppLang = lang;
     document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : lang);
     removeLanguageGate();
@@ -585,46 +607,69 @@
     else translateApp();
   }
 
-  function renderSwitcher(){
+  function renderSwitcher() {
     var lang = getLang();
-    return '<span class="vertax-lang-switcher" role="group" aria-label="Language">' +
-      langs.map(function(code){
-        return '<button class="vertax-lang-btn' + (code === lang ? ' is-active' : '') + '" type="button" data-action="app-lang" data-lang="' + code + '" aria-pressed="' + (code === lang ? 'true' : 'false') + '">' + labels[code] + '</button>';
-      }).join('') +
-      '</span>';
+    return (
+      '<span class="vertax-lang-switcher" role="group" aria-label="Language">' +
+      langs
+        .map(function (code) {
+          return (
+            '<button class="vertax-lang-btn' +
+            (code === lang ? ' is-active' : '') +
+            '" type="button" data-action="app-lang" data-lang="' +
+            code +
+            '" aria-pressed="' +
+            (code === lang ? 'true' : 'false') +
+            '">' +
+            labels[code] +
+            '</button>'
+          );
+        })
+        .join('') +
+      '</span>'
+    );
   }
 
-  function ensureSwitcher(root){
+  function ensureSwitcher(root) {
     var side = root.querySelector('.laiso-chassis-side');
     if (!side || side.querySelector('.vertax-lang-switcher')) return;
     side.insertAdjacentHTML('afterbegin', renderSwitcher());
   }
 
-  function renderLanguageGate(root){
+  function renderLanguageGate(root) {
     if (!shouldShowLanguageGate()) return;
     if (root.querySelector('.vertax-lang-gate')) return;
-    root.insertAdjacentHTML('beforeend',
+    root.insertAdjacentHTML(
+      'beforeend',
       '<div class="vertax-lang-gate" role="dialog" aria-modal="true" aria-labelledby="vertax-lang-gate-title">' +
         '<div class="vertax-lang-gate-card">' +
-          '<p class="vertax-lang-gate-kicker">VERTAX-01</p>' +
-          '<h2 class="vertax-lang-gate-title" id="vertax-lang-gate-title">Выберите язык</h2>' +
-          '<p class="vertax-lang-gate-copy">Choose the interface language. You can change it later in the top panel.</p>' +
-          '<div class="vertax-lang-gate-options">' +
-            langs.map(function(code){
-              return '<button class="vertax-lang-gate-btn" type="button" data-action="app-lang" data-lang="' + code + '">' + langNames[code] + '</button>';
-            }).join('') +
-          '</div>' +
+        '<p class="vertax-lang-gate-kicker">VERTAX-01</p>' +
+        '<h2 class="vertax-lang-gate-title" id="vertax-lang-gate-title">Выберите язык</h2>' +
+        '<p class="vertax-lang-gate-copy">Choose the interface language. You can change it later in the top panel.</p>' +
+        '<div class="vertax-lang-gate-options">' +
+        langs
+          .map(function (code) {
+            return (
+              '<button class="vertax-lang-gate-btn" type="button" data-action="app-lang" data-lang="' +
+              code +
+              '">' +
+              langNames[code] +
+              '</button>'
+            );
+          })
+          .join('') +
         '</div>' +
-      '</div>'
+        '</div>' +
+        '</div>'
     );
   }
 
-  function removeLanguageGate(){
+  function removeLanguageGate() {
     var gate = document.querySelector('#laiso-app .vertax-lang-gate');
     if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
   }
 
-  function translateTextNode(node, dict){
+  function translateTextNode(node, dict) {
     var raw = normalize(node.nodeValue);
     if (!raw) return;
     if (dict[raw]) {
@@ -637,49 +682,65 @@
       return;
     }
     var translated = raw
-      .replace(/^Пластинки \((\d+)\)$/i, function(_, n){ return (dict['Пластинки'] || 'Records') + ' (' + n + ')'; })
-      .replace(/^Сеты \((\d+)\)$/i, function(_, n){ return (dict['Сеты'] || 'Sets') + ' (' + n + ')'; })
-      .replace(/^сет · (\d+) трек\.$/i, function(_, n){ return (dict['сет'] || 'set') + ' · ' + n + ' ' + (dict['трек.'] || 'tracks'); })
-      .replace(/^сессия · (\d+)\/(\d+)$/i, function(_, a, b){ return (dict['сессия'] || 'session') + ' · ' + a + '/' + b; })
-      .replace(/^Диапазон темпа ± (\d+) BPM$/i, function(_, n){ return (dict['Диапазон темпа'] || 'Tempo range') + ' ± ' + n + ' BPM'; })
-      .replace(/^(ВСЯ КОЛЛЕКЦИЯ|ДОБАВЛЕННЫЕ) · (\d+)$/i, function(_, label, n){
+      .replace(/^Пластинки \((\d+)\)$/i, function (_, n) {
+        return (dict['Пластинки'] || 'Records') + ' (' + n + ')';
+      })
+      .replace(/^Сеты \((\d+)\)$/i, function (_, n) {
+        return (dict['Сеты'] || 'Sets') + ' (' + n + ')';
+      })
+      .replace(/^сет · (\d+) трек\.$/i, function (_, n) {
+        return (dict['сет'] || 'set') + ' · ' + n + ' ' + (dict['трек.'] || 'tracks');
+      })
+      .replace(/^сессия · (\d+)\/(\d+)$/i, function (_, a, b) {
+        return (dict['сессия'] || 'session') + ' · ' + a + '/' + b;
+      })
+      .replace(/^Диапазон темпа ± (\d+) BPM$/i, function (_, n) {
+        return (dict['Диапазон темпа'] || 'Tempo range') + ' ± ' + n + ' BPM';
+      })
+      .replace(/^(ВСЯ КОЛЛЕКЦИЯ|ДОБАВЛЕННЫЕ) · (\d+)$/i, function (_, label, n) {
         return (dict[label.toUpperCase()] || label) + ' · ' + n;
       })
-      .replace(/^НА ПЛАСТИНКЕ (.+)$/i, function(_, pos){
+      .replace(/^НА ПЛАСТИНКЕ (.+)$/i, function (_, pos) {
         return (dict['НА ПЛАСТИНКЕ'] || 'On record') + ' ' + pos;
       })
-      .replace(/^(\d+) ТРЕБУЮТ ПРОВЕРКИ$/i, function(_, n){
+      .replace(/^(\d+) ТРЕБУЮТ ПРОВЕРКИ$/i, function (_, n) {
         return n + ' ' + (dict['ТРЕБУЮТ ПРОВЕРКИ'] || 'need review');
       })
-      .replace(/^(\d+) ТРЕК\.$/i, function(_, n){
+      .replace(/^(\d+) ТРЕК\.$/i, function (_, n) {
         return n + ' ' + (dict['ТРЕК.'] || 'tracks');
       })
-      .replace(/^(\d+) мин$/i, function(_, n){
+      .replace(/^(\d+) мин$/i, function (_, n) {
         var unit = dict.__minutes || 'min';
         return n + ' ' + unit;
       });
-    Object.keys(dict).sort(function(a, b){ return b.length - a.length; }).some(function(key){
-      if (!/[А-Яа-яЁё]/.test(key) || key.length < 4 || translated.indexOf(key) < 0) return false;
-      translated = translated.split(key).join(dict[key]);
-      return false;
-    });
+    Object.keys(dict)
+      .sort(function (a, b) {
+        return b.length - a.length;
+      })
+      .some(function (key) {
+        if (!/[А-Яа-яЁё]/.test(key) || key.length < 4 || translated.indexOf(key) < 0) return false;
+        translated = translated.split(key).join(dict[key]);
+        return false;
+      });
     if (translated !== raw) node.nodeValue = node.nodeValue.replace(raw, translated);
   }
 
-  function postProcessElements(root, lang, dict){
+  function postProcessElements(root, lang, dict) {
     if (lang === 'ru') return;
-    root.querySelectorAll('[data-action="back"]').forEach(function(el){
+    root.querySelectorAll('[data-action="back"]').forEach(function (el) {
       el.textContent = dict['← Назад'] || dict['Назад'] || 'Back';
     });
-    root.querySelectorAll('.laiso-track > div, .laiso-track-head, .laiso-track-header').forEach(function(el){
-      var value = normalize(el.textContent);
-      if (/^ПОЗ НАЗВАНИЕ BPM KEY$/i.test(value) || /^Поз Название BPM Key$/i.test(value)) {
-        el.textContent = dict['ПОЗ НАЗВАНИЕ BPM KEY'] || 'POS TITLE BPM KEY';
-      }
-    });
+    root
+      .querySelectorAll('.laiso-track > div, .laiso-track-head, .laiso-track-header')
+      .forEach(function (el) {
+        var value = normalize(el.textContent);
+        if (/^ПОЗ НАЗВАНИЕ BPM KEY$/i.test(value) || /^Поз Название BPM Key$/i.test(value)) {
+          el.textContent = dict['ПОЗ НАЗВАНИЕ BPM KEY'] || 'POS TITLE BPM KEY';
+        }
+      });
   }
 
-  function translateApp(){
+  function translateApp() {
     if (isTranslating) return;
     var root = document.getElementById('laiso-root');
     if (!root) return;
@@ -689,7 +750,7 @@
     var lang = getLang();
     window.__vertaxAppLang = lang;
     document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : lang);
-    root.querySelectorAll('.vertax-lang-btn').forEach(function(btn){
+    root.querySelectorAll('.vertax-lang-btn').forEach(function (btn) {
       var active = btn.getAttribute('data-lang') === lang;
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
@@ -701,43 +762,47 @@
     var dict = getDict(lang);
     dict.__minutes = lang === 'en' ? 'min' : lang === 'zh' ? '分钟' : '分';
     var ph = placeholders[lang] || {};
-    root.querySelectorAll('input, textarea').forEach(function(el){
+    root.querySelectorAll('input, textarea').forEach(function (el) {
       var p = el.getAttribute('placeholder');
       if (p && ph[p]) el.setAttribute('placeholder', ph[p]);
     });
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode: function(node){
+      acceptNode: function (node) {
         var parent = node.parentNode;
         if (!parent) return NodeFilter.FILTER_REJECT;
-        if (/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/i.test(parent.nodeName)) return NodeFilter.FILTER_REJECT;
-        if (parent.closest && parent.closest('.vertax-lang-switcher')) return NodeFilter.FILTER_REJECT;
+        if (/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/i.test(parent.nodeName))
+          return NodeFilter.FILTER_REJECT;
+        if (parent.closest && parent.closest('.vertax-lang-switcher'))
+          return NodeFilter.FILTER_REJECT;
         return normalize(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
+      },
     });
     var nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function(node){ translateTextNode(node, dict); });
+    nodes.forEach(function (node) {
+      translateTextNode(node, dict);
+    });
     postProcessElements(root, lang, dict);
     isTranslating = false;
   }
 
-  function scheduleTranslate(delay){
+  function scheduleTranslate(delay) {
     if (isTranslating) return;
     clearTimeout(observerTimer);
     observerTimer = setTimeout(translateApp, delay || 80);
   }
 
-  function scheduleTranslateBurst(){
+  function scheduleTranslateBurst() {
     setTimeout(translateApp, 0);
     setTimeout(translateApp, 120);
     setTimeout(translateApp, 360);
   }
 
-  function installRenderHooks(){
+  function installRenderHooks() {
     try {
       if (typeof render === 'function' && !window.__vertaxI18nRenderWrapped) {
         var originalRender = render;
-        render = function(){
+        render = function () {
           var result = originalRender.apply(this, arguments);
           scheduleTranslateBurst();
           return result;
@@ -745,24 +810,28 @@
         window.__vertaxI18nRenderWrapped = true;
         if (window.laisoBuck) window.laisoBuck.render = render;
       }
-    } catch(_) {}
+    } catch (_) {}
     try {
-      if (window.laisoBuck && typeof window.laisoBuck.render === 'function' && !window.__vertaxI18nBuckRenderWrapped) {
+      if (
+        window.laisoBuck &&
+        typeof window.laisoBuck.render === 'function' &&
+        !window.__vertaxI18nBuckRenderWrapped
+      ) {
         var originalBuckRender = window.laisoBuck.render;
-        window.laisoBuck.render = function(){
+        window.laisoBuck.render = function () {
           var result = originalBuckRender.apply(this, arguments);
           scheduleTranslateBurst();
           return result;
         };
         window.__vertaxI18nBuckRenderWrapped = true;
       }
-    } catch(_) {}
+    } catch (_) {}
   }
 
-  function installObserver(){
+  function installObserver() {
     var app = document.getElementById('laiso-app');
     if (!app || !window.MutationObserver || observer) return;
-    observer = new MutationObserver(function(mutations){
+    observer = new MutationObserver(function (mutations) {
       if (isTranslating) return;
       for (var i = 0; i < mutations.length; i++) {
         if (mutations[i].addedNodes && mutations[i].addedNodes.length) {
@@ -774,32 +843,44 @@
     observer.observe(app, { childList: true, subtree: true });
   }
 
-  document.addEventListener('click', function(e){
-    var btn = e.target && e.target.closest && e.target.closest('#laiso-app [data-action="app-lang"]');
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-    setLang(btn.getAttribute('data-lang') || 'ru');
-  }, true);
+  document.addEventListener(
+    'click',
+    function (e) {
+      var btn =
+        e.target && e.target.closest && e.target.closest('#laiso-app [data-action="app-lang"]');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      setLang(btn.getAttribute('data-lang') || 'ru');
+    },
+    true
+  );
 
-  document.addEventListener('click', function(e){
-    if (!e.target || !e.target.closest || !e.target.closest('#laiso-app')) return;
-    scheduleTranslateBurst();
-  }, false);
+  document.addEventListener(
+    'click',
+    function (e) {
+      if (!e.target || !e.target.closest || !e.target.closest('#laiso-app')) return;
+      scheduleTranslateBurst();
+    },
+    false
+  );
 
-  function installHeartbeat(){
+  function installHeartbeat() {
     if (heartbeat) return;
-    heartbeat = setInterval(function(){
+    heartbeat = setInterval(function () {
       if (getLang() === 'ru') return;
       if (document.hidden) return;
       translateApp();
     }, 650);
   }
 
-  function boot(){
+  function boot() {
     if (typeof window.vertaxRegisterAfterRender === 'function') {
-      window.vertaxRegisterAfterRender(function(){ setTimeout(translateApp, 0); setTimeout(translateApp, 140); });
+      window.vertaxRegisterAfterRender(function () {
+        setTimeout(translateApp, 0);
+        setTimeout(translateApp, 140);
+      });
       installObserver();
       installRenderHooks();
       installHeartbeat();
