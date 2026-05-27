@@ -610,7 +610,13 @@
   function renderSwitcher() {
     var lang = getLang();
     return (
-      '<span class="vertax-lang-switcher" role="group" aria-label="Language">' +
+      '<details class="vertax-lang-switcher vertax-lang-dial">' +
+      '<summary class="vertax-lang-dial-face" aria-label="Language">' +
+      '<span class="vertax-lang-dial-mark">' +
+      labels[lang] +
+      '</span>' +
+      '</summary>' +
+      '<span class="vertax-lang-dial-menu" role="group" aria-label="Language">' +
       langs
         .map(function (code) {
           return (
@@ -626,7 +632,8 @@
           );
         })
         .join('') +
-      '</span>'
+      '</span>' +
+      '</details>'
     );
   }
 
@@ -852,6 +859,8 @@
       e.preventDefault();
       e.stopPropagation();
       if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      var dial = btn.closest && btn.closest('.vertax-lang-dial');
+      if (dial) dial.removeAttribute('open');
       setLang(btn.getAttribute('data-lang') || 'ru');
     },
     true

@@ -361,12 +361,18 @@ function syncTelegramChrome() {
     document.body.classList.toggle('vertax-dark', state.view === 'live-set');
   }
   var tg = getHostWebApp();
-  if (!tg) return;
+  if (!tg || !tg.BackButton) {
+    if (document.body) document.body.classList.remove('vertax-has-tg-back');
+    return;
+  }
   try {
-    if (tg.BackButton) {
+    var useHostBackButton = isTelegramRuntime() && canTelegramGoBack();
+    if (useHostBackButton) {
       if (document.body) document.body.classList.add('vertax-has-tg-back');
       if (canTelegramGoBack()) tg.BackButton.show();
-      else tg.BackButton.hide();
+    } else {
+      if (document.body) document.body.classList.remove('vertax-has-tg-back');
+      tg.BackButton.hide();
     }
   } catch (_) {}
 }

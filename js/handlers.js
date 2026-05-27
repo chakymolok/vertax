@@ -6020,6 +6020,8 @@ function installRuntSourceSelectionPage() {
           if (state.view === 'runt26-source') {
             var root = document.getElementById('laiso-root');
             if (root) root.innerHTML = renderSourcePage();
+            if (typeof syncTelegramChrome === 'function') syncTelegramChrome();
+            if (typeof window.vertaxTranslateApp === 'function') window.vertaxTranslateApp();
             return;
           }
           old();
@@ -6034,6 +6036,8 @@ function installRuntSourceSelectionPage() {
             if (state.view === 'runt26-source') {
               var root = document.getElementById('laiso-root');
               if (root) root.innerHTML = renderSourcePage();
+              if (typeof syncTelegramChrome === 'function') syncTelegramChrome();
+              if (typeof window.vertaxTranslateApp === 'function') window.vertaxTranslateApp();
               return;
             }
             oldGlobal();
