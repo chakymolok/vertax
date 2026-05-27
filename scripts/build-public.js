@@ -13,6 +13,7 @@ const entries = [
   'css',
   'dist',
   'fonts',
+  'js/about.js',
 ];
 
 function copyRecursive(src, dest) {

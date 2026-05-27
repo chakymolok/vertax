@@ -112,9 +112,9 @@ function discogsDirectSearchUrl(params) {
 }
 async function discogsSearch(params) {
   if (!shouldUseDiscogsProxy()) {
-    return (await discogsDirectJson(discogsDirectSearchUrl(params), 'discogs-search-fail')).results.filter(
-      isDiscogsVinylResult
-    );
+    return (
+      await discogsDirectJson(discogsDirectSearchUrl(params), 'discogs-search-fail')
+    ).results.filter(isDiscogsVinylResult);
   }
   var url = vertaxApiUrl('/api/discogs');
   url.searchParams.set('action', 'search');
@@ -184,7 +184,11 @@ async function discogsCollectionPage(username, page) {
     );
     directUrl.searchParams.set('per_page', '100');
     directUrl.searchParams.set('page', String(page || 1));
-    return await discogsDirectJson(directUrl, 'discogs-collection-fail', 'discogs-collection-private');
+    return await discogsDirectJson(
+      directUrl,
+      'discogs-collection-fail',
+      'discogs-collection-private'
+    );
   }
 }
 function mapDiscogsCollectionRelease(item) {
@@ -561,8 +565,11 @@ function normalizeMetadataCachePart(value) {
 }
 function getTrackCachePosition(track, vinyl) {
   var pos = (track && (track.position || track.displayPosition)) || '';
-  if (!pos && typeof displayPosition === 'function' && track && vinyl) pos = displayPosition(track, vinyl);
-  return String(pos || '').toUpperCase().trim();
+  if (!pos && typeof displayPosition === 'function' && track && vinyl)
+    pos = displayPosition(track, vinyl);
+  return String(pos || '')
+    .toUpperCase()
+    .trim();
 }
 function getMetadataCacheKeys(track, vinyl) {
   var keys = [];

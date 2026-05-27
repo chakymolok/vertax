@@ -162,16 +162,16 @@ function renderVertaxDisplay() {
     renderVertaxDisplay() +
     '<div class="laiso-mod-label">главное меню</div>' +
     '<div class="laiso-home-grid">' +
-    '<button class="laiso-btn laiso-btn-main" data-action="go-add">Найти пластинку</button>' +
-    '<button class="laiso-btn laiso-btn-secondary" data-action="go-collection">Коллекция</button>' +
-    '<button class="laiso-btn laiso-btn-secondary" data-action="go-set">Собрать сет</button>' +
-    '<button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import">Импорт из Discogs</button>' +
+    '<button class="laiso-btn laiso-btn-main" data-action="go-add" data-testid="home-add-record">Найти пластинку</button>' +
+    '<button class="laiso-btn laiso-btn-secondary" data-action="go-collection" data-testid="home-collection">Коллекция</button>' +
+    '<button class="laiso-btn laiso-btn-secondary" data-action="go-set" data-testid="home-set-builder">Собрать сет</button>' +
+    '<button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import" data-testid="home-discogs-import">Импорт из Discogs</button>' +
     '</div>' +
     '<div class="laiso-home-stickers">' +
-    '<button class="laiso-sticker laiso-sticker-backup" data-action="goto-backup">' +
+    '<button class="laiso-sticker laiso-sticker-backup" data-action="goto-backup" data-testid="home-backup">' +
     '<span>service</span><strong>Резервная копия</strong><small>сохранить коллекцию</small>' +
     '</button>' +
-    '<button class="laiso-sticker laiso-sticker-about" data-action="open-about">' +
+    '<button class="laiso-sticker laiso-sticker-about" data-action="open-about" data-testid="home-about">' +
     '<span>about</span><strong>О проекте</strong><small>что это за штука</small>' +
     '</button>' +
     '<a class="laiso-sticker laiso-sticker-donate" href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">' +
@@ -557,7 +557,7 @@ function inputField(label, id, val) {
   return (
     '<div class="laiso-modal-bg" data-action="close-modal-bg"><div class="laiso-modal" data-stop>' +
     '<div class="laiso-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-    '<h2 class="laiso-modal-title">О VERTAX-01</h2><button class="laiso-back" data-action="close-modal">Закрыть</button></div>' +
+    '<h2 class="laiso-modal-title">О VERTAX-01</h2><button class="laiso-back" data-action="close-modal" data-testid="about-modal-close">Закрыть</button></div>' +
     '<div class="laiso-stack">' +
     '<p>Цифровой DJ-компаньон для винила. Добавь до ' +
     SESSION_LIMIT +

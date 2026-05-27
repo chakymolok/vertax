@@ -27,11 +27,17 @@ await page.route('**/*', async (route) => {
 });
 
 await page.goto(url, { waitUntil: 'domcontentloaded' });
-await page.waitForFunction(() => window.laisoBuck && window.laisoBuck.state && window.laisoBuck.render);
+await page.waitForFunction(
+  () => window.laisoBuck && window.laisoBuck.state && window.laisoBuck.render
+);
 await page.waitForFunction(() => window.dbInstance !== null || window.db !== undefined);
 
 assert.equal(await page.locator('#laiso-app').count(), 1, '#laiso-app should exist');
-assert.equal(await page.evaluate(() => !!(window.db || window.dbInstance)), true, 'IndexedDB should initialize');
+assert.equal(
+  await page.evaluate(() => !!(window.db || window.dbInstance)),
+  true,
+  'IndexedDB should initialize'
+);
 
 async function renderView(view) {
   await page.evaluate((nextView) => {
@@ -51,39 +57,51 @@ assert.ok(setHtml.trim().length > 0, 'viewSet should return non-empty HTML');
 await renderView('backup');
 
 await page.evaluate(() => {
-  window.laisoBuck.state.ui.generatedSet = [{
-    id: 'track-1',
-    recordId: 'vinyl-1',
-    title: 'Smoke Track',
-    bpm: 120,
-    key: 'A minor',
-    camelot: '8A',
-    vinylTitle: 'Smoke Record',
-    vinylArtist: 'Smoke Artist',
-    displayPosition: 'A1'
-  }];
+  window.laisoBuck.state.ui.generatedSet = [
+    {
+      id: 'track-1',
+      recordId: 'vinyl-1',
+      title: 'Smoke Track',
+      bpm: 120,
+      key: 'A minor',
+      camelot: '8A',
+      vinylTitle: 'Smoke Record',
+      vinylArtist: 'Smoke Artist',
+      displayPosition: 'A1',
+    },
+  ];
   window.laisoBuck.state.view = 'set';
   window.laisoBuck.render();
 });
 
-const actionNames = await page.locator('[data-action]').evaluateAll((els) => els.map((el) => el.dataset.action));
+const actionNames = await page
+  .locator('[data-action]')
+  .evaluateAll((els) => els.map((el) => el.dataset.action));
 for (const action of ['set-generate', 'set-save']) {
   assert.ok(actionNames.includes(action), `DOM should include data-action=${action}`);
 }
 
 await renderView('backup');
-const backupActions = await page.locator('[data-action]').evaluateAll((els) => els.map((el) => el.dataset.action));
-assert.ok(backupActions.includes('backup-download'), 'DOM should include data-action=backup-download');
+const backupActions = await page
+  .locator('[data-action]')
+  .evaluateAll((els) => els.map((el) => el.dataset.action));
+assert.ok(
+  backupActions.includes('backup-download'),
+  'DOM should include data-action=backup-download'
+);
 
 await renderView('home');
-await page.getByRole('button', { name: 'Найти пластинку' }).click();
+await page.getByTestId('home-add-record').click();
 await page.waitForFunction(() => window.laisoBuck.state.view === 'add');
-assert.ok((await page.locator('#laiso-root').innerHTML()).includes('Добавить пластинку'), 'Add vinyl button should open add view');
+assert.ok(
+  (await page.locator('#laiso-root').innerHTML()).includes('Добавить пластинку'),
+  'Add vinyl button should open add view'
+);
 
 await renderView('home');
-await page.getByText('О проекте').click();
+await page.getByTestId('home-about').click();
 await page.locator('.laiso-modal').waitFor({ state: 'visible' });
-await page.getByRole('button', { name: 'Закрыть' }).click();
+await page.getByTestId('about-modal-close').click();
 await page.waitForFunction(() => !document.querySelector('.laiso-modal'));
 
 await page.evaluate(() => {
@@ -98,14 +116,20 @@ await page.waitForFunction(() => {
 });
 
 await renderView('home');
-await page.getByRole('button', { name: 'Коллекция' }).click();
+await page.getByTestId('home-collection').click();
 await page.waitForFunction(() => window.laisoBuck.state.view === 'collection');
 await renderView('home');
-await page.getByRole('button', { name: 'Резервная копия' }).click();
+await page.getByTestId('home-backup').click();
 await page.waitForFunction(() => window.laisoBuck.state.view === 'backup');
 
-const uncaught = errors.filter((line) => /Uncaught|ReferenceError|SyntaxError|TypeError/i.test(line));
-assert.deepEqual(uncaught, [], `No uncaught console/runtime errors expected: ${uncaught.join('\n')}`);
+const uncaught = errors.filter((line) =>
+  /Uncaught|ReferenceError|SyntaxError|TypeError/i.test(line)
+);
+assert.deepEqual(
+  uncaught,
+  [],
+  `No uncaught console/runtime errors expected: ${uncaught.join('\n')}`
+);
 
 await browser.close();
 console.log('smoke ok');

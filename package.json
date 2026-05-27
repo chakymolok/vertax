@@ -2,27 +2,37 @@
   "name": "vertax",
   "version": "1.0.0",
   "description": "Vinyl DJ set builder — Discogs + BPM/key lookup, Telegram/VK WebApp",
+  "private": true,
   "scripts": {
     "build": "node scripts/build-assets.js && node scripts/build-public.js",
     "css:audit": "node scripts/css-audit.js",
+    "dev": "npm run build && npx serve public -p 4177",
+    "lint": "npm run format:check",
     "smoke": "node smoke.mjs",
     "test": "npm run smoke",
-    "format": "prettier --write \"js/*.js\"",
-    "format:check": "prettier --check \"js/*.js\"",
-    "serve": "npx serve . -p 3000"
+    "format": "prettier --write \"js/*.js\" \"scripts/*.js\" \"smoke.mjs\"",
+    "format:check": "prettier --check \"js/*.js\" \"scripts/*.js\" \"smoke.mjs\"",
+    "serve": "npx serve public -p 4177"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chakymolok/vertax.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "vinyl",
+    "dj",
+    "discogs",
+    "bpm",
+    "camelot",
+    "telegram-mini-app"
+  ],
+  "author": "Michael Proskurin / 1994lab",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/chakymolok/vertax/issues"
   },
-  "homepage": "https://github.com/chakymolok/vertax#readme",
+  "homepage": "https://vertax-one.vercel.app",
   "devDependencies": {
     "esbuild": "^0.28.0",
     "playwright": "^1.59.1",

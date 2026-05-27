@@ -8,8 +8,20 @@ function loadScriptOnce(src, opts) {
   window.__vertaxScriptPromises[src] = new Promise(function (resolve) {
     var existing = document.querySelector('script[src="' + src + '"]');
     if (existing) {
-      existing.addEventListener('load', function () { resolve(existing); }, { once: true });
-      existing.addEventListener('error', function () { resolve(null); }, { once: true });
+      existing.addEventListener(
+        'load',
+        function () {
+          resolve(existing);
+        },
+        { once: true }
+      );
+      existing.addEventListener(
+        'error',
+        function () {
+          resolve(null);
+        },
+        { once: true }
+      );
       if (existing.dataset.loaded === 'true') resolve(existing);
       return;
     }
@@ -673,7 +685,7 @@ function getVertaxUserName() {
   try {
     if (
       (typeof isTelegramRuntime === 'function' && isTelegramRuntime()) ||
-      (typeof isVkRuntime === 'function' && isVkRuntime()) ||
+      (typeof isVkMiniApp === 'function' && isVkMiniApp()) ||
       (typeof isMaxRuntime === 'function' && isMaxRuntime())
     ) {
       console.warn(
@@ -1769,7 +1781,9 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   }
 
   function parseBpm(raw) {
-    var value = String(raw == null ? '' : raw).trim().replace(',', '.');
+    var value = String(raw == null ? '' : raw)
+      .trim()
+      .replace(',', '.');
     if (!value) return null;
     if (!/^\d{1,3}(\.\d{1,2})?$/.test(value)) return { error: 'BPM должен быть числом' };
     var n = Number(value);
@@ -1907,4 +1921,42 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   installOverride();
   setTimeout(installOverride, 0);
   setTimeout(installOverride, 600);
+})();
+
+(function exposeVertaxNamespace() {
+  var api = (window.vertax = window.vertax || {});
+  api.version = '1.0.0';
+  api.state = state;
+  api.handlers = handlers;
+  api.render = function () {
+    return render();
+  };
+  api.findVinyl = findVinyl;
+  api.findTrack = findTrack;
+  api.showToast = showToast;
+  api.platform = {
+    initBridge: initPlatformBridge,
+    isTelegram: isTelegramRuntime,
+    isVk: isVkMiniApp,
+    isMax: isMaxRuntime,
+  };
+  api.data = {
+    persistVinyl: persistVinyl,
+    persistSet: persistSet,
+    deleteVinyl: deleteVinylFromDb,
+    deleteSet: deleteSetFromDb,
+  };
+  api.discogs = {
+    search: discogsSearch,
+    release: discogsRelease,
+    collectionPage: discogsCollectionPage,
+  };
+  api.metadata = {
+    fetchTrack: fetchTrackMetadata,
+    getCached: getCachedMetadata,
+    setCached: setCachedMetadata,
+  };
+  window.laisoBuck = window.laisoBuck || {};
+  window.laisoBuck.state = state;
+  window.laisoBuck.render = api.render;
 })();
