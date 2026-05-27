@@ -42,6 +42,10 @@ Required for `api/discogs.js`:
 
 - `DISCOGS_TOKEN` or `DISCOGS_PERSONAL_ACCESS_TOKEN`
 
+Required for `api/bpm.js`:
+
+- `GETSONGBPM_KEY`
+
 Used by Redis-backed cache and proposal/admin flows:
 
 - `KV_REST_API_URL`

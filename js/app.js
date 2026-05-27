@@ -95,6 +95,55 @@ function initPlatformBridge() {
 window.loadScriptOnce = loadScriptOnce;
 window.initPlatformBridge = initPlatformBridge;
 
+function vertaxResolveRuntimeModal(value) {
+  var modal = state && state.modal;
+  if (modal && typeof modal.resolve === 'function') modal.resolve(value);
+  state.modal = null;
+  render();
+}
+
+function vertaxPrompt(message, defaultValue, options) {
+  options = options || {};
+  return new Promise(function (resolve) {
+    state.modal = {
+      type: 'prompt',
+      title: options.title || 'Введите значение',
+      message: message || '',
+      fieldLabel: options.fieldLabel || message || 'Значение',
+      defaultValue: defaultValue == null ? '' : String(defaultValue),
+      confirmText: options.confirmText || 'OK',
+      cancelText: options.cancelText || 'Отмена',
+      resolve: resolve,
+    };
+    render();
+    setTimeout(function () {
+      var input = document.getElementById('vertax-prompt-input');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 30);
+  });
+}
+
+function vertaxConfirm(message, options) {
+  options = options || {};
+  return new Promise(function (resolve) {
+    state.modal = {
+      type: 'confirm',
+      title: options.title || 'Подтверждение',
+      message: message || '',
+      confirmText: options.confirmText || 'OK',
+      cancelText: options.cancelText || 'Отмена',
+      resolve: resolve,
+    };
+    render();
+  });
+}
+
+window.vertaxPrompt = vertaxPrompt;
+window.vertaxConfirm = vertaxConfirm;
+
 document.addEventListener(
   'gesturestart',
   function (e) {
@@ -346,6 +395,7 @@ window.maximizeTelegramWebApp = maximizeTelegramWebApp;
   var n = e.target;
   while (n && n !== document.body) {
     if (n.dataset && n.dataset.action) return n;
+    if (n.dataset && n.dataset.stop) return null;
     n = n.parentNode;
   }
   return null;
@@ -367,7 +417,10 @@ document.addEventListener('click', function (e) {
   var fn = handlers[action];
   if (fn) {
     try {
-      fn(e, t);
+      Promise.resolve(fn(e, t)).catch(function (err) {
+        console.warn('action error', action, err);
+        showToast('Ошибка: ' + err.message);
+      });
     } catch (err) {
       console.warn('action error', action, err);
       showToast('Ошибка: ' + err.message);
@@ -382,7 +435,9 @@ document.addEventListener('change', function (e) {
   var fn = handlers[action];
   if (fn)
     try {
-      fn(e, t);
+      Promise.resolve(fn(e, t)).catch(function (err) {
+        console.warn('change error', err);
+      });
     } catch (err) {
       console.warn('change error', err);
     }
@@ -411,6 +466,24 @@ document.addEventListener('input', function (e) {
 /* Enter-key submit for free-text search field */ document.addEventListener(
   'keydown',
   function (e) {
+    if (state && state.modal && state.modal.type) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        vertaxResolveRuntimeModal(state.modal.type === 'confirm' ? false : null);
+        return;
+      }
+      if (e.key === 'Enter' && state.modal.type === 'prompt') {
+        e.preventDefault();
+        var input = document.getElementById('vertax-prompt-input');
+        vertaxResolveRuntimeModal(input ? input.value : '');
+        return;
+      }
+      if (e.key === 'Enter' && state.modal.type === 'confirm') {
+        e.preventDefault();
+        vertaxResolveRuntimeModal(true);
+        return;
+      }
+    }
     if (!e.target.closest || !e.target.closest('#laiso-app')) return;
     if (e.key !== 'Enter') return;
     var action = e.target.dataset && e.target.dataset.action;

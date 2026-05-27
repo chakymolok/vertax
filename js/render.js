@@ -597,6 +597,8 @@ function renderConfirmClearModal() {
   );
 }
 function renderModal() {
+  if (state.modal && state.modal.type === 'confirm') return renderRuntimeConfirmModal(state.modal);
+  if (state.modal && state.modal.type === 'prompt') return renderRuntimePromptModal(state.modal);
   if (state.modal === 'manual-meta') return renderManualMetaModal();
   if (state.modal === 'add-vinyl') return renderAddModal();
   if (state.modal === 'manual-vinyl') return renderManualVinylModal();
@@ -604,6 +606,54 @@ function renderModal() {
   if (state.modal === 'help') return renderHelpModal();
   if (state.modal === 'confirm-clear') return renderConfirmClearModal();
   return '';
+}
+function renderRuntimeConfirmModal(modal) {
+  return (
+    '<div class="laiso-modal-bg" data-action="vertax-modal-cancel"><div class="laiso-modal" data-stop>' +
+    '<h2 class="laiso-modal-title">' +
+    esc(modal.title || 'Подтвердить действие') +
+    '</h2>' +
+    '<p style="white-space:pre-line;">' +
+    esc(modal.message || '') +
+    '</p>' +
+    '<div class="laiso-row" style="margin-top:16px;">' +
+    '<button class="laiso-btn laiso-btn-secondary laiso-grow" data-action="vertax-modal-cancel">' +
+    esc(modal.cancelText || 'Отмена') +
+    '</button>' +
+    '<button class="laiso-btn laiso-grow" data-action="vertax-modal-confirm">' +
+    esc(modal.confirmText || 'OK') +
+    '</button>' +
+    '</div>' +
+    '</div></div>'
+  );
+}
+function renderRuntimePromptModal(modal) {
+  return (
+    '<div class="laiso-modal-bg" data-action="vertax-modal-cancel"><div class="laiso-modal" data-stop>' +
+    '<h2 class="laiso-modal-title">' +
+    esc(modal.title || 'Введите значение') +
+    '</h2>' +
+    '<div class="laiso-stack">' +
+    '<label class="laiso-label" for="vertax-prompt-input">' +
+    esc(modal.fieldLabel || modal.message || 'Значение') +
+    '</label>' +
+    '<input class="laiso-input" id="vertax-prompt-input" data-action="vertax-modal-input" type="text" value="' +
+    esc(modal.defaultValue || '') +
+    '">' +
+    (modal.message && modal.fieldLabel
+      ? '<p class="laiso-meta" style="white-space:pre-line;">' + esc(modal.message) + '</p>'
+      : '') +
+    '<div class="laiso-row" style="margin-top:8px;">' +
+    '<button class="laiso-btn laiso-btn-secondary laiso-grow" data-action="vertax-modal-cancel">' +
+    esc(modal.cancelText || 'Отмена') +
+    '</button>' +
+    '<button class="laiso-btn laiso-grow" data-action="vertax-modal-confirm">' +
+    esc(modal.confirmText || 'OK') +
+    '</button>' +
+    '</div>' +
+    '</div>' +
+    '</div></div>'
+  );
 }
 function renderManualMetaModal() {
   var data = (state.ui && state.ui.manualMeta) || {};
@@ -2155,12 +2205,12 @@ function installRuntSetManualMetaControls() {
       showToast('BPM: ' + p.t.bpm);
       render();
     };
-    handlers['track-manual-meta'] = function (_, el) {
+    handlers['track-manual-meta'] = async function (_, el) {
       var vid = el.dataset.vid,
         tid = el.dataset.tid;
       var p = patchFindTrackPair(vid, tid);
       if (!p.t) return;
-      var bpmStr = window.prompt('BPM (60–220) или пусто:', p.t.bpm || '');
+      var bpmStr = await vertaxPrompt('BPM (60–220) или пусто:', p.t.bpm || '');
       if (bpmStr !== null) {
         if (bpmStr.trim() === '') {
           p.t.bpm = null;
@@ -2177,7 +2227,7 @@ function installRuntSetManualMetaControls() {
           }
         }
       }
-      var keyStr = window.prompt(
+      var keyStr = await vertaxPrompt(
         'Тональность или Camelot (например 6B, 12A, Am, F#m):',
         p.t.camelot || p.t.key || ''
       );

@@ -1,9 +1,7 @@
 /* VERTAX-01 / RUNT-01 state, constants, and shared utilities. */
 
-/* ============================================================ */ /* CONSTANTS */ /* ============================================================ */ var GETSONGBPM_KEY =
-  '492c969f57d91b911355adc4b70bba8e';
-var GETSONGBPM_BASE = 'https://api.getsong.co';
-var ACOUSTICBRAINZ_BASE = 'https://acousticbrainz.org/api/v1';
+/* ============================================================ */ /* CONSTANTS */ /* ============================================================ */ var ACOUSTICBRAINZ_BASE =
+  'https://acousticbrainz.org/api/v1';
 var MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2';
 var BPM_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 /* 30 days */ var FETCH_DELAY_MS = 350;

@@ -461,17 +461,13 @@ async function fetchFromGetSongBPM(artist, title) {
     .toLowerCase();
   if (!cleanArtist || !cleanTitle) return null;
   var lookup = 'song:' + cleanTitle + '+artist:' + cleanArtist;
-  var url =
-    GETSONGBPM_BASE +
-    '/search/?api_key=' +
-    GETSONGBPM_KEY +
-    '&type=both&lookup=' +
-    encodeURIComponent(lookup);
+  var url = vertaxApiUrl('/api/bpm');
+  url.searchParams.set('lookup', lookup);
   try {
-    var res = await fetch(url);
+    var res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
     if (res.status === 429) {
       await sleep(5000);
-      res = await fetch(url);
+      res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
       if (!res.ok) return null;
     }
     if (!res.ok) return null;
@@ -981,8 +977,8 @@ function installRuntManualMetaValidation() {
         });
       } catch (e) {}
     }
-    function runtManualMetaFlow(track, vinyl) {
-      var bpmRaw = window.prompt(
+    async function runtManualMetaFlow(track, vinyl) {
+      var bpmRaw = await vertaxPrompt(
         'BPM: число 40–220. Примеры: 174, 86.5. Пусто = очистить BPM.',
         track.bpm || ''
       );
@@ -992,7 +988,7 @@ function installRuntManualMetaValidation() {
         runtToast(bpmParsed.error);
         return false;
       }
-      var keyRaw = window.prompt(
+      var keyRaw = await vertaxPrompt(
         'Тональность: Camelot 8A/7B или ключ Am, F#m, D minor. Пусто = очистить Key.',
         track.camelot || track.key || ''
       );

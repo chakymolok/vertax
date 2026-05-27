@@ -4,17 +4,9 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const outDir = path.join(root, 'public');
 
-const entries = [
-  'index.html',
-  'sw.js',
-  'about',
-  'vk',
-  'assets',
-  'css',
-  'dist',
-  'fonts',
-  'js/about.js',
-];
+const entries = ['index.html', 'sw.js', 'about', 'vk', 'assets', 'dist', 'fonts', 'js/about.js'];
+
+const fileCopies = [['css/about.css', 'about.css']];
 
 function copyRecursive(src, dest) {
   const stat = fs.statSync(src);
@@ -36,6 +28,12 @@ for (const entry of entries) {
   const src = path.join(root, entry);
   if (!fs.existsSync(src)) continue;
   copyRecursive(src, path.join(outDir, entry));
+}
+
+for (const copy of fileCopies) {
+  const src = path.join(root, copy[0]);
+  if (!fs.existsSync(src)) continue;
+  copyRecursive(src, path.join(outDir, copy[1]));
 }
 
 console.log('public/ static output ready');

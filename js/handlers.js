@@ -282,6 +282,19 @@ on('close-modal-bg', function (e) {
     render();
   }
 });
+on('vertax-modal-confirm', function () {
+  if (!state.modal || !state.modal.type) return;
+  if (state.modal.type === 'prompt') {
+    var input = document.getElementById('vertax-prompt-input');
+    vertaxResolveRuntimeModal(input ? input.value : '');
+    return;
+  }
+  vertaxResolveRuntimeModal(true);
+});
+on('vertax-modal-cancel', function () {
+  if (!state.modal || !state.modal.type) return;
+  vertaxResolveRuntimeModal(state.modal.type === 'confirm' ? false : null);
+});
 /* ============================================================ */ /* RUNT-01: free-text Discogs search */ /* ============================================================ */ function runDiscogsSearch() {
   var q = (state.ui.searchQuery || '').trim();
   if (!q) {
@@ -320,7 +333,7 @@ on('discogs-search', function () {
     /* no-op; data-bind covers value sync */
   }
 );
-on('search-pick', function (_, el) {
+on('search-pick', async function (_, el) {
   if (state.vinyls.length >= SESSION_LIMIT) {
     showToast('Лимит сессии');
     return;
@@ -610,22 +623,22 @@ on('edit-track', function (_, el) {
   state.view = 'edit-track';
   render();
 });
-on('rename-track', function (_, el) {
+on('rename-track', async function (_, el) {
   var v = findVinyl(state.ui.currentVinylId);
   var t = v && findTrack(v, el.dataset.id);
   if (!t) return;
-  var name = window.prompt('Название трека:', t.title || '');
+  var name = await vertaxPrompt('Название трека:', t.title || '');
   if (name !== null) {
     t.title = name;
     persistVinyl(v);
     render();
   }
 });
-on('change-side', function (_, el) {
+on('change-side', async function (_, el) {
   var v = findVinyl(state.ui.currentVinylId);
   var t = v && findTrack(v, el.dataset.id);
   if (!t) return;
-  var s = window.prompt('Сторона (A / B / C / D / E / F):', t.side || 'A');
+  var s = await vertaxPrompt('Сторона (A / B / C / D / E / F):', t.side || 'A');
   if (s) {
     s = s.toUpperCase().charAt(0);
     if (/^[A-F]$/.test(s)) {
@@ -680,12 +693,12 @@ function nextPositionForSide(vinyl, side) {
   var next = (nums.length ? Math.max.apply(null, nums) : 0) + 1;
   return side + next;
 }
-on('add-track-blank', function () {
+on('add-track-blank', async function () {
   var v = findVinyl(state.ui.currentVinylId);
   if (!v) return;
   var activeSide = (state.ui.activeSide || 'A').toUpperCase().charAt(0);
   if (!/^[A-F]$/.test(activeSide)) activeSide = 'A';
-  var title = window.prompt('Название трека:', '');
+  var title = await vertaxPrompt('Название трека:', '');
   if (title === null) return;
   title = title.trim();
   if (!title) {
@@ -693,7 +706,7 @@ on('add-track-blank', function () {
     return;
   }
   var posDefault = nextPositionForSide(v, activeSide);
-  var pos = window.prompt('Позиция на пластинке (например A1, B2):', posDefault);
+  var pos = await vertaxPrompt('Позиция на пластинке (например A1, B2):', posDefault);
   if (pos === null) return;
   pos = String(pos || posDefault)
     .trim()
@@ -701,7 +714,7 @@ on('add-track-blank', function () {
   if (!/^[A-F]\d*$/i.test(pos)) pos = posDefault;
   var parsedPos = parsePos(pos);
   var bpm = null;
-  var bpmStr = window.prompt('BPM (можно оставить пустым):', '');
+  var bpmStr = await vertaxPrompt('BPM (можно оставить пустым):', '');
   if (bpmStr !== null && String(bpmStr).trim() !== '') {
     var n = parseInt(String(bpmStr).trim(), 10);
     if (!isNaN(n) && n >= 50 && n <= 220) bpm = n;
@@ -709,7 +722,7 @@ on('add-track-blank', function () {
   }
   var key = null;
   var camelot = null;
-  var keyStr = window.prompt('Key или Camelot (например 8A, 7B, D minor; можно пусто):', '');
+  var keyStr = await vertaxPrompt('Key или Camelot (например 8A, 7B, D minor; можно пусто):', '');
   if (keyStr !== null && String(keyStr).trim() !== '') {
     var parsedKey = parseManualKeyInput(keyStr);
     key = parsedKey.key;
@@ -1055,9 +1068,13 @@ on('vinyl-toggle-exclude', function (_, el) {
   showToast(v.excludeFromSets ? 'Пластинка скрыта из сетов' : 'Пластинка снова в сетах');
   render();
 });
-on('vinyl-remove-session', function (_, el) {
+on('vinyl-remove-session', async function (_, el) {
   var vid = el.dataset.vid;
-  if (!window.confirm('Удалить пластинку из сессии? (Останется в коллекции, если уже сохранена.)'))
+  if (
+    !(await vertaxConfirm(
+      'Удалить пластинку из сессии? (Останется в коллекции, если уже сохранена.)'
+    ))
+  )
     return;
   state.vinyls = state.vinyls.filter(function (v) {
     return v.id !== vid;
@@ -1066,10 +1083,10 @@ on('vinyl-remove-session', function (_, el) {
 });
 /* --- MANUAL BPM/KEY ENTRY (from set-data panel or tracklist) --- */ on(
   'track-manual-meta',
-  function (_, el) {
+  async function (_, el) {
     var p = findTrackPairByEl(el);
     if (!p.t) return;
-    var bpmStr = window.prompt('BPM (60–200) или пусто:', p.t.bpm || '');
+    var bpmStr = await vertaxPrompt('BPM (60–200) или пусто:', p.t.bpm || '');
     if (bpmStr !== null && bpmStr !== '') {
       var n = parseInt(bpmStr, 10);
       if (!isNaN(n) && n >= 60 && n <= 200) {
@@ -1082,7 +1099,7 @@ on('vinyl-remove-session', function (_, el) {
       p.t.bpm = null;
       p.t.bpmSource = null;
     }
-    var keyStr = window.prompt('Key (например 8A, Am, F#m) или пусто:', p.t.key || '');
+    var keyStr = await vertaxPrompt('Key (например 8A, Am, F#m) или пусто:', p.t.key || '');
     if (keyStr !== null) {
       var k = keyStr.trim();
       if (k) {
@@ -1240,11 +1257,11 @@ on('set-export', function () {
   }, 200);
   showToast('Сет экспортирован');
 });
-on('set-save', function () {
+on('set-save', async function () {
   dedupeGeneratedSet();
   var s = state.ui.generatedSet;
   if (!s.length) return;
-  var name = window.prompt(
+  var name = await vertaxPrompt(
     'Имя сета:',
     'Сет ' + new Date().toISOString().slice(0, 16).replace('T', ' ')
   );
@@ -1315,8 +1332,8 @@ on('set-load', function (_, el) {
   state.view = 'set';
   render();
 });
-on('set-delete', function (_, el) {
-  if (!window.confirm('Удалить этот сет?')) return;
+on('set-delete', async function (_, el) {
+  if (!(await vertaxConfirm('Удалить этот сет?'))) return;
   state.sets = state.sets.filter(function (x) {
     return x.id !== el.dataset.id;
   });
@@ -2301,8 +2318,8 @@ function installRuntSetDndAndAddTrackModal() {
       showToast('Трек добавлен в сет');
       render();
     });
-    on('set-clear-current', function () {
-      if (!window.confirm('Очистить текущий сет?')) return;
+    on('set-clear-current', async function () {
+      if (!(await vertaxConfirm('Очистить текущий сет?'))) return;
       state.ui.generatedSet = [];
       render();
     });
@@ -2573,9 +2590,12 @@ function installRuntManualMetadataHandlers() {
         }
       });
     }
-    function setManualMeta(vinyl, track) {
+    async function setManualMeta(vinyl, track) {
       var currentBpm = track.bpm || '';
-      var bpmStr = window.prompt('BPM для трека «' + (track.title || 'трек') + '»:', currentBpm);
+      var bpmStr = await vertaxPrompt(
+        'BPM для трека «' + (track.title || 'трек') + '»:',
+        currentBpm
+      );
       if (bpmStr === null) return false;
       bpmStr = String(bpmStr).trim();
       if (bpmStr) {
@@ -2595,7 +2615,7 @@ function installRuntManualMetadataHandlers() {
         track.halftimeCorrected = false;
       }
       var currentTone = track.camelot || track.key || '';
-      var toneStr = window.prompt(
+      var toneStr = await vertaxPrompt(
         'Camelot или тональность. Например: 8A, 7B, F major, Dm:',
         currentTone
       );
@@ -2635,7 +2655,9 @@ function installRuntManualMetadataHandlers() {
         var vinyl = findVinyl(vid);
         var track = vinyl && findTrack(vinyl, tid);
         if (!track) return;
-        setManualMeta(vinyl, track);
+        setManualMeta(vinyl, track).catch(function (err) {
+          console.warn('manual meta failed', err);
+        });
       }
     );
     /* Also make “Не в сете” visually update on the fetching screen. */ on(
@@ -2877,7 +2899,7 @@ function installRuntDiscogsDuplicatePicker() {
         });
     }
     if (typeof on === 'function') {
-      on('search-pick', function (_, el) {
+      on('search-pick', async function (_, el) {
         if ((state.vinyls || []).length >= SESSION_LIMIT) {
           if (typeof showToast === 'function') showToast('Лимит сессии');
           return;
@@ -2890,14 +2912,14 @@ function installRuntDiscogsDuplicatePicker() {
         var duplicate = findDuplicateVinyl(id, picked);
         if (duplicate) {
           if (isInSession(duplicate)) {
-            var openIt = window.confirm(
+            var openIt = await vertaxConfirm(
               'Эта пластинка уже добавлена в текущую сессию. Открыть её треклист?'
             );
             if (openIt) useExistingVinyl(duplicate);
             else if (typeof showToast === 'function') showToast('Не добавляю дубль');
             return;
           }
-          var useOld = window.confirm(
+          var useOld = await vertaxConfirm(
             'Эта пластинка уже есть в коллекции.\n\n' +
               'OK — взять существующую из коллекции.\n' +
               'Отмена — добавить как отдельный дубль.'
@@ -3225,7 +3247,7 @@ function installRuntAddTrackFromCollection() {
         state.ui.addTrackSort = el.dataset.sort || 'smart';
         rerender();
       });
-      on('set-add-track-pick', function (_, el) {
+      on('set-add-track-pick', async function (_, el) {
         var tracks = getCollectionTracks();
         var idx = parseInt(el.dataset.trackIdx, 10);
         var track = tracks[idx];
@@ -3245,7 +3267,7 @@ function installRuntAddTrackFromCollection() {
           track.recordId &&
           String(last.recordId) === String(track.recordId)
         ) {
-          var ok = window.confirm(
+          var ok = await vertaxConfirm(
             'Этот трек с той же пластинки, что и предыдущий. Добавить всё равно? Лучше переставить порядок после добавления.'
           );
           if (!ok) return;
@@ -3477,19 +3499,22 @@ function installRuntScopeAndFetchingControls() {
         return t && !t.excludeFromSets && (!t.bpm || !t.camelot);
       });
     }
-    function openManualMetaForItem(item) {
+    async function openManualMetaForItem(item) {
       if (!item) return;
       var v = getFetchingVinyl();
       var t = v && findTrackSafe(v, item.trackId);
       if (!t) return;
-      var bpmRaw = window.prompt('BPM для «' + (t.title || 'трек') + '» (40–220):', t.bpm || '');
+      var bpmRaw = await vertaxPrompt(
+        'BPM для «' + (t.title || 'трек') + '» (40–220):',
+        t.bpm || ''
+      );
       if (bpmRaw === null) return false;
       var bpm = parseBpmValue(bpmRaw);
       if (bpm === false) {
         toast('BPM должен быть числом 40–220');
         return openManualMetaForItem(item);
       }
-      var keyRaw = window.prompt(
+      var keyRaw = await vertaxPrompt(
         'Camelot / Key для «' + (t.title || 'трек') + '» (например 8A, D minor, Am):',
         t.camelot || t.key || ''
       );
@@ -3530,7 +3555,7 @@ function installRuntScopeAndFetchingControls() {
       persist(v);
       return true;
     }
-    window.runtManualMetaFlow = function (startTrackId) {
+    window.runtManualMetaFlow = async function (startTrackId) {
       var items = getUnresolvedFetchItems();
       if (startTrackId) {
         items.sort(function (a, b) {
@@ -3543,11 +3568,13 @@ function installRuntScopeAndFetchingControls() {
         return;
       }
       for (var i = 0; i < items.length; i++) {
-        var ok = openManualMetaForItem(items[i]);
+        var ok = await openManualMetaForItem(items[i]);
         if (ok === false) break;
         var left = getUnresolvedFetchItems().length;
         if (left > 0) {
-          var go = window.confirm('Заполнить следующий нераспознанный трек? Осталось: ' + left);
+          var go = await vertaxConfirm(
+            'Заполнить следующий нераспознанный трек? Осталось: ' + left
+          );
           if (!go) break;
         }
       }
@@ -3560,18 +3587,18 @@ function installRuntScopeAndFetchingControls() {
       on('fetch-edit-this', function (_e, el) {
         window.runtManualMetaFlow(el.dataset.tid);
       });
-      on('track-manual-meta', function (_e, el) {
+      on('track-manual-meta', async function (_e, el) {
         var v = findVinylSafe(el.dataset.vid);
         var t = v && findTrackSafe(v, el.dataset.tid);
         if (!t) return;
-        var bpmRaw = window.prompt('BPM (40–220) или пусто:', t.bpm || '');
+        var bpmRaw = await vertaxPrompt('BPM (40–220) или пусто:', t.bpm || '');
         if (bpmRaw === null) return;
         var bpm = parseBpmValue(bpmRaw);
         if (bpm === false) {
           toast('BPM должен быть числом 40–220');
           return;
         }
-        var keyRaw = window.prompt('Camelot / Key или пусто:', t.camelot || t.key || '');
+        var keyRaw = await vertaxPrompt('Camelot / Key или пусто:', t.camelot || t.key || '');
         if (keyRaw === null) return;
         var key = parseKeyValue(keyRaw);
         if (key === false) {
@@ -5400,13 +5427,13 @@ function installRuntDiagnosticsPanel() {
           if (typeof persistVinyl === 'function') persistVinyl(v);
         } catch (_) {}
       }
-      function manualEdit(vid, tid) {
+      async function manualEdit(vid, tid) {
         var p = findPair(vid, tid);
         if (!p.t) {
           toast('Трек не найден');
           return;
         }
-        var bpmStr = window.prompt('BPM: число от 60 до 220', p.t.bpm || '');
+        var bpmStr = await vertaxPrompt('BPM: число от 60 до 220', p.t.bpm || '');
         if (bpmStr === null) return;
         if (String(bpmStr).trim() !== '') {
           var bpm = parseInt(bpmStr, 10);
@@ -5419,7 +5446,7 @@ function installRuntDiagnosticsPanel() {
           p.t.originalBpm = null;
           p.t.halftimeCorrected = false;
         }
-        var keyStr = window.prompt(
+        var keyStr = await vertaxPrompt(
           'Camelot или Key: например 8A, 6B, F# minor',
           p.t.camelot || p.t.key || ''
         );
@@ -5606,7 +5633,9 @@ function installRuntDiagnosticsPanel() {
           if (action === 'runt25-manual') {
             e.preventDefault();
             e.stopPropagation();
-            manualEdit(el.dataset.vid, el.dataset.tid);
+            manualEdit(el.dataset.vid, el.dataset.tid).catch(function (err) {
+              console.warn('manual edit failed', err);
+            });
           }
           if (action === 'runt25-exclude') {
             e.preventDefault();

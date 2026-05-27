@@ -34,6 +34,9 @@ const safelist = [
   /^selected$/,
   /^loading$/,
   /^error$/,
+  /^muted$/,
+  /^col-cam$/,
+  /^woff2$/,
 ];
 
 const selectors = new Set();
@@ -43,6 +46,7 @@ for (const file of cssFiles) {
 }
 
 const maybeUnused = [...selectors].filter((name) => {
+  if (/^\d/.test(name)) return false;
   if (safelist.some((rx) => rx.test(name))) return false;
   return !content.includes(name);
 });
