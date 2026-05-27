@@ -140,3 +140,32 @@ body.vertax-dark #laiso-app{
 }
 body.vertax-dark #laiso-app a{ color: var(--accent-lime); }
 body.vertax-dark #laiso-app .laiso-toast{ background:#1A1814; color:#EEE7DA; border:1px solid #3A382F; }
+/* Permanent app footer, outside the rendered screen so it survives every route/view. */
+#laiso-app .vertax-global-footer {
+  margin: 24px auto 18px;
+  padding: 12px 16px 0;
+  max-width: 520px;
+  border-top: 1px solid var(--border, rgba(17, 17, 17, .12));
+  color: var(--text-tertiary, #8A847B);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 10px;
+  line-height: 1.7;
+  letter-spacing: .04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+#laiso-app .vertax-global-footer a {
+  color: var(--accent-lime-dark, #6b8f12);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+body.vertax-theme-dark #laiso-app .vertax-global-footer {
+  border-top-color: rgba(238, 231, 218, .14);
+  color: rgba(238, 231, 218, .55);
+}
+
+body.vertax-theme-dark #laiso-app .vertax-global-footer a {
+  color: var(--accent-lime, #C4F542);
+}
