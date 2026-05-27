@@ -1,21 +1,87 @@
 /* VERTAX-01 / RUNT-01 app entrypoint. */
 
-(function () {
+function loadScriptOnce(src, opts) {
+  opts = opts || {};
+  if (!src) return Promise.resolve(null);
+  if (!window.__vertaxScriptPromises) window.__vertaxScriptPromises = {};
+  if (window.__vertaxScriptPromises[src]) return window.__vertaxScriptPromises[src];
+  window.__vertaxScriptPromises[src] = new Promise(function (resolve) {
+    var existing = document.querySelector('script[src="' + src + '"]');
+    if (existing) {
+      existing.addEventListener('load', function () { resolve(existing); }, { once: true });
+      existing.addEventListener('error', function () { resolve(null); }, { once: true });
+      if (existing.dataset.loaded === 'true') resolve(existing);
+      return;
+    }
+    var script = document.createElement('script');
+    script.src = src;
+    script.async = opts.async !== false;
+    script.defer = opts.defer !== false;
+    script.onload = function () {
+      script.dataset.loaded = 'true';
+      resolve(script);
+    };
+    script.onerror = function () {
+      console.warn('[VERTAX] Optional platform SDK failed:', src);
+      resolve(null);
+    };
+    (document.head || document.documentElement).appendChild(script);
+  });
+  return window.__vertaxScriptPromises[src];
+}
+
+function isTelegramRuntime() {
+  try {
+    return /tgWebAppData|tgWebAppVersion|telegram/i.test(location.search + location.hash);
+  } catch (_) {
+    return false;
+  }
+}
+
+function isMaxRuntime() {
+  try {
+    return /maxWebApp|maWebApp|platform=max/i.test(location.search + location.hash);
+  } catch (_) {
+    return false;
+  }
+}
+
+function notifyMiniAppHost() {
   var webApp, botUsername;
   if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
     webApp = window.Telegram.WebApp;
-    botUsername = 'vertaksbot'; // заменить на username телеграм бота
+    botUsername = 'vertaksbot';
   } else if (window.WebApp && window.WebApp.initData) {
     webApp = window.WebApp;
-    botUsername = 'id503124294144_2_bot'; // заменить на username макс бота
+    botUsername = 'id503124294144_2_bot';
   }
-  if (webApp) {
+  if (!webApp || window.__vertaxMiniAppHostNotified) return;
+  window.__vertaxMiniAppHostNotified = true;
+  try {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', 'https://api.onedam.me/webapp/' + botUsername);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.send(JSON.stringify(webApp));
-  }
-})();
+  } catch (_) {}
+}
+
+function initPlatformBridge() {
+  var loaders = [];
+  if (isTelegramRuntime())
+    loaders.push(loadScriptOnce('https://telegram.org/js/telegram-web-app.js'));
+  if (isMaxRuntime()) loaders.push(loadScriptOnce('https://st.max.ru/js/max-web-app.js'));
+  if (isVkMiniApp())
+    loaders.push(loadScriptOnce('https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js'));
+  if (!loaders.length) return Promise.resolve();
+  return Promise.all(loaders).then(function () {
+    notifyMiniAppHost();
+    installTelegramWebAppChrome();
+    syncTelegramChrome();
+  });
+}
+
+window.loadScriptOnce = loadScriptOnce;
+window.initPlatformBridge = initPlatformBridge;
 
 document.addEventListener(
   'gesturestart',
@@ -342,6 +408,18 @@ document.addEventListener('input', function (e) {
     }
   }
 );
+function registerVertaxServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  if (!/^https?:$/.test(location.protocol)) return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function (err) {
+      console.warn(
+        '[VERTAX] Service worker registration failed:',
+        err && err.message ? err.message : err
+      );
+    });
+  });
+}
 /* ============================================================ */ /* INIT */ /* ============================================================ */ async function init() {
   try {
     dbInstance = await dbOpen();
@@ -353,9 +431,14 @@ document.addEventListener('input', function (e) {
     console.warn('IndexedDB unavailable, running in volatile mode:', e);
   }
   render();
+  initPlatformBridge();
+  registerVertaxServiceWorker();
 }
 init();
 /* Expose for console debug (optional) */ window.laisoBuck = { state: state, render: render };
+
+var vertaxAfterRenderCallbacks = window.__vertaxAfterRenderCallbacks || [];
+window.__vertaxAfterRenderCallbacks = vertaxAfterRenderCallbacks;
 
 (function installRuntAndVertaxExtensions() {
   if (window.__runtAndVertaxExtensionsInstalled) return;
@@ -588,9 +671,15 @@ function getVertaxUserName() {
   debug.source = 'fallback';
   window.__vertaxNameDebug = debug;
   try {
-    console.warn(
-      '[VERTAX] getVertaxUserName fell back to DUDE. Inspect window.__vertaxNameDebug and window.Telegram?.WebApp?.initDataUnsafe.'
-    );
+    if (
+      (typeof isTelegramRuntime === 'function' && isTelegramRuntime()) ||
+      (typeof isVkRuntime === 'function' && isVkRuntime()) ||
+      (typeof isMaxRuntime === 'function' && isMaxRuntime())
+    ) {
+      console.warn(
+        '[VERTAX] getVertaxUserName fell back to DUDE. Inspect window.__vertaxNameDebug and window.Telegram?.WebApp?.initDataUnsafe.'
+      );
+    }
   } catch (_) {}
   return 'DUDE';
 }
@@ -863,7 +952,9 @@ function vertaxApplyCamelotOnlyUi(root) {
     });
 }
 
-var vertaxAfterRenderCallbacks = [];
+vertaxAfterRenderCallbacks =
+  window.__vertaxAfterRenderCallbacks || vertaxAfterRenderCallbacks || [];
+window.__vertaxAfterRenderCallbacks = vertaxAfterRenderCallbacks;
 function vertaxRegisterAfterRender(fn) {
   if (typeof fn !== 'function') return;
   if (vertaxAfterRenderCallbacks.indexOf(fn) >= 0) return;
@@ -1659,4 +1750,161 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   afterRender();
   setTimeout(afterRender, 500);
   console.log('RUNT-01 PATCH-34 loaded: Beatport first BPM/Key source');
+})();
+
+(function installVertaxManualMetaModal() {
+  if (window.__vertaxManualMetaModalInstalled) return;
+  window.__vertaxManualMetaModalInstalled = true;
+
+  function findPairFromEl(el) {
+    var vid =
+      (el && el.dataset && (el.dataset.vid || el.dataset.vinylId)) ||
+      (state.ui && state.ui.currentVinylId);
+    var tid =
+      (el && el.dataset && (el.dataset.tid || el.dataset.trackId)) ||
+      (state.ui && state.ui.currentTrackId);
+    var v = typeof findVinyl === 'function' ? findVinyl(vid) : null;
+    var t = v && typeof findTrack === 'function' ? findTrack(v, tid) : null;
+    return { v: v, t: t };
+  }
+
+  function parseBpm(raw) {
+    var value = String(raw == null ? '' : raw).trim().replace(',', '.');
+    if (!value) return null;
+    if (!/^\d{1,3}(\.\d{1,2})?$/.test(value)) return { error: 'BPM должен быть числом' };
+    var n = Number(value);
+    if (!isFinite(n) || n < 40 || n > 250) return { error: 'BPM должен быть от 40 до 250' };
+    return Math.round(n * 10) / 10;
+  }
+
+  function parseKey(raw) {
+    var value = String(raw == null ? '' : raw).trim();
+    if (!value) return { key: null, camelot: null };
+    if (typeof window.runtValidateKey === 'function') {
+      var parsed = window.runtValidateKey(value);
+      if (parsed && parsed.error) return parsed;
+      return parsed || { key: null, camelot: null };
+    }
+    if (typeof parseManualKeyInput === 'function') return parseManualKeyInput(value);
+    if (/^\d{1,2}[ab]$/i.test(value)) {
+      var cam = value.toUpperCase();
+      return { key: CAMELOT_TO_KEY[cam] || null, camelot: cam };
+    }
+    var key = typeof normalizeKeyName === 'function' ? normalizeKeyName(value) : null;
+    return { key: key || value, camelot: key && KEY_TO_CAMELOT ? KEY_TO_CAMELOT[key] : null };
+  }
+
+  function syncFetchingItem(track) {
+    try {
+      var fp = state && state.ui && state.ui.fetchProgress;
+      if (!fp || !fp.items) return;
+      fp.items.forEach(function (it) {
+        if (it.trackId === track.id) {
+          it.status = track.bpm || track.camelot || track.key ? 'ok' : 'notfound';
+          it.meta =
+            track.bpm || track.camelot || track.key
+              ? {
+                  bpm: track.bpm || null,
+                  key: track.key || null,
+                  camelot: track.camelot || null,
+                  source: 'manual',
+                  confidence: 'manual',
+                }
+              : null;
+        }
+      });
+    } catch (_) {}
+  }
+
+  function openManualMetaModal(track, vinyl) {
+    if (!track || !vinyl) return false;
+    state.ui.manualMeta = {
+      vinylId: vinyl.id,
+      trackId: track.id,
+      bpm: track.bpm || '',
+      key: track.camelot || track.key || '',
+      error: null,
+    };
+    state.modal = 'manual-meta';
+    render();
+    setTimeout(function () {
+      var input = document.getElementById('manual-meta-bpm');
+      if (input) input.focus();
+    }, 30);
+    return true;
+  }
+
+  function saveManualMetaModal() {
+    var data = state.ui && state.ui.manualMeta;
+    if (!data) return;
+    var v = typeof findVinyl === 'function' ? findVinyl(data.vinylId) : null;
+    var t = v && typeof findTrack === 'function' ? findTrack(v, data.trackId) : null;
+    if (!v || !t) {
+      state.modal = null;
+      render();
+      return;
+    }
+    var bpmEl = document.getElementById('manual-meta-bpm');
+    var keyEl = document.getElementById('manual-meta-key');
+    var bpmParsed = parseBpm(bpmEl ? bpmEl.value : '');
+    if (bpmParsed && bpmParsed.error) {
+      state.ui.manualMeta.error = bpmParsed.error;
+      render();
+      return;
+    }
+    var keyParsed = parseKey(keyEl ? keyEl.value : '');
+    if (keyParsed && keyParsed.error) {
+      state.ui.manualMeta.error = keyParsed.error;
+      render();
+      return;
+    }
+    t.bpm = bpmParsed === null ? null : bpmParsed;
+    t.bpmSource = t.bpm ? 'manual' : null;
+    t.originalBpm = null;
+    t.halftimeCorrected = false;
+    t.conflict = null;
+    t.key = keyParsed.key;
+    t.camelot = keyParsed.camelot;
+    t.keySource = t.key || t.camelot ? 'manual' : null;
+    t.confidence =
+      t.bpm && (t.key || t.camelot) ? 'medium' : t.bpm || t.key || t.camelot ? 'medium' : 'manual';
+    syncFetchingItem(t);
+    if (typeof persistVinyl === 'function') persistVinyl(v);
+    state.modal = null;
+    state.ui.manualMeta = null;
+    if (typeof showToast === 'function') showToast('BPM/Key сохранены');
+    render();
+  }
+
+  function installOverride() {
+    if (typeof handlers === 'undefined' || !handlers) return;
+    handlers['track-manual-meta'] = function (_, el) {
+      var pair = findPairFromEl(el);
+      openManualMetaModal(pair.t, pair.v);
+    };
+    handlers['manual-meta-save'] = function () {
+      saveManualMetaModal();
+    };
+    handlers['manual-meta-cancel'] = function () {
+      state.modal = null;
+      if (state.ui) state.ui.manualMeta = null;
+      render();
+    };
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (!state || state.modal !== 'manual-meta') return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (handlers && handlers['manual-meta-cancel']) handlers['manual-meta-cancel']();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      saveManualMetaModal();
+    }
+  });
+
+  window.vertaxOpenManualMetaModal = openManualMetaModal;
+  installOverride();
+  setTimeout(installOverride, 0);
+  setTimeout(installOverride, 600);
 })();

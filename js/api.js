@@ -19,15 +19,56 @@ function isDiscogsVinylCollectionItem(item) {
   return text.indexOf('vinyl') >= 0 && text.indexOf('cd') < 0;
 }
 function vertaxApiUrl(path) {
-  var base = '';
+  return new URL(path, window.location.origin);
+}
+function shouldUseDiscogsProxy() {
   try {
     var host = window.location.hostname || '';
-    if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(host)) base = 'https://vertax-one.vercel.app';
-  } catch (_) {}
-  return new URL(path, base || window.location.origin);
+    return !/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(host);
+  } catch (_) {
+    return true;
+  }
+}
+var DISCOGS_REQUEST_INTERVAL_MS = 350;
+function createRateLimitedQueue(opts) {
+  opts = opts || {};
+  var intervalMs = opts.intervalMs || 350;
+  var queue = [];
+  var active = false;
+  var lastRun = 0;
+  function pump() {
+    if (active || !queue.length) return;
+    active = true;
+    var wait = Math.max(0, intervalMs - (Date.now() - lastRun));
+    setTimeout(function () {
+      var item = queue.shift();
+      lastRun = Date.now();
+      Promise.resolve()
+        .then(item.fn)
+        .then(item.resolve, item.reject)
+        .finally(function () {
+          active = false;
+          pump();
+        });
+    }, wait);
+  }
+  return {
+    enqueue: function (fn) {
+      return new Promise(function (resolve, reject) {
+        queue.push({ fn: fn, resolve: resolve, reject: reject });
+        pump();
+      });
+    },
+  };
+}
+var discogsQueue = createRateLimitedQueue({ intervalMs: DISCOGS_REQUEST_INTERVAL_MS });
+function runDiscogsRequest(fn) {
+  return discogsQueue.enqueue(fn);
 }
 async function discogsProxyJson(url, failCode, privateCode) {
-  var res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+  var res = await runDiscogsRequest(function () {
+    return fetch(url.toString(), { headers: { Accept: 'application/json' } });
+  });
   if (res.status === 429) throw new Error('rate-limit');
   if (privateCode && (res.status === 404 || res.status === 403)) throw new Error(privateCode);
   if (res.status === 404) throw new Error('discogs-api-not-deployed');
@@ -51,7 +92,9 @@ function shouldFallbackToPublicDiscogs(err) {
   );
 }
 async function discogsDirectJson(url, failCode, privateCode) {
-  var res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+  var res = await runDiscogsRequest(function () {
+    return fetch(url.toString(), { headers: { Accept: 'application/json' } });
+  });
   if (res.status === 429) throw new Error('rate-limit');
   if (privateCode && (res.status === 404 || res.status === 403)) throw new Error(privateCode);
   if (!res.ok) throw new Error(failCode);
@@ -68,6 +111,11 @@ function discogsDirectSearchUrl(params) {
   return url;
 }
 async function discogsSearch(params) {
+  if (!shouldUseDiscogsProxy()) {
+    return (await discogsDirectJson(discogsDirectSearchUrl(params), 'discogs-search-fail')).results.filter(
+      isDiscogsVinylResult
+    );
+  }
   var url = vertaxApiUrl('/api/discogs');
   url.searchParams.set('action', 'search');
   Object.keys(params || {}).forEach(function (k) {
@@ -86,6 +134,12 @@ async function discogsSearch(params) {
   return (data.results || []).filter(isDiscogsVinylResult);
 }
 async function discogsRelease(id) {
+  if (!shouldUseDiscogsProxy()) {
+    return await discogsDirectJson(
+      new URL('https://api.discogs.com/releases/' + encodeURIComponent(id)),
+      'discogs-release-fail'
+    );
+  }
   var url = vertaxApiUrl('/api/discogs');
   url.searchParams.set('action', 'release');
   url.searchParams.set('id', String(id));
@@ -100,6 +154,20 @@ async function discogsRelease(id) {
   }
 }
 async function discogsCollectionPage(username, page) {
+  if (!shouldUseDiscogsProxy()) {
+    var directUrl = new URL(
+      'https://api.discogs.com/users/' +
+        encodeURIComponent(username) +
+        '/collection/folders/0/releases'
+    );
+    directUrl.searchParams.set('per_page', '100');
+    directUrl.searchParams.set('page', String(page || 1));
+    return await discogsDirectJson(
+      directUrl,
+      'discogs-collection-fail',
+      'discogs-collection-private'
+    );
+  }
   var url = vertaxApiUrl('/api/discogs');
   url.searchParams.set('action', 'collection');
   url.searchParams.set('username', username);
@@ -223,18 +291,21 @@ function mapDiscogsCollectionRelease(item) {
       render();
       return;
     }
-    /* Fetch release detail for top-3 */ var full = [];
-    for (var j = 0; j < Math.min(3, candidates.length); j++) {
-      try {
-        var rel = await discogsRelease(candidates[j].id);
-        full.push({ search: candidates[j], mapped: mapDiscogsRelease(rel) });
-        await new Promise(function (r) {
-          setTimeout(r, 220);
-        }); /* gentle rate-limit */
-      } catch (_) {
-        /* skip */
-      }
-    }
+    /* Fetch release detail for top-3 through the shared Discogs queue. */
+    var settled = await Promise.allSettled(
+      candidates.slice(0, 3).map(function (candidate) {
+        return discogsRelease(candidate.id).then(function (rel) {
+          return { search: candidate, mapped: mapDiscogsRelease(rel) };
+        });
+      })
+    );
+    var full = settled
+      .filter(function (item) {
+        return item.status === 'fulfilled' && item.value && item.value.mapped;
+      })
+      .map(function (item) {
+        return item.value;
+      });
     if (full.length === 0) {
       vinyl.status = 'not_found';
       showToast('Не удалось получить детали релиза.', 3000);
@@ -478,17 +549,51 @@ async function setCachedMetadata(cacheKey, meta) {
     await dbPut('bpm_cache', rec);
   } catch (_) {}
 }
-async function fetchTrackMetadata(track, vinyl) {
-  var cacheKey =
-    String(vinyl.artist || '')
+function normalizeMetadataCachePart(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\b(feat|ft|featuring)\.?\b/g, 'feat')
+    .replace(/[–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\wа-яё0-9\s\-\|]/gi, '')
+    .trim();
+}
+function getTrackCachePosition(track, vinyl) {
+  var pos = (track && (track.position || track.displayPosition)) || '';
+  if (!pos && typeof displayPosition === 'function' && track && vinyl) pos = displayPosition(track, vinyl);
+  return String(pos || '').toUpperCase().trim();
+}
+function getMetadataCacheKeys(track, vinyl) {
+  var keys = [];
+  var discogsId = vinyl && (vinyl.discogsId || vinyl.discogsReleaseId);
+  var pos = getTrackCachePosition(track, vinyl);
+  if (discogsId && pos) keys.push('discogs:' + String(discogsId) + '|' + pos);
+  var normalized =
+    normalizeMetadataCachePart(vinyl && vinyl.artist) +
+    '|' +
+    normalizeMetadataCachePart(track && track.title);
+  if (normalized !== '|') keys.push('norm:' + normalized);
+  var legacy =
+    String((vinyl && vinyl.artist) || '')
       .toLowerCase()
       .trim() +
     '|' +
-    String(track.title || '')
+    String((track && track.title) || '')
       .toLowerCase()
       .trim();
-  var cached = await getCachedMetadata(cacheKey);
-  if (cached) return cached;
+  if (legacy !== '|' && keys.indexOf(legacy) < 0) keys.push(legacy);
+  return keys;
+}
+async function fetchTrackMetadata(track, vinyl) {
+  var cacheKeys = getMetadataCacheKeys(track, vinyl);
+  for (var ck = 0; ck < cacheKeys.length; ck++) {
+    var cached = await getCachedMetadata(cacheKeys[ck]);
+    if (cached) {
+      if (ck > 0 && cacheKeys[0]) await setCachedMetadata(cacheKeys[0], cached);
+      return cached;
+    }
+  }
   var primary = await fetchFromGetSongBPM(vinyl.artist, track.title);
   var secondary = null;
   var primaryEmpty = !primary || (!primary.bpm && !primary.key && !primary.camelot);
@@ -516,7 +621,9 @@ async function fetchTrackMetadata(track, vinyl) {
     }
   }
   if (result && result.bpm) result = applyHalftimeCorrection(result, vinyl);
-  if (result) await setCachedMetadata(cacheKey, result);
+  if (result) {
+    for (var k = 0; k < cacheKeys.length; k++) await setCachedMetadata(cacheKeys[k], result);
+  }
   return result;
 }
 

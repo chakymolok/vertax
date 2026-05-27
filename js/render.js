@@ -597,12 +597,34 @@ function renderConfirmClearModal() {
   );
 }
 function renderModal() {
+  if (state.modal === 'manual-meta') return renderManualMetaModal();
   if (state.modal === 'add-vinyl') return renderAddModal();
   if (state.modal === 'manual-vinyl') return renderManualVinylModal();
   if (state.modal === 'about') return renderAboutModal();
   if (state.modal === 'help') return renderHelpModal();
   if (state.modal === 'confirm-clear') return renderConfirmClearModal();
   return '';
+}
+function renderManualMetaModal() {
+  var data = (state.ui && state.ui.manualMeta) || {};
+  return (
+    '<div class="laiso-modal-bg" data-action="close-modal-bg"><div class="laiso-modal" data-stop>' +
+    '<div class="laiso-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+    '<h2 class="laiso-modal-title">BPM / Key</h2><button class="laiso-back" data-action="manual-meta-cancel">Отмена</button></div>' +
+    '<div class="laiso-stack">' +
+    '<div><label class="laiso-label">BPM</label><input class="laiso-input" id="manual-meta-bpm" inputmode="decimal" type="text" placeholder="174 или пусто" value="' +
+    esc(data.bpm || '') +
+    '"></div>' +
+    '<div><label class="laiso-label">Key / Camelot</label><input class="laiso-input" id="manual-meta-key" type="text" autocapitalize="characters" placeholder="8A, 9B, Am, F#m" value="' +
+    esc(data.key || '') +
+    '"></div>' +
+    (data.error ? '<div class="laiso-hint laiso-hint-warn">' + esc(data.error) + '</div>' : '') +
+    '<div class="laiso-row" style="margin-top:8px;">' +
+    '<button class="laiso-btn laiso-btn-secondary laiso-grow" data-action="manual-meta-cancel">Отмена</button>' +
+    '<button class="laiso-btn laiso-grow" data-action="manual-meta-save">Сохранить</button>' +
+    '</div>' +
+    '</div></div></div>'
+  );
 }
 
 /* ---------- MATCH ---------- */ function viewMatch() {

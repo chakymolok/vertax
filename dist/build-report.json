@@ -1,0 +1,22 @@
+{
+  "jsBytes": 440330,
+  "cssBytes": 168162,
+  "jsSources": [
+    "js/db.js",
+    "js/state.js",
+    "js/api.js",
+    "js/render.js",
+    "js/handlers.js",
+    "js/app.js",
+    "js/app-i18n.js"
+  ],
+  "cssSources": [
+    "css/base.css",
+    "css/layout.css",
+    "css/components.css",
+    "css/themes.css",
+    "css/display.css",
+    "css/app-i18n.css"
+  ],
+  "builtAt": "2026-05-27T10:04:53.282Z"
+}
