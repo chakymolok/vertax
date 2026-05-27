@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Vinyl DJ set builder — Discogs + BPM/key lookup, Telegram/VK WebApp",
   "scripts": {
-    "build": "node scripts/build-assets.js",
+    "build": "node scripts/build-assets.js && node scripts/build-public.js",
     "css:audit": "node scripts/css-audit.js",
     "smoke": "node smoke.mjs",
     "test": "npm run smoke",
