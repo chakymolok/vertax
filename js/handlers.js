@@ -301,6 +301,7 @@ on('vertax-modal-cancel', function () {
     showToast('Введите запрос');
     return;
   }
+  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Поиск Discogs требует интернет')) return;
   if (state.ui.searchLoading) return;
   state.ui.searchLoading = true;
   state.ui.searchError = null;
@@ -451,6 +452,7 @@ on('recognize-all', function () {
     return v.status === 'awaiting' || v.status === 'not_found';
   });
   if (pending.length === 0) return;
+  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Распознавание требует интернет')) return;
   showToast('Распознаём ' + pending.length + '…', 1500);
   (async function () {
     for (var i = 0; i < pending.length; i++) {
@@ -465,6 +467,7 @@ on('recognize-all', function () {
 on('recognize-one', function (_, el) {
   var v = findVinyl(el.dataset.id);
   if (!v) return;
+  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Распознавание требует интернет')) return;
   if (v.discogsId) {
     loadTracklistFromDiscogsVinyl(v);
     return;
@@ -1438,6 +1441,7 @@ async function loadDiscogsImport() {
     showToast('Введите Discogs username');
     return;
   }
+  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Импорт Discogs требует интернет')) return;
   state.ui.discogsImportUsername = username;
   state.ui.discogsImportLoading = true;
   state.ui.discogsImportLoaded = false;

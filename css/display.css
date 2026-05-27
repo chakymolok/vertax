@@ -1143,3 +1143,29 @@ body #laiso-app .laiso-track-key.vertax-camelot-only {
   font-family: var(--font-mono, monospace) !important;
   font-weight: 700 !important;
 }
+
+/* ============================================================
+   OFFLINE INDICATOR
+   When body.vertax-offline is set, central display status
+   shows an orange OFFLINE marker next to READY, and key
+   network-bound action buttons get a "disabled" look.
+   ============================================================ */
+body.vertax-offline #laiso-app .vertax-display-status::after {
+  content: '· OFFLINE';
+  margin-left: 8px;
+  color: #E66A2C;
+  letter-spacing: .14em;
+  font-weight: 700;
+  animation: vertax-offline-pulse 1.6s ease-in-out infinite;
+}
+@keyframes vertax-offline-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .55; }
+}
+body.vertax-offline #laiso-app [data-action="discogs-search"],
+body.vertax-offline #laiso-app [data-action="discogs-import-load"],
+body.vertax-offline #laiso-app [data-action="recognize-all"],
+body.vertax-offline #laiso-app [data-action="recognize-one"] {
+  opacity: .55;
+  filter: grayscale(.4);
+}

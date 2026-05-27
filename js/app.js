@@ -95,6 +95,42 @@ function initPlatformBridge() {
 window.loadScriptOnce = loadScriptOnce;
 window.initPlatformBridge = initPlatformBridge;
 
+/* ============================================================
+   OFFLINE DETECTION + GRACEFUL NETWORK ACTION GATE
+   ============================================================ */
+function vertaxIsOnline() {
+  try {
+    return typeof navigator === 'undefined' ? true : navigator.onLine !== false;
+  } catch (_) {
+    return true;
+  }
+}
+function vertaxRequireOnline(msg) {
+  if (vertaxIsOnline()) return true;
+  if (typeof showToast === 'function') {
+    showToast(msg || 'Нужен интернет для этого действия');
+  }
+  return false;
+}
+function vertaxSyncOnlineClass() {
+  if (!document.body) return;
+  document.body.classList.toggle('vertax-offline', !vertaxIsOnline());
+}
+window.vertaxIsOnline = vertaxIsOnline;
+window.vertaxRequireOnline = vertaxRequireOnline;
+try {
+  window.addEventListener('online', function () {
+    vertaxSyncOnlineClass();
+    if (typeof showToast === 'function') showToast('Снова на связи');
+  });
+  window.addEventListener('offline', function () {
+    vertaxSyncOnlineClass();
+    if (typeof showToast === 'function') showToast('Offline-режим');
+  });
+} catch (_) {}
+/* Run once on script load; render() will also sync class via vertaxAfterRender. */
+setTimeout(vertaxSyncOnlineClass, 0);
+
 function vertaxResolveRuntimeModal(value) {
   var modal = state && state.modal;
   if (modal && typeof modal.resolve === 'function') modal.resolve(value);
