@@ -162,6 +162,7 @@ async function vertaxGetDjVerdict(analysis) {
         matches: analysis && analysis.matches,
         unmatched_release_tracks: analysis && analysis.unmatched_release_tracks,
         tracks_not_enriched: analysis && analysis.tracks_not_enriched,
+        collection_profile: analysis && analysis.collection_profile,
       },
     }),
   });
