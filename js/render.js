@@ -1953,9 +1953,9 @@ function viewFitCheck() {
   var release = (result && result.release) || {};
   var market = release.marketplace || {};
   var confidenceLabel = {
-    high: 'Оценка надёжная',
-    medium: 'Оценка умеренная',
-    low: 'Оценка предварительная',
+    high: 'данных хватает',
+    medium: 'часть данных',
+    low: 'мало данных',
   }[(scores && scores.confidence) || 'low'];
   var candidates = (u.fitCheckCandidates || []).length
     ? '<div class="laiso-mod-label">Нашёл несколько релизов. Выбери нужный.</div><div class="laiso-stack-sm">' +
@@ -1968,8 +1968,13 @@ function viewFitCheck() {
   var coveragePercent = Math.round((breakdown.metadata_coverage || 0) * 100);
   var discogsStat = release.rating ? release.rating + '/5' : 'нет рейтинга';
   var discogsSub = release.rating ? (release.rating_count || 0) + ' голосов' : 'Discogs';
-  var marketStat = market.lowest_price != null ? market.lowest_price + ' ' + (market.currency || '') : 'нет данных';
-  var marketSub = market.lowest_price != null ? (market.num_for_sale || 0) + ' в продаже' : 'маркетплейс';
+  var discogsPrice = market.average_price != null ? market.average_price : market.lowest_price;
+  var marketStat = discogsPrice != null ? discogsPrice + ' ' + (market.currency || '') : 'нет данных';
+  var marketSub =
+    discogsPrice != null
+      ? (market.average_price != null ? 'средняя цена' : 'минимальная цена') +
+        (market.num_for_sale ? ' · ' + market.num_for_sale + ' в продаже' : '')
+      : 'нет цены';
   var coverUrl = release.cover_url || release.coverUrl || '';
   var aiBlock =
     u.fitCheckAiVerdict || u.fitCheckAiError || u.fitCheckAiLoading
@@ -1996,8 +2001,8 @@ function viewFitCheck() {
       '</div><div class="laiso-lcd-label">' +
       esc(scores.scale_label) +
       '</div></div><div class="vertax-fit-summary-grid">' +
-      '<div class="vertax-fit-stat"><span>Оценка</span><strong>' +
-      esc(confidenceLabel.replace('Оценка ', '')) +
+      '<div class="vertax-fit-stat"><span>Данные</span><strong>' +
+      esc(confidenceLabel) +
       '</strong><small>BPM/Key: ' +
       esc(enrichedCount) +
       ' из ' +
@@ -2006,13 +2011,13 @@ function viewFitCheck() {
       esc(matchedCount) +
       '</strong><small>покрытие ' +
       esc(coveragePercent) +
-      '%</small></div><div class="vertax-fit-stat"><span>Purchase</span><strong>' +
+      '%</small></div><div class="vertax-fit-stat"><span>К покупке</span><strong>' +
       esc(scores.purchase_score) +
-      '/100</strong><small>отдельный скор</small></div><div class="vertax-fit-stat"><span>Discogs</span><strong>' +
+      '/100</strong><small>музыка + рейтинг</small></div><div class="vertax-fit-stat"><span>Discogs</span><strong>' +
       esc(discogsStat) +
       '</strong><small>' +
       esc(discogsSub) +
-      '</small></div><div class="vertax-fit-stat"><span>Market</span><strong>' +
+      '</small></div><div class="vertax-fit-stat"><span>Цена на Discogs</span><strong>' +
       esc(marketStat) +
       '</strong><small>' +
       esc(marketSub) +

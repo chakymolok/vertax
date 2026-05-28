@@ -92,7 +92,7 @@ module.exports = async function analyzeRelease(req, res) {
       const status = error && error.status ? error.status : 500;
       return send(res, status, {
         ok: false,
-        error: status === 503 ? 'ai_unavailable' : 'ai_verdict_failed',
+        error: status === 503 ? 'ai_unavailable' : error && error.code || 'ai_verdict_failed',
         message: error && error.message ? error.message : 'failed'
       });
     }

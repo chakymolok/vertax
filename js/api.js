@@ -166,7 +166,7 @@ async function vertaxGetDjVerdict(analysis) {
   var body = await res.json().catch(function () {
     return {};
   });
-  if (!res.ok || body.error) throw new Error(body.error || body.message || 'ai-verdict-failed');
+  if (!res.ok || body.error) throw new Error(body.message || body.error || 'ai-verdict-failed');
   return body;
 }
 function shouldUseDiscogsProxy() {
