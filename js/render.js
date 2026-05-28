@@ -1896,6 +1896,23 @@ function renderFitCheckAutoSummary(text) {
     '</div>'
   );
 }
+function renderFitCheckAiText(text) {
+  var raw = String(text || '').trim();
+  if (!raw) return '';
+  var parts = raw
+    .split(/\n{2,}/)
+    .map(function (part) {
+      return part.trim();
+    })
+    .filter(Boolean);
+  if (!parts.length) parts = [raw];
+  return parts
+    .slice(0, 4)
+    .map(function (part) {
+      return '<p>' + esc(part) + '</p>';
+    })
+    .join('');
+}
 function renderFitCheckMatch(match) {
   var rt = match.release_track || {};
   var best = (match.best_collection_matches && match.best_collection_matches[0]) || {};
@@ -1978,12 +1995,12 @@ function viewFitCheck() {
   var coverUrl = release.cover_url || release.coverUrl || '';
   var aiBlock =
     u.fitCheckAiVerdict || u.fitCheckAiError || u.fitCheckAiLoading
-      ? '<div class="vertax-fit-ai-box"><strong>DJ-разбор</strong>' +
+      ? '<div class="vertax-fit-ai-box"><strong>AI DJ-разбор</strong>' +
         (u.fitCheckAiLoading
           ? '<p><span class="laiso-spinner"></span> Думаю по делу…</p>'
           : u.fitCheckAiError
             ? '<p class="vertax-fit-ai-error">' + esc(u.fitCheckAiError) + '</p>'
-            : '<p>' + esc(u.fitCheckAiVerdict) + '</p>') +
+            : renderFitCheckAiText(u.fitCheckAiVerdict)) +
         '</div>'
       : '';
   var resultHtml = result
@@ -2047,7 +2064,7 @@ function viewFitCheck() {
       '<button class="laiso-btn laiso-btn-secondary laiso-btn-block vertax-fit-ai-btn" data-action="fit-check-ai-verdict" ' +
       (u.fitCheckAiLoading ? 'disabled' : '') +
       '>' +
-      (u.fitCheckAiLoading ? '<span class="laiso-spinner"></span> Думаю…' : 'Получить DJ-разбор') +
+      (u.fitCheckAiLoading ? '<span class="laiso-spinner"></span> Думаю…' : 'AI DJ-разбор') +
       '</button>' +
       aiBlock
     : '';
@@ -2055,7 +2072,7 @@ function viewFitCheck() {
     renderHeader('Подойдёт ли пластинка?') +
     '<div class="laiso-panel"><div class="laiso-h2">Подойдёт ли эта пластинка к моей коллекции?</div>' +
     '<p style="color:var(--text-secondary);line-height:1.55;">Введи название релиза или каталожный номер. Vertax найдёт пластинку в Discogs, подтянет треки, BPM и Key, сравнит с твоей коллекцией и покажет, насколько релиз ложится в твой музыкальный контекст.</p>' +
-    '<p class="laiso-hint">Скор считается математически: BPM, Camelot, плотность совпадений и покрытие метаданных. DJ-разбор можно включить отдельно.</p>' +
+    '<p class="laiso-hint">Скор считается математически: BPM, Camelot, плотность совпадений и покрытие метаданных. AI DJ-разбор можно включить отдельно.</p>' +
     '<div class="laiso-search" style="margin-top:12px;"><input class="laiso-input" type="search" placeholder="Название релиза или каталожный номер" value="' +
     esc(u.fitCheckQuery || '') +
     '" data-action="fit-check-input"></div>' +
