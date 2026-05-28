@@ -245,6 +245,15 @@ Cache behavior should preserve backwards compatibility with existing records.
 
 Server-side Beatport/track cache lives in Redis through `lib/redis-cache.js`.
 
+Compatibility analysis adds temporary Redis collection indexes:
+
+- key: `collection_index:{user_id}:{collection_hash}`;
+- TTL: 30 days;
+- TTL behavior: sliding, refreshed on index lookup and repeated index sync;
+- purpose: compute release-to-collection compatibility without sending the full collection on every request.
+
+The 30-day TTL is only for temporary collection indexes. It must not be applied to `vertax:beatport:track:*` or other shared track metadata caches.
+
 ## Serverless API
 
 Current API functions:
@@ -252,9 +261,9 @@ Current API functions:
 - `api/discogs.js` - Discogs proxy for search, release, and collection.
 - `api/bpm.js` - GetSongBPM proxy using `GETSONGBPM_KEY`.
 - `api/beatport-lookup.js` - Beatport metadata lookup and cache.
+- `api/collection-index.js` - temporary per-user normalized collection index for compatibility analysis.
+- `api/analyze-release.js` - Discogs release lookup, BPM/Camelot enrichment, and mathematical compatibility scoring.
 - `api/discogs-ingest.js` - ingest local vinyl track metadata into shared cache/proposal flow.
-- `api/cache-export.js` - protected cache export.
-- `api/cache-refresh.js` - cache refresh helper.
 - `api/telegram-webhook.js` - Telegram admin callback webhook.
 - `api/admin/approve.js` - approve metadata proposal.
 - `api/admin/reject.js` - reject metadata proposal.
@@ -336,4 +345,3 @@ Smoke test:
 - `smoke.mjs`
 - uses Playwright;
 - should prefer `data-testid` selectors over visible Russian text.
-

@@ -39,6 +39,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Improve partial-failure behavior when metadata sources fail.
 - Make source labels clear for BPM/Key results.
 - Preserve manual values over uncertain auto-detected values.
+- Continue improving "Will this record fit?" with better selection UI and real-world scoring checks.
 
 ## Next
 
@@ -135,4 +136,4 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Added app-level language gate and language switcher.
 - Added CI smoke workflow.
 - Added `data-testid` selectors for smoke stability.
-
+- Added the first non-AI core of "Подойдёт ли пластинка?": collection index, release analysis, mathematical scoring, and base UI.

@@ -21,6 +21,129 @@ function isDiscogsVinylCollectionItem(item) {
 function vertaxApiUrl(path) {
   return new URL(path, window.location.origin);
 }
+function vertaxNormalizeHashPart(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\wа-яё0-9\s|.-]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function vertaxStableCollectionTrackKey(track) {
+  var releaseId = track.discogs_release_id || track.discogsId || track.discogsReleaseId;
+  var position = String(track.position || '')
+    .trim()
+    .toUpperCase();
+  if (releaseId && position) return String(releaseId) + '|' + position;
+  return [
+    vertaxNormalizeHashPart(track.artist),
+    vertaxNormalizeHashPart(track.title),
+    track.bpm || '',
+    track.camelot || '',
+  ].join('|');
+}
+function vertaxFlattenCollectionForAnalysis() {
+  var out = [];
+  var source = state.collection && state.collection.length ? state.collection : state.vinyls || [];
+  (source || []).forEach(function (vinyl) {
+    var releaseId = vinyl.discogsId || vinyl.discogsReleaseId || vinyl.discogs_release_id || null;
+    (vinyl.tracklist || []).forEach(function (track) {
+      if (!track || !track.title || track.excludeFromSets || vinyl.excludeFromSets) return;
+      out.push({
+        artist: vinyl.artist || track.artist || '',
+        title: track.title || '',
+        mix: track.mix || null,
+        bpm: track.bpm || null,
+        camelot: track.camelot || null,
+        genre: track.genre || vinyl.genre || vinyl.style || null,
+        discogs_release_id: releaseId,
+        position: track.position || track.displayPosition || '',
+        record_title: vinyl.title || '',
+      });
+    });
+  });
+  return out;
+}
+async function vertaxSha256(text) {
+  try {
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+      var bytes = new TextEncoder().encode(text);
+      var hash = await window.crypto.subtle.digest('SHA-256', bytes);
+      return Array.prototype.map
+        .call(new Uint8Array(hash), function (b) {
+          return b.toString(16).padStart(2, '0');
+        })
+        .join('');
+    }
+  } catch (_) {}
+  var h = 0;
+  for (var i = 0; i < text.length; i++) h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+  return 'fallback-' + Math.abs(h);
+}
+async function vertaxCollectionHash(collection) {
+  var stable = (collection || [])
+    .map(function (track) {
+      return {
+        k: vertaxStableCollectionTrackKey(track),
+        artist: vertaxNormalizeHashPart(track.artist),
+        title: vertaxNormalizeHashPart(track.title),
+        mix: vertaxNormalizeHashPart(track.mix),
+        bpm: track.bpm || '',
+        camelot: String(track.camelot || '').toUpperCase(),
+        genre: vertaxNormalizeHashPart(Array.isArray(track.genre) ? track.genre.join(' ') : track.genre),
+        discogs_release_id: track.discogs_release_id || '',
+        position: String(track.position || '').trim().toUpperCase(),
+      };
+    })
+    .sort(function (a, b) {
+      return a.k.localeCompare(b.k);
+    });
+  return await vertaxSha256(JSON.stringify(stable));
+}
+function vertaxUserId() {
+  var key = 'vertax_uid';
+  try {
+    var existing = localStorage.getItem(key);
+    if (existing) return existing;
+    var id =
+      window.crypto && window.crypto.randomUUID
+        ? window.crypto.randomUUID()
+        : 'anon-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+    localStorage.setItem(key, id);
+    return id;
+  } catch (_) {
+    return 'anon-' + Date.now();
+  }
+}
+async function vertaxSyncCollectionIndex(collection, hash) {
+  var res = await fetch(vertaxApiUrl('/api/collection-index').toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-User-Id': vertaxUserId() },
+    body: JSON.stringify({ collection_hash: hash, collection: collection }),
+  });
+  var body = await res.json().catch(function () {
+    return {};
+  });
+  if (!res.ok || !body.ok) throw new Error(body.error || 'collection-index-failed');
+  return body;
+}
+async function vertaxAnalyzeRelease(payload) {
+  var res = await fetch(vertaxApiUrl('/api/analyze-release').toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-User-Id': vertaxUserId() },
+    body: JSON.stringify(payload),
+  });
+  var body = await res.json().catch(function () {
+    return {};
+  });
+  if (body && body.error === 'collection_index_missing') throw new Error('collection_index_missing');
+  if (!res.ok && !(body && body.status === 'needs_selection')) {
+    throw new Error(body.error || body.message || 'analyze-release-failed');
+  }
+  return body;
+}
 function shouldUseDiscogsProxy() {
   try {
     var host = window.location.hostname || '';

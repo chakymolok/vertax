@@ -54,6 +54,9 @@ function render() {
     case 'discogs-import':
       viewHtml = viewDiscogsImport();
       break;
+    case 'fit-check':
+      viewHtml = viewFitCheck();
+      break;
     case 'backup':
       viewHtml = typeof window.viewBackup === 'function' ? window.viewBackup() : viewHome();
       break;
@@ -166,6 +169,7 @@ function renderVertaxDisplay() {
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-collection" data-testid="home-collection">Коллекция</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-set" data-testid="home-set-builder">Собрать сет</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import" data-testid="home-discogs-import">Импорт из Discogs</button>' +
+    '<button class="laiso-btn laiso-btn-secondary" data-action="goto-fit-check" data-testid="home-fit-check">Проверить пластинку</button>' +
     '</div>' +
     '<div class="laiso-home-stickers">' +
     '<button class="laiso-sticker laiso-sticker-backup" data-action="goto-backup" data-testid="home-backup">' +
@@ -1845,6 +1849,152 @@ function sectorPath(cx, cy, r1, r2, aStart, aEnd, label, code, active) {
     '" stroke="#D4D0C8" stroke-width="0.5" data-action="wheel-pick" data-code="' +
     code +
     '"></path>'
+  );
+}
+function renderFitCheckCandidate(c) {
+  return (
+    '<button class="laiso-vinyl-card" data-action="fit-check-candidate" data-release-id="' +
+    esc(c.discogs_id) +
+    '" style="width:100%;text-align:left;">' +
+    '<div class="laiso-vinyl-cover" style="font-size:10px;">' +
+    esc(String(c.year || '')) +
+    '</div>' +
+    '<div class="laiso-vinyl-info"><div class="laiso-vinyl-title">' +
+    esc(c.title || '—') +
+    '</div><div class="laiso-vinyl-artist">' +
+    esc([c.label, c.catalog_number, c.country].filter(Boolean).join(' · ')) +
+    '</div><div class="laiso-vinyl-meta">' +
+    esc(c.format || '') +
+    '</div></div><div class="laiso-vinyl-actions"><span class="laiso-badge laiso-badge-awaiting">выбрать</span></div></button>'
+  );
+}
+function renderFitCheckMatch(match) {
+  var rt = match.release_track || {};
+  var best = (match.best_collection_matches && match.best_collection_matches[0]) || {};
+  return (
+    '<div class="laiso-set-card">' +
+    '<div class="laiso-set-card-head"><span class="laiso-set-pos">' +
+    esc(rt.position || '—') +
+    '</span><span class="laiso-set-title">' +
+    esc(rt.title || '—') +
+    '</span></div><div class="laiso-set-meta">' +
+    esc((rt.bpm ? rt.bpm + ' BPM' : '— BPM') + ' / ' + (rt.camelot || '—')) +
+    ' → ' +
+    esc((best.artist || '') + ' — ' + (best.title || '—')) +
+    '</div><div class="laiso-set-pills"><span class="laiso-pill laiso-pill-bpm">' +
+    esc(best.bpm ? best.bpm + ' BPM' : '— BPM') +
+    '</span>' +
+    (best.camelot ? '<span class="laiso-pill laiso-pill-cam">' + esc(best.camelot) + '</span>' : '') +
+    '<span class="laiso-pill">' +
+    Math.round((best.compatibility || 0) * 100) +
+    '%</span></div>' +
+    (best.reasons && best.reasons.length
+      ? '<div class="laiso-hint" style="margin-top:8px;">Причина: ' +
+        esc(best.reasons.join(', ')) +
+        '</div>'
+      : '') +
+    '</div>'
+  );
+}
+function renderFitCheckManualTrack(track, idx) {
+  var key = esc(track.position || String(idx));
+  return (
+    '<div class="laiso-panel"><div class="laiso-h2">' +
+    esc([track.position, track.title].filter(Boolean).join(' · ')) +
+    '</div><div class="laiso-row" style="margin-top:10px;">' +
+    '<input class="laiso-input laiso-grow" inputmode="decimal" placeholder="BPM" data-action="fit-manual-bpm" data-fit-key="' +
+    key +
+    '">' +
+    '<input class="laiso-input laiso-grow" placeholder="Camelot 9A" data-action="fit-manual-camelot" data-fit-key="' +
+    key +
+    '"></div></div>'
+  );
+}
+function viewFitCheck() {
+  var u = state.ui || {};
+  var result = u.fitCheckResult;
+  var scores = result && result.scores;
+  var breakdown = (result && result.breakdown) || {};
+  var release = (result && result.release) || {};
+  var market = release.marketplace || {};
+  var confidenceLabel = {
+    high: 'Оценка надёжная',
+    medium: 'Оценка умеренная',
+    low: 'Оценка предварительная',
+  }[(scores && scores.confidence) || 'low'];
+  var candidates = (u.fitCheckCandidates || []).length
+    ? '<div class="laiso-mod-label">Нашёл несколько релизов. Выбери нужный.</div><div class="laiso-stack-sm">' +
+      u.fitCheckCandidates.map(renderFitCheckCandidate).join('') +
+      '</div>'
+    : '';
+  var resultHtml = result
+    ? '<div class="laiso-mod-label">результат</div><div class="laiso-panel">' +
+      '<div class="laiso-h2">' +
+      esc(release.title || '—') +
+      '</div><div class="laiso-meta" style="margin-top:4px;">' +
+      esc([release.artist, release.label, release.year, release.catalog_number].filter(Boolean).join(' · ')) +
+      '</div><div class="laiso-lcd" style="margin-top:14px;"><div class="laiso-lcd-label">compatibility</div><div class="laiso-lcd-xl">' +
+      esc(scores.compatibility_score) +
+      '</div><div class="laiso-lcd-label">' +
+      esc(scores.scale_label) +
+      '</div></div><div class="laiso-stack-sm" style="margin-top:12px;">' +
+      '<div class="laiso-hint">' +
+      esc(confidenceLabel) +
+      ': BPM/Key найден для ' +
+      esc(breakdown.enriched_count || 0) +
+      ' из ' +
+      esc(result.release_track_count || 0) +
+      ' треков.</div><div class="laiso-hint">Пары: ' +
+      esc(breakdown.matched_track_count || 0) +
+      ' · покрытие: ' +
+      esc(Math.round((breakdown.metadata_coverage || 0) * 100)) +
+      '% · purchase score: ' +
+      esc(scores.purchase_score) +
+      '/100</div><div class="laiso-hint">Discogs: ' +
+      esc(release.rating ? release.rating + '/5 (' + (release.rating_count || 0) + ')' : 'нет рейтинга') +
+      ' · Маркетплейс: ' +
+      esc(market.lowest_price ? 'от ' + market.lowest_price + ' ' + (market.currency || '') + ', ' + (market.num_for_sale || 0) + ' в продаже' : 'нет данных') +
+      '</div></div><p style="margin:14px 0 0;color:var(--text-secondary);">' +
+      esc(result.auto_summary || '') +
+      '</p></div><div class="laiso-mod-label">лучшие совпадения</div><div class="laiso-stack-sm">' +
+      ((result.matches || []).slice(0, 8).map(renderFitCheckMatch).join('') ||
+        '<div class="laiso-empty">Сильных совпадений не найдено.</div>') +
+      '</div>' +
+      ((result.unmatched_release_tracks || []).length
+        ? '<details class="laiso-panel"><summary class="laiso-h2">Не вписались</summary><div class="laiso-stack-sm" style="margin-top:10px;">' +
+          result.unmatched_release_tracks
+            .slice(0, 12)
+            .map(function (t) {
+              return '<div class="laiso-hint">' + esc([t.position, t.title, t.bpm && t.bpm + ' BPM', t.camelot].filter(Boolean).join(' · ')) + '</div>';
+            })
+            .join('') +
+          '</div></details>'
+        : '') +
+      ((result.tracks_not_enriched || []).length
+        ? '<details class="laiso-panel" open><summary class="laiso-h2">Не нашли BPM/Key</summary><p class="laiso-hint" style="margin:10px 0;">Не удалось найти метаданные для ' +
+          result.tracks_not_enriched.length +
+          ' треков. Можно заполнить BPM/Key вручную и пересчитать анализ.</p>' +
+          result.tracks_not_enriched.map(renderFitCheckManualTrack).join('') +
+          '<button class="laiso-btn laiso-btn-block" data-action="fit-check-recalculate">Пересчитать анализ</button></details>'
+        : '') +
+      '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" disabled title="Будет следующим этапом">Получить DJ-разбор</button>'
+    : '';
+  return (
+    renderHeader('Подойдёт ли пластинка?') +
+    '<div class="laiso-panel"><div class="laiso-h2">Подойдёт ли эта пластинка к моей коллекции?</div>' +
+    '<p style="color:var(--text-secondary);line-height:1.55;">Введи название релиза или каталожный номер. Vertax найдёт пластинку в Discogs, подтянет треки, BPM и Key, сравнит с твоей коллекцией и покажет, насколько релиз ложится в твой музыкальный контекст.</p>' +
+    '<p class="laiso-hint">Скор считается математически: BPM, Camelot, плотность совпадений и покрытие метаданных. DJ-разбор можно включить отдельно.</p>' +
+    '<div class="laiso-search" style="margin-top:12px;"><input class="laiso-input" type="search" placeholder="Название релиза или каталожный номер" value="' +
+    esc(u.fitCheckQuery || '') +
+    '" data-action="fit-check-input"></div>' +
+    '<button class="laiso-btn laiso-btn-block" data-action="fit-check-submit" style="margin-top:10px;">' +
+    (u.fitCheckLoading ? '<span class="laiso-spinner"></span> Проверяю…' : 'Проверить пластинку') +
+    '</button>' +
+    (u.fitCheckError ? '<div class="laiso-hint laiso-hint-warn" style="margin-top:8px;">' + esc(u.fitCheckError) + '</div>' : '') +
+    '</div>' +
+    candidates +
+    resultHtml +
+    renderFooter()
   );
 }
 /* ---------- COLLECTION & SETTINGS ---------- */ function viewCollection() {

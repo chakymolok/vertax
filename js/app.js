@@ -496,7 +496,10 @@ document.addEventListener('input', function (e) {
   if (
     t.dataset.action === 'collection-search' ||
     t.dataset.action === 'bpm-input' ||
-    t.dataset.action === 'add-track-search'
+    t.dataset.action === 'add-track-search' ||
+    t.dataset.action === 'fit-check-input' ||
+    t.dataset.action === 'fit-manual-bpm' ||
+    t.dataset.action === 'fit-manual-camelot'
   ) {
     var fn = handlers[t.dataset.action];
     if (fn)

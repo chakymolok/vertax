@@ -222,6 +222,7 @@ on('back', function () {
   else if (v === 'set') state.view = 'home';
   else if (v === 'collection') state.view = 'home';
   else if (v === 'discogs-import') state.view = 'home';
+  else if (v === 'fit-check') state.view = 'home';
   else if (v === 'about') state.view = 'home';
   else if (v === 'add') state.view = 'home';
   else state.view = 'home';
@@ -241,6 +242,11 @@ on('goto-discogs-import', function () {
   state.ui.discogsImportProgress = 0;
   state.ui.discogsImportVinyls = [];
   state.view = 'discogs-import';
+  render();
+});
+on('goto-fit-check', function () {
+  state.view = 'fit-check';
+  state.ui.fitCheckError = null;
   render();
 });
 on('go-set', function () {
@@ -1641,6 +1647,106 @@ on('toggle-discogs-fetch-meta', function (e, el) {
 });
 on('discogs-enrich-cancel', function () {
   state.ui.discogsImportEnrichCancel = true;
+});
+async function runFitCheck(opts) {
+  opts = opts || {};
+  var query = String(state.ui.fitCheckQuery || '').trim();
+  if (!query && !opts.releaseId) {
+    state.ui.fitCheckError = 'Введите название релиза или каталожный номер';
+    render();
+    return;
+  }
+  var collection = vertaxFlattenCollectionForAnalysis();
+  if (!collection.length) {
+    state.ui.fitCheckError = 'В коллекции пока нет треков с данными. Сначала добавь пластинки.';
+    render();
+    return;
+  }
+  state.ui.fitCheckLoading = true;
+  state.ui.fitCheckError = null;
+  state.ui.fitCheckCandidates = [];
+  render();
+  try {
+    var hash = state.ui.fitCheckHash || (await vertaxCollectionHash(collection));
+    state.ui.fitCheckHash = hash;
+    await vertaxSyncCollectionIndex(collection, hash);
+    var payload = { collection_hash: hash };
+    if (opts.releaseId) payload.release_id = opts.releaseId;
+    else payload.query = query;
+    var manual = [];
+    var current = (state.ui.fitCheckResult && state.ui.fitCheckResult.tracks_not_enriched) || [];
+    current.forEach(function (track, idx) {
+      var key = track.position || String(idx);
+      var rec = state.ui.fitCheckManual && state.ui.fitCheckManual[key];
+      if (rec && (rec.bpm || rec.camelot)) {
+        manual.push({
+          position: track.position,
+          artist: track.artist,
+          title: track.title,
+          bpm: rec.bpm,
+          camelot: rec.camelot,
+        });
+      }
+    });
+    if (manual.length) payload.manual_tracks = manual;
+    var result = await vertaxAnalyzeRelease(payload);
+    if (result.status === 'needs_selection') {
+      state.ui.fitCheckCandidates = result.candidates || [];
+      state.ui.fitCheckResult = null;
+    } else {
+      state.ui.fitCheckCandidates = [];
+      state.ui.fitCheckResult = result;
+    }
+  } catch (e) {
+    var msg = String((e && e.message) || e);
+    if (msg === 'collection_index_missing') {
+      try {
+        var retryHash = state.ui.fitCheckHash || (await vertaxCollectionHash(collection));
+        await vertaxSyncCollectionIndex(collection, retryHash);
+        state.ui.fitCheckHash = retryHash;
+        return await runFitCheck(opts);
+      } catch (retryErr) {
+        msg = String((retryErr && retryErr.message) || retryErr);
+      }
+    }
+    state.ui.fitCheckError = 'Не удалось проверить пластинку: ' + msg;
+  } finally {
+    state.ui.fitCheckLoading = false;
+    render();
+  }
+}
+on('fit-check-input', function (e, el) {
+  state.ui.fitCheckQuery = el.value || '';
+});
+on('fit-check-submit', function () {
+  state.ui.fitCheckManual = {};
+  runFitCheck();
+});
+on('fit-check-candidate', function (_, el) {
+  var id = el && el.dataset && el.dataset.releaseId;
+  if (!id) return;
+  runFitCheck({ releaseId: id });
+});
+on('fit-manual-bpm', function (e, el) {
+  var key = el && el.dataset && el.dataset.fitKey;
+  if (!key) return;
+  state.ui.fitCheckManual = state.ui.fitCheckManual || {};
+  state.ui.fitCheckManual[key] = state.ui.fitCheckManual[key] || {};
+  state.ui.fitCheckManual[key].bpm = el.value || '';
+});
+on('fit-manual-camelot', function (e, el) {
+  var key = el && el.dataset && el.dataset.fitKey;
+  if (!key) return;
+  state.ui.fitCheckManual = state.ui.fitCheckManual || {};
+  state.ui.fitCheckManual[key] = state.ui.fitCheckManual[key] || {};
+  state.ui.fitCheckManual[key].camelot = String(el.value || '').toUpperCase();
+});
+on('fit-check-recalculate', function () {
+  var releaseId =
+    state.ui.fitCheckResult &&
+    state.ui.fitCheckResult.release &&
+    state.ui.fitCheckResult.release.discogs_id;
+  if (releaseId) runFitCheck({ releaseId: releaseId });
 });
 on('confirm-clear', function () {
   state.modal = 'confirm-clear';

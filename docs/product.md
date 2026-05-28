@@ -57,6 +57,7 @@ Main capabilities:
 - Local collection management.
 - Discogs collection import.
 - Set builder.
+- "Will this record fit?" compatibility check against the local collection.
 - Live set mode.
 - Backup and restore.
 - Language selection and app-level i18n overlay.
@@ -139,6 +140,8 @@ The primary collection lives locally in the user's browser via IndexedDB. Vertax
 
 Server-side cache is used for shared metadata acceleration and admin/proposal workflows, not as the user's primary collection storage.
 
+For compatibility analysis, Vertax temporarily stores a normalized collection index on the server under an anonymous local UUID. This index is used only for compatibility math and expires after inactivity. The Redis key is `collection_index:{user_id}:{collection_hash}` with a sliding 30-day TTL.
+
 ## Product Principles
 
 - Keep `/` stable and working.
@@ -155,4 +158,3 @@ Server-side cache is used for shared metadata acceleration and admin/proposal wo
 - Some external services may be unavailable or rate-limited.
 - Prompt/confirm dialogs are not reliable in Telegram/VK/MAX WebViews; use in-app modals.
 - The current client architecture is vanilla JS with global state and patch installers. Changes should be careful and localized.
-

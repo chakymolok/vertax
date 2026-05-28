@@ -191,6 +191,23 @@ Metadata sources are imperfect. Preserve user control.
 - Prefer Discogs release ID plus track position when available.
 - Respect rate limits; do not add uncontrolled `Promise.all` against Discogs.
 - Partial failures should not kill the whole flow.
+- Compatibility score must be calculated by math, not by AI.
+- AI/DJ verdicts, when present, may explain the result but must not decide compatibility.
+
+## Redis TTL Rules
+
+Temporary compatibility keys may expire:
+
+- `collection_index:{user_id}:{collection_hash}` gets a sliding 30-day TTL.
+- future `ai_verdict:{release_id}:{collection_hash}` may also use a 30-day TTL.
+
+Shared metadata keys must not receive that TTL:
+
+- `vertax:beatport:track:*`
+- Discogs/Beatport enriched track records
+- shared BPM/Camelot metadata
+
+Existing miss-cache TTLs, such as `vertax:beatport:miss:*`, should keep their current behavior.
 
 ## Service Worker Rules
 
@@ -240,4 +257,3 @@ Update docs when changing:
 - AI/editing constraints.
 
 Keep README short. Put deeper documentation in `/docs`.
-

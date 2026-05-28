@@ -100,6 +100,13 @@ ALL_KEYS.forEach(function (k) {
         complete: false,
         vinylId: null,
       },
+      fitCheckQuery: '',
+      fitCheckLoading: false,
+      fitCheckError: null,
+      fitCheckHash: null,
+      fitCheckCandidates: [],
+      fitCheckResult: null,
+      fitCheckManual: {},
     },
   };
 
