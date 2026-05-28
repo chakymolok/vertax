@@ -1857,7 +1857,9 @@ function renderFitCheckCandidate(c) {
     esc(c.discogs_id) +
     '" style="width:100%;text-align:left;">' +
     '<div class="laiso-vinyl-cover" style="font-size:10px;">' +
-    esc(String(c.year || '')) +
+    (c.cover_url || c.coverUrl
+      ? '<img src="' + esc(c.cover_url || c.coverUrl) + '" alt="">'
+      : esc(String(c.year || ''))) +
     '</div>' +
     '<div class="laiso-vinyl-info"><div class="laiso-vinyl-title">' +
     esc(c.title || '—') +
@@ -1968,13 +1970,28 @@ function viewFitCheck() {
   var discogsSub = release.rating ? (release.rating_count || 0) + ' голосов' : 'Discogs';
   var marketStat = market.lowest_price != null ? market.lowest_price + ' ' + (market.currency || '') : 'нет данных';
   var marketSub = market.lowest_price != null ? (market.num_for_sale || 0) + ' в продаже' : 'маркетплейс';
+  var coverUrl = release.cover_url || release.coverUrl || '';
+  var aiBlock =
+    u.fitCheckAiVerdict || u.fitCheckAiError || u.fitCheckAiLoading
+      ? '<div class="vertax-fit-ai-box"><strong>DJ-разбор</strong>' +
+        (u.fitCheckAiLoading
+          ? '<p><span class="laiso-spinner"></span> Думаю по делу…</p>'
+          : u.fitCheckAiError
+            ? '<p class="vertax-fit-ai-error">' + esc(u.fitCheckAiError) + '</p>'
+            : '<p>' + esc(u.fitCheckAiVerdict) + '</p>') +
+        '</div>'
+      : '';
   var resultHtml = result
     ? '<div class="laiso-mod-label">результат</div><div class="laiso-panel">' +
+      '<div class="vertax-fit-release-head">' +
+      '<div class="vertax-fit-release-cover">' +
+      (coverUrl ? '<img src="' + esc(coverUrl) + '" alt="">' : '<span>vinyl</span>') +
+      '</div><div class="vertax-fit-release-main">' +
       '<div class="laiso-h2">' +
       esc(release.title || '—') +
       '</div><div class="laiso-meta" style="margin-top:4px;">' +
       esc([release.artist, release.label, release.year, release.catalog_number].filter(Boolean).join(' · ')) +
-      '</div><div class="laiso-lcd" style="margin-top:14px;"><div class="laiso-lcd-label">compatibility</div><div class="laiso-lcd-xl">' +
+      '</div></div></div><div class="laiso-lcd" style="margin-top:14px;"><div class="laiso-lcd-label">compatibility</div><div class="laiso-lcd-xl">' +
       esc(scores.compatibility_score) +
       '</div><div class="laiso-lcd-label">' +
       esc(scores.scale_label) +
@@ -2022,7 +2039,12 @@ function viewFitCheck() {
           result.tracks_not_enriched.map(renderFitCheckManualTrack).join('') +
           '<button class="laiso-btn laiso-btn-block" data-action="fit-check-recalculate">Пересчитать анализ</button></details>'
         : '') +
-      '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" disabled title="Будет следующим этапом">Получить DJ-разбор</button>'
+      '<button class="laiso-btn laiso-btn-secondary laiso-btn-block vertax-fit-ai-btn" data-action="fit-check-ai-verdict" ' +
+      (u.fitCheckAiLoading ? 'disabled' : '') +
+      '>' +
+      (u.fitCheckAiLoading ? '<span class="laiso-spinner"></span> Думаю…' : 'Получить DJ-разбор') +
+      '</button>' +
+      aiBlock
     : '';
   return (
     renderHeader('Подойдёт ли пластинка?') +

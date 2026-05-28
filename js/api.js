@@ -144,6 +144,31 @@ async function vertaxAnalyzeRelease(payload) {
   }
   return body;
 }
+async function vertaxGetDjVerdict(analysis) {
+  var release = (analysis && analysis.release) || {};
+  var res = await fetch(vertaxApiUrl('/api/analyze-release').toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-User-Id': vertaxUserId() },
+    body: JSON.stringify({
+      action: 'ai_verdict',
+      release_id: release.discogs_id,
+      collection_hash: analysis && analysis.collection_hash,
+      analysis_summary: {
+        release: release,
+        scores: analysis && analysis.scores,
+        breakdown: analysis && analysis.breakdown,
+        matches: analysis && analysis.matches,
+        unmatched_release_tracks: analysis && analysis.unmatched_release_tracks,
+        tracks_not_enriched: analysis && analysis.tracks_not_enriched,
+      },
+    }),
+  });
+  var body = await res.json().catch(function () {
+    return {};
+  });
+  if (!res.ok || body.error) throw new Error(body.error || body.message || 'ai-verdict-failed');
+  return body;
+}
 function shouldUseDiscogsProxy() {
   try {
     var host = window.location.hostname || '';

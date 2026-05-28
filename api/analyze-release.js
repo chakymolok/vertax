@@ -7,6 +7,7 @@ const {
   analyzeReleaseAgainstIndex,
   sanitizeUserId
 } = require('../lib/compatibility-analysis');
+const { getAiVerdict } = require('../lib/ai-verdict');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -82,6 +83,20 @@ module.exports = async function analyzeRelease(req, res) {
   const body = await readJsonBody(req);
   if (!body) return send(res, 400, { error: 'bad_json' });
   if (!userId || userId === 'anonymous') return send(res, 400, { error: 'user_id_required' });
+
+  if (body.action === 'ai_verdict') {
+    try {
+      const verdict = await getAiVerdict(body);
+      return send(res, 200, Object.assign({ ok: true, status: 'ok' }, verdict));
+    } catch (error) {
+      const status = error && error.status ? error.status : 500;
+      return send(res, status, {
+        ok: false,
+        error: status === 503 ? 'ai_unavailable' : 'ai_verdict_failed',
+        message: error && error.message ? error.message : 'failed'
+      });
+    }
+  }
 
   let index;
   try {

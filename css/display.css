@@ -1191,6 +1191,23 @@ body #laiso-app .laiso-home-grid .vertax-fit-home-cta {
   text-align: left !important;
 }
 
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="fit-check-submit"],
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="fit-check-submit"]:hover,
+body #laiso-app .laiso-btn[data-action="fit-check-submit"],
+body #laiso-app .laiso-btn[data-action="fit-check-submit"]:hover {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="fit-check-submit"] *,
+body.vertax-theme-dark #laiso-app .laiso-btn[data-action="fit-check-submit"]:hover *,
+body #laiso-app .laiso-btn[data-action="fit-check-submit"] *,
+body #laiso-app .laiso-btn[data-action="fit-check-submit"]:hover * {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
 body #laiso-app .laiso-home-grid .vertax-fit-home-cta::after {
   content: "";
   position: absolute;
@@ -1228,6 +1245,43 @@ body #laiso-app .laiso-home-grid .vertax-fit-home-cta small {
   0%, 48% { transform: translateX(-58%) rotate(8deg); opacity: 0; }
   58% { opacity: 1; }
   100% { transform: translateX(58%) rotate(8deg); opacity: 0; }
+}
+
+body #laiso-app .vertax-fit-release-head {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+body #laiso-app .vertax-fit-release-main {
+  min-width: 0;
+}
+
+body #laiso-app .vertax-fit-release-cover {
+  width: 96px;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #20251A, #080908);
+  border: 1px solid rgba(200,255,46,.28);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--runt-accent, #C8FF2E);
+  -webkit-text-fill-color: var(--runt-accent, #C8FF2E);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 28px rgba(16,17,15,.12);
+}
+
+body #laiso-app .vertax-fit-release-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 body #laiso-app .vertax-fit-summary-grid {
@@ -1294,6 +1348,47 @@ body #laiso-app .vertax-fit-auto-summary p {
 
 body #laiso-app .vertax-fit-auto-summary p + p {
   margin-top: 8px;
+}
+
+body #laiso-app .vertax-fit-ai-btn {
+  margin-top: 12px !important;
+  background:
+    linear-gradient(115deg, rgba(200,255,46,.12), rgba(255,255,255,0) 35%),
+    linear-gradient(180deg, #20251A, #10110F) !important;
+  border-color: rgba(200,255,46,.42) !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+body #laiso-app .vertax-fit-ai-box {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--runt-card-soft, #F5F2ED);
+  border: 1px solid rgba(200,255,46,.24);
+}
+
+body #laiso-app .vertax-fit-ai-box > strong {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--runt-accent, #C8FF2E);
+  -webkit-text-fill-color: var(--runt-accent, #C8FF2E);
+}
+
+body #laiso-app .vertax-fit-ai-box p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--runt-text, #101010);
+  -webkit-text-fill-color: var(--runt-text, #101010);
+}
+
+body #laiso-app .vertax-fit-ai-error {
+  color: var(--runt-danger, #E66A2C) !important;
+  -webkit-text-fill-color: var(--runt-danger, #E66A2C) !important;
 }
 
 body #laiso-app .vertax-fit-match-card {
@@ -1456,6 +1551,15 @@ body #laiso-app .vertax-fit-reasons strong {
 }
 
 @media (max-width: 520px) {
+  body #laiso-app .vertax-fit-release-head {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  body #laiso-app .vertax-fit-release-cover {
+    width: 76px;
+    border-radius: 14px;
+  }
+
   body #laiso-app .vertax-fit-match-top,
   body #laiso-app .vertax-fit-track-title {
     grid-template-columns: 1fr;

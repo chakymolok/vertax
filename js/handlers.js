@@ -1696,6 +1696,8 @@ async function runFitCheck(opts) {
     } else {
       state.ui.fitCheckCandidates = [];
       state.ui.fitCheckResult = result;
+      state.ui.fitCheckAiError = null;
+      state.ui.fitCheckAiVerdict = null;
     }
   } catch (e) {
     var msg = String((e && e.message) || e);
@@ -1747,6 +1749,25 @@ on('fit-check-recalculate', function () {
     state.ui.fitCheckResult.release &&
     state.ui.fitCheckResult.release.discogs_id;
   if (releaseId) runFitCheck({ releaseId: releaseId });
+});
+on('fit-check-ai-verdict', async function () {
+  if (!state.ui.fitCheckResult || state.ui.fitCheckAiLoading) return;
+  state.ui.fitCheckAiLoading = true;
+  state.ui.fitCheckAiError = null;
+  render();
+  try {
+    var result = await vertaxGetDjVerdict(state.ui.fitCheckResult);
+    state.ui.fitCheckAiVerdict = result.verdict || '';
+  } catch (e) {
+    var msg = String((e && e.message) || e || 'ai_unavailable');
+    state.ui.fitCheckAiError =
+      msg === 'ai_unavailable' || msg === 'gemini_api_key_missing'
+        ? 'DJ-разбор временно недоступен.'
+        : 'Не удалось получить DJ-разбор: ' + msg;
+  } finally {
+    state.ui.fitCheckAiLoading = false;
+    render();
+  }
 });
 on('confirm-clear', function () {
   state.modal = 'confirm-clear';

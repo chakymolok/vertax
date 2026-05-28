@@ -107,6 +107,9 @@ ALL_KEYS.forEach(function (k) {
       fitCheckCandidates: [],
       fitCheckResult: null,
       fitCheckManual: {},
+      fitCheckAiLoading: false,
+      fitCheckAiError: null,
+      fitCheckAiVerdict: null,
     },
   };
 
