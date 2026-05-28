@@ -146,6 +146,7 @@ async function vertaxAnalyzeRelease(payload) {
 }
 async function vertaxGetDjVerdict(analysis) {
   var release = (analysis && analysis.release) || {};
+  var lang = window.__vertaxAppLang || 'ru';
   var res = await fetch(vertaxApiUrl('/api/analyze-release').toString(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-User-Id': vertaxUserId() },
@@ -153,6 +154,7 @@ async function vertaxGetDjVerdict(analysis) {
       action: 'ai_verdict',
       release_id: release.discogs_id,
       collection_hash: analysis && analysis.collection_hash,
+      language: lang,
       analysis_summary: {
         release: release,
         scores: analysis && analysis.scores,

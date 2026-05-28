@@ -1352,12 +1352,24 @@ body #laiso-app .vertax-fit-auto-summary p + p {
 
 body #laiso-app .vertax-fit-ai-btn {
   margin-top: 12px !important;
-  background:
-    linear-gradient(115deg, rgba(200,255,46,.12), rgba(255,255,255,0) 35%),
-    linear-gradient(180deg, #20251A, #10110F) !important;
-  border-color: rgba(200,255,46,.42) !important;
-  color: #FFFFFF !important;
-  -webkit-text-fill-color: #FFFFFF !important;
+  background: linear-gradient(180deg, var(--runt-accent, #C8FF2E), var(--runt-accent-dark, #A7E600)) !important;
+  border-color: var(--runt-accent-dark, #A7E600) !important;
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+  text-shadow: none !important;
+}
+
+body #laiso-app .vertax-fit-ai-btn *,
+body #laiso-app .vertax-fit-ai-btn:hover *,
+body #laiso-app .vertax-fit-ai-btn:disabled * {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
+}
+
+body #laiso-app .vertax-fit-ai-btn:hover,
+body #laiso-app .vertax-fit-ai-btn:disabled {
+  color: #101010 !important;
+  -webkit-text-fill-color: #101010 !important;
 }
 
 body #laiso-app .vertax-fit-ai-box {
