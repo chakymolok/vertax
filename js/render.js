@@ -169,7 +169,7 @@ function renderVertaxDisplay() {
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-collection" data-testid="home-collection">Коллекция</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-set" data-testid="home-set-builder">Собрать сет</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import" data-testid="home-discogs-import">Импорт из Discogs</button>' +
-    '<button class="laiso-btn laiso-btn-secondary" data-action="goto-fit-check" data-testid="home-fit-check">Проверить пластинку</button>' +
+    '<button class="laiso-btn laiso-btn-secondary vertax-fit-home-cta" data-action="goto-fit-check" data-testid="home-fit-check"><span>Подойдёт ли пластинка?</span><small>проверить релиз по коллекции</small></button>' +
     '</div>' +
     '<div class="laiso-home-stickers">' +
     '<button class="laiso-sticker laiso-sticker-backup" data-action="goto-backup" data-testid="home-backup">' +
@@ -1868,32 +1868,65 @@ function renderFitCheckCandidate(c) {
     '</div></div><div class="laiso-vinyl-actions"><span class="laiso-badge laiso-badge-awaiting">выбрать</span></div></button>'
   );
 }
+function formatPercentValue(value) {
+  return Math.round((Number(value) || 0) * 100) + '%';
+}
+function renderFitCheckAutoSummary(text) {
+  var raw = String(text || '').trim();
+  if (!raw) return '';
+  var chunks = raw
+    .split('. ')
+    .map(function (part, idx, arr) {
+      var s = part.trim();
+      if (!s) return '';
+      if (idx < arr.length - 1 && !/[.!?]$/.test(s)) s += '.';
+      return s;
+    })
+    .filter(Boolean)
+    .slice(0, 5);
+  return (
+    '<div class="vertax-fit-auto-summary"><strong>Коротко</strong>' +
+    chunks
+      .map(function (part) {
+        return '<p>' + esc(part) + '</p>';
+      })
+      .join('') +
+    '</div>'
+  );
+}
 function renderFitCheckMatch(match) {
   var rt = match.release_track || {};
   var best = (match.best_collection_matches && match.best_collection_matches[0]) || {};
+  var releaseMeta = [rt.bpm ? rt.bpm + ' BPM' : '— BPM', rt.camelot || '—'].join(' / ');
+  var collectionTitle = [best.artist, best.title || '—'].filter(Boolean).join(' — ');
+  var reasons = (best.reasons || []).join(', ');
   return (
-    '<div class="laiso-set-card">' +
-    '<div class="laiso-set-card-head"><span class="laiso-set-pos">' +
+    '<article class="vertax-fit-match-card">' +
+    '<div class="vertax-fit-match-top">' +
+    '<div class="vertax-fit-track-title"><span class="vertax-fit-pos">' +
     esc(rt.position || '—') +
-    '</span><span class="laiso-set-title">' +
+    '</span><div><strong>' +
     esc(rt.title || '—') +
-    '</span></div><div class="laiso-set-meta">' +
-    esc((rt.bpm ? rt.bpm + ' BPM' : '— BPM') + ' / ' + (rt.camelot || '—')) +
-    ' → ' +
-    esc((best.artist || '') + ' — ' + (best.title || '—')) +
-    '</div><div class="laiso-set-pills"><span class="laiso-pill laiso-pill-bpm">' +
+    '</strong><small>' +
+    esc(releaseMeta) +
+    '</small></div></div>' +
+    '<div class="vertax-fit-score"><strong>' +
+    formatPercentValue(best.compatibility) +
+    '</strong><span>match</span></div></div>' +
+    '<div class="vertax-fit-link"><span>→</span><strong>' +
+    esc(collectionTitle) +
+    '</strong></div>' +
+    '<div class="vertax-fit-chips"><span class="vertax-fit-chip">' +
     esc(best.bpm ? best.bpm + ' BPM' : '— BPM') +
     '</span>' +
-    (best.camelot ? '<span class="laiso-pill laiso-pill-cam">' + esc(best.camelot) + '</span>' : '') +
-    '<span class="laiso-pill">' +
-    Math.round((best.compatibility || 0) * 100) +
-    '%</span></div>' +
-    (best.reasons && best.reasons.length
-      ? '<div class="laiso-hint" style="margin-top:8px;">Причина: ' +
-        esc(best.reasons.join(', ')) +
-        '</div>'
+    (best.camelot ? '<span class="vertax-fit-chip vertax-fit-chip-key">' + esc(best.camelot) + '</span>' : '') +
+    '<span class="vertax-fit-chip vertax-fit-chip-score">' +
+    formatPercentValue(best.compatibility) +
+    '</span></div>' +
+    (reasons
+      ? '<p class="vertax-fit-reasons"><strong>Причина:</strong> ' + esc(reasons) + '</p>'
       : '') +
-    '</div>'
+    '</article>'
   );
 }
 function renderFitCheckManualTrack(track, idx) {
@@ -1927,6 +1960,14 @@ function viewFitCheck() {
       u.fitCheckCandidates.map(renderFitCheckCandidate).join('') +
       '</div>'
     : '';
+  var enrichedCount = breakdown.enriched_count || 0;
+  var releaseTrackCount = result ? result.release_track_count || 0 : 0;
+  var matchedCount = breakdown.matched_track_count || 0;
+  var coveragePercent = Math.round((breakdown.metadata_coverage || 0) * 100);
+  var discogsStat = release.rating ? release.rating + '/5' : 'нет рейтинга';
+  var discogsSub = release.rating ? (release.rating_count || 0) + ' голосов' : 'Discogs';
+  var marketStat = market.lowest_price != null ? market.lowest_price + ' ' + (market.currency || '') : 'нет данных';
+  var marketSub = market.lowest_price != null ? (market.num_for_sale || 0) + ' в продаже' : 'маркетплейс';
   var resultHtml = result
     ? '<div class="laiso-mod-label">результат</div><div class="laiso-panel">' +
       '<div class="laiso-h2">' +
@@ -1937,26 +1978,30 @@ function viewFitCheck() {
       esc(scores.compatibility_score) +
       '</div><div class="laiso-lcd-label">' +
       esc(scores.scale_label) +
-      '</div></div><div class="laiso-stack-sm" style="margin-top:12px;">' +
-      '<div class="laiso-hint">' +
-      esc(confidenceLabel) +
-      ': BPM/Key найден для ' +
-      esc(breakdown.enriched_count || 0) +
+      '</div></div><div class="vertax-fit-summary-grid">' +
+      '<div class="vertax-fit-stat"><span>Оценка</span><strong>' +
+      esc(confidenceLabel.replace('Оценка ', '')) +
+      '</strong><small>BPM/Key: ' +
+      esc(enrichedCount) +
       ' из ' +
-      esc(result.release_track_count || 0) +
-      ' треков.</div><div class="laiso-hint">Пары: ' +
-      esc(breakdown.matched_track_count || 0) +
-      ' · покрытие: ' +
-      esc(Math.round((breakdown.metadata_coverage || 0) * 100)) +
-      '% · purchase score: ' +
+      esc(releaseTrackCount) +
+      '</small></div><div class="vertax-fit-stat"><span>Пары</span><strong>' +
+      esc(matchedCount) +
+      '</strong><small>покрытие ' +
+      esc(coveragePercent) +
+      '%</small></div><div class="vertax-fit-stat"><span>Purchase</span><strong>' +
       esc(scores.purchase_score) +
-      '/100</div><div class="laiso-hint">Discogs: ' +
-      esc(release.rating ? release.rating + '/5 (' + (release.rating_count || 0) + ')' : 'нет рейтинга') +
-      ' · Маркетплейс: ' +
-      esc(market.lowest_price ? 'от ' + market.lowest_price + ' ' + (market.currency || '') + ', ' + (market.num_for_sale || 0) + ' в продаже' : 'нет данных') +
-      '</div></div><p style="margin:14px 0 0;color:var(--text-secondary);">' +
-      esc(result.auto_summary || '') +
-      '</p></div><div class="laiso-mod-label">лучшие совпадения</div><div class="laiso-stack-sm">' +
+      '/100</strong><small>отдельный скор</small></div><div class="vertax-fit-stat"><span>Discogs</span><strong>' +
+      esc(discogsStat) +
+      '</strong><small>' +
+      esc(discogsSub) +
+      '</small></div><div class="vertax-fit-stat"><span>Market</span><strong>' +
+      esc(marketStat) +
+      '</strong><small>' +
+      esc(marketSub) +
+      '</small></div></div>' +
+      renderFitCheckAutoSummary(result.auto_summary) +
+      '</div><div class="laiso-mod-label">лучшие совпадения</div><div class="laiso-stack-sm">' +
       ((result.matches || []).slice(0, 8).map(renderFitCheckMatch).join('') ||
         '<div class="laiso-empty">Сильных совпадений не найдено.</div>') +
       '</div>' +

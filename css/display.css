@@ -1169,3 +1169,303 @@ body.vertax-offline #laiso-app [data-action="recognize-one"] {
   opacity: .55;
   filter: grayscale(.4);
 }
+
+/* Fit-check CTA and result cards */
+body #laiso-app .laiso-home-grid .vertax-fit-home-cta {
+  grid-column: 1 / -1 !important;
+  aspect-ratio: auto !important;
+  min-height: 86px !important;
+  padding: 16px 18px !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background:
+    linear-gradient(115deg, rgba(200,255,46,.10), rgba(255,255,255,0) 34%),
+    linear-gradient(180deg, #20251A, #10110F) !important;
+  border: 1px solid rgba(200,255,46,.44) !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  text-align: left !important;
+}
+
+body #laiso-app .laiso-home-grid .vertax-fit-home-cta::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(105deg, transparent 35%, rgba(200,255,46,.28) 48%, rgba(255,255,255,.20) 52%, transparent 65%);
+  transform: translateX(-58%) rotate(8deg);
+  animation: vertax-fit-sheen 3.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+body #laiso-app .laiso-home-grid .vertax-fit-home-cta span,
+body #laiso-app .laiso-home-grid .vertax-fit-home-cta small {
+  position: relative;
+  z-index: 1;
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+
+body #laiso-app .laiso-home-grid .vertax-fit-home-cta span {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.08;
+}
+
+body #laiso-app .laiso-home-grid .vertax-fit-home-cta small {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.74) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.74) !important;
+}
+
+@keyframes vertax-fit-sheen {
+  0%, 48% { transform: translateX(-58%) rotate(8deg); opacity: 0; }
+  58% { opacity: 1; }
+  100% { transform: translateX(58%) rotate(8deg); opacity: 0; }
+}
+
+body #laiso-app .vertax-fit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+body #laiso-app .vertax-fit-stat {
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid var(--runt-line, #D4D0C8);
+  border-radius: 14px;
+  background: var(--runt-card-soft, #F5F2ED);
+}
+
+body #laiso-app .vertax-fit-stat span,
+body #laiso-app .vertax-fit-stat small,
+body #laiso-app .vertax-fit-score span {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--runt-faint, #8A908A);
+}
+
+body #laiso-app .vertax-fit-stat strong {
+  display: block;
+  margin: 5px 0 3px;
+  font-size: 18px;
+  line-height: 1.05;
+  color: var(--runt-text, #101010);
+  -webkit-text-fill-color: var(--runt-text, #101010);
+  overflow-wrap: anywhere;
+}
+
+body #laiso-app .vertax-fit-auto-summary {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(200,255,46,.28);
+  background: linear-gradient(180deg, rgba(200,255,46,.08), rgba(200,255,46,.02));
+}
+
+body #laiso-app .vertax-fit-auto-summary > strong {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--runt-accent, #C8FF2E);
+  -webkit-text-fill-color: var(--runt-accent, #C8FF2E);
+}
+
+body #laiso-app .vertax-fit-auto-summary p {
+  margin: 0;
+  color: var(--runt-text, #101010);
+  line-height: 1.5;
+}
+
+body #laiso-app .vertax-fit-auto-summary p + p {
+  margin-top: 8px;
+}
+
+body #laiso-app .vertax-fit-match-card {
+  padding: 16px;
+  border: 1px solid var(--runt-line, #D4D0C8);
+  border-radius: 16px;
+  background: var(--runt-card, #FAFAF7);
+  box-shadow: 0 10px 24px var(--runt-shadow, rgba(16,17,15,.055));
+  overflow: hidden;
+}
+
+body #laiso-app .vertax-fit-match-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+body #laiso-app .vertax-fit-track-title {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+body #laiso-app .vertax-fit-pos {
+  display: inline-flex;
+  min-width: 58px;
+  max-width: 72px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: #080908;
+  color: var(--runt-accent, #C8FF2E);
+  -webkit-text-fill-color: var(--runt-accent, #C8FF2E);
+  font-family: var(--font-mono, monospace);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+body #laiso-app .vertax-fit-track-title strong {
+  display: block;
+  min-width: 0;
+  color: var(--runt-text, #101010);
+  -webkit-text-fill-color: var(--runt-text, #101010);
+  font-size: 24px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+body #laiso-app .vertax-fit-track-title small {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--runt-muted, #6D726E);
+}
+
+body #laiso-app .vertax-fit-score {
+  min-width: 92px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--runt-accent, #C8FF2E), var(--runt-accent-dark, #A7E600));
+  color: #101010;
+  -webkit-text-fill-color: #101010;
+  text-align: center;
+}
+
+body #laiso-app .vertax-fit-score strong {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 28px;
+  line-height: 1;
+  color: #101010;
+  -webkit-text-fill-color: #101010;
+}
+
+body #laiso-app .vertax-fit-score span {
+  margin-top: 4px;
+  color: rgba(16,16,16,.70);
+  -webkit-text-fill-color: rgba(16,16,16,.70);
+}
+
+body #laiso-app .vertax-fit-link {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-top: 14px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--runt-muted, #6D726E);
+}
+
+body #laiso-app .vertax-fit-link strong {
+  min-width: 0;
+  color: inherit;
+  -webkit-text-fill-color: inherit;
+  overflow-wrap: anywhere;
+}
+
+body #laiso-app .vertax-fit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+body #laiso-app .vertax-fit-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: var(--runt-card-soft, #F5F2ED);
+  color: var(--runt-text, #101010);
+  -webkit-text-fill-color: var(--runt-text, #101010);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+body #laiso-app .vertax-fit-chip-key,
+body #laiso-app .vertax-fit-chip-score {
+  background: #10110F;
+  color: var(--runt-accent, #C8FF2E);
+  -webkit-text-fill-color: var(--runt-accent, #C8FF2E);
+}
+
+body #laiso-app .vertax-fit-reasons {
+  margin: 14px 0 0;
+  color: var(--runt-muted, #6D726E);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+body #laiso-app .vertax-fit-reasons strong {
+  color: var(--runt-text, #101010);
+  -webkit-text-fill-color: var(--runt-text, #101010);
+}
+
+@media (max-width: 720px) {
+  body #laiso-app .vertax-fit-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  body #laiso-app .vertax-fit-match-top,
+  body #laiso-app .vertax-fit-track-title {
+    grid-template-columns: 1fr;
+  }
+
+  body #laiso-app .vertax-fit-score {
+    width: 100%;
+  }
+
+  body #laiso-app .vertax-fit-track-title strong {
+    font-size: 22px;
+  }
+}
