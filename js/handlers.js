@@ -1760,10 +1760,14 @@ on('fit-check-ai-verdict', async function () {
     state.ui.fitCheckAiVerdict = result.verdict || '';
   } catch (e) {
     var msg = String((e && e.message) || e || 'ai_unavailable');
-    state.ui.fitCheckAiError =
-      msg === 'ai_unavailable' || msg === 'gemini_api_key_missing'
-        ? 'DJ-разбор временно недоступен.'
-        : 'Не удалось получить DJ-разбор: ' + msg;
+    if (msg === 'ai_unavailable' || msg === 'gemini_api_key_missing') {
+      state.ui.fitCheckAiError = 'DJ-разбор временно недоступен.';
+    } else if (/quota|billing|free-tier|лимит|GROQ_API_KEY/i.test(msg)) {
+      state.ui.fitCheckAiError =
+        'DJ-разбор временно недоступен: у Gemini закончилась квота. Можно включить billing в Google AI Studio или добавить GROQ_API_KEY как запасной AI-провайдер.';
+    } else {
+      state.ui.fitCheckAiError = 'Не удалось получить DJ-разбор: ' + msg;
+    }
   } finally {
     state.ui.fitCheckAiLoading = false;
     render();

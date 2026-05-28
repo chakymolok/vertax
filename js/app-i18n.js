@@ -60,6 +60,8 @@
       'Думаю…': 'Thinking...',
       'Думаю по делу…': 'Thinking it through...',
       'DJ-разбор временно недоступен.': 'DJ breakdown is temporarily unavailable.',
+      'DJ-разбор временно недоступен: у Gemini закончилась квота. Можно включить billing в Google AI Studio или добавить GROQ_API_KEY как запасной AI-провайдер.':
+        'DJ breakdown is temporarily unavailable: Gemini quota is exhausted. Enable billing in Google AI Studio or add GROQ_API_KEY as a fallback AI provider.',
       'Импорт из Discogs': 'Discogs import',
       service: 'service',
       'Резервная копия': 'Backup',
@@ -225,6 +227,8 @@
       'Думаю…': '思考中...',
       'Думаю по делу…': '正在分析...',
       'DJ-разбор временно недоступен.': 'DJ 解读暂时不可用。',
+      'DJ-разбор временно недоступен: у Gemini закончилась квота. Можно включить billing в Google AI Studio или добавить GROQ_API_KEY как запасной AI-провайдер.':
+        'DJ 解读暂时不可用：Gemini 配额已用完。请在 Google AI Studio 启用 billing，或添加 GROQ_API_KEY 作为备用 AI。',
       'Импорт из Discogs': 'Discogs 导入',
       service: '服务',
       'Резервная копия': '备份',
@@ -373,6 +377,8 @@
       'Думаю…': '考え中...',
       'Думаю по делу…': '分析中...',
       'DJ-разбор временно недоступен.': 'DJコメントは一時的に利用できません。',
+      'DJ-разбор временно недоступен: у Gemini закончилась квота. Можно включить billing в Google AI Studio или добавить GROQ_API_KEY как запасной AI-провайдер.':
+        'DJコメントは一時的に利用できません。Gemini のクォータが上限です。Google AI Studio で billing を有効にするか、GROQ_API_KEY をフォールバックとして追加してください。',
       'Импорт из Discogs': 'Discogs インポート',
       service: 'サービス',
       'Резервная копия': 'バックアップ',
