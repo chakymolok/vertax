@@ -1,5 +1,5 @@
 {
-  "jsBytes": 484448,
+  "jsBytes": 484525,
   "cssBytes": 179339,
   "jsSources": [
     "js/db.js",
@@ -18,5 +18,5 @@
     "css/display.css",
     "css/app-i18n.css"
   ],
-  "builtAt": "2026-05-28T18:01:19.179Z"
+  "builtAt": "2026-05-28T18:11:52.855Z"
 }

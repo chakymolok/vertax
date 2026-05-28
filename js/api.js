@@ -58,6 +58,8 @@ function vertaxFlattenCollectionForAnalysis() {
         bpm: track.bpm || null,
         camelot: track.camelot || null,
         genre: track.genre || vinyl.genre || vinyl.style || null,
+        label: vinyl.label || track.label || track.vinylLabel || '',
+        catno: vinyl.catno || vinyl.catalog_number || '',
         discogs_release_id: releaseId,
         position: track.position || track.displayPosition || '',
         record_title: vinyl.title || '',
