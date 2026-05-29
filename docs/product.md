@@ -58,6 +58,7 @@ Main capabilities:
 - Discogs collection import.
 - Set builder.
 - "Will this record fit?" compatibility check against the local collection.
+- AI DJ breakdown for compatibility results, generated only on demand.
 - Live set mode.
 - Backup and restore.
 - Language selection and app-level i18n overlay.
@@ -127,6 +128,26 @@ Current intent:
 5. Vertax generates an ordered track list.
 6. User can edit, reorder, export, save, or enter Live Mode.
 
+### Check If A Record Fits
+
+1. User opens "Подойдёт ли пластинка?".
+2. User enters a release title or catalog number.
+3. Vertax builds or refreshes a temporary collection index under an anonymous local UUID.
+4. Vertax finds candidate releases in Discogs. If several versions are plausible, the user chooses the exact release.
+5. Vertax loads release metadata, cover art, tracklist, Discogs rating, marketplace signals, styles, genres, notes, and video titles when available.
+6. Vertax enriches release tracks with BPM and Camelot from Redis/Beatport/manual fallback.
+7. Vertax compares the release to the user's collection using math:
+   - BPM compatibility;
+   - Camelot compatibility;
+   - genre-family affinity;
+   - match density;
+   - metadata coverage.
+8. Vertax shows compatibility score, purchase signal, Discogs price/rating, best matches, unmatched tracks, and missing BPM/Key tracks.
+9. User may manually fill missing BPM/Key and recalculate.
+10. User may request an AI DJ breakdown.
+
+The AI DJ breakdown does not decide compatibility. It explains the already-computed result and may discuss the release context, labels/artists already present in the user's collection, Discogs notes, styles, and possible set use cases. It must not invent web facts or Discogs-owner comments that are not in the provided data.
+
 ### Backup And Restore
 
 1. User opens backup.
@@ -142,6 +163,14 @@ Server-side cache is used for shared metadata acceleration and admin/proposal wo
 
 For compatibility analysis, Vertax temporarily stores a normalized collection index on the server under an anonymous local UUID. This index is used only for compatibility math and expires after inactivity. The Redis key is `collection_index:{user_id}:{collection_hash}` with a sliding 30-day TTL.
 
+AI DJ verdicts are also temporary cached explanations. Their Redis key includes prompt version and language:
+
+```text
+ai_verdict:{prompt_version}:{lang}:{release_id}:{collection_hash}
+```
+
+They use a 30-day TTL and can be regenerated when prompt logic changes.
+
 ## Product Principles
 
 - Keep `/` stable and working.
@@ -151,10 +180,13 @@ For compatibility analysis, Vertax temporarily stores a normalized collection in
 - Keep vinyl-specific constraints visible: side, position, same-record warning, BPM, Key, Camelot.
 - Manual correction must remain easy because metadata sources are imperfect.
 - The app should work in bad network conditions after the first successful load.
+- AI should support the current app language and must remain subordinate to math-based compatibility.
 
 ## Current Constraints
 
 - Vercel Hobby has a serverless function limit. The project should stay at or below 12 functions unless deployment changes.
 - Some external services may be unavailable or rate-limited.
+- Gemini/Groq AI providers may be unavailable, out of quota, or missing keys; the app must fail gracefully.
+- The app currently does not perform general web search for release research. Any richer public web context should be added through an explicit search API and cached separately.
 - Prompt/confirm dialogs are not reliable in Telegram/VK/MAX WebViews; use in-app modals.
 - The current client architecture is vanilla JS with global state and patch installers. Changes should be careful and localized.

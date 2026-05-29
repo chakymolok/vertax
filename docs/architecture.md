@@ -252,7 +252,58 @@ Compatibility analysis adds temporary Redis collection indexes:
 - TTL behavior: sliding, refreshed on index lookup and repeated index sync;
 - purpose: compute release-to-collection compatibility without sending the full collection on every request.
 
+AI DJ verdicts are cached separately:
+
+- key: `ai_verdict:{prompt_version}:{lang}:{release_id}:{collection_hash}`;
+- TTL: 30 days;
+- purpose: avoid repeated AI calls for the same release, collection hash, prompt version, and UI language;
+- generated only after the user clicks `AI DJ-разбор`.
+
 The 30-day TTL is only for temporary collection indexes. It must not be applied to `vertax:beatport:track:*` or other shared track metadata caches.
+
+### Compatibility Analysis Data Flow
+
+Client helpers in `js/api.js`:
+
+- `vertaxFlattenCollectionForAnalysis()` flattens local collection tracks.
+- `vertaxCollectionHash()` hashes only stable analysis fields.
+- `vertaxSyncCollectionIndex()` posts to `/api/collection-index`.
+- `vertaxAnalyzeRelease()` posts to `/api/analyze-release`.
+- `vertaxGetDjVerdict()` posts to `/api/analyze-release` with `action: "ai_verdict"` and current UI language.
+
+Server helpers in `lib/compatibility-analysis.js`:
+
+- normalize collection tracks into a minimal index;
+- preserve release ID and track position when present;
+- include artist, title, BPM, Camelot, genre, label, record title, and position;
+- build buckets for future large-collection filtering;
+- load Discogs candidates/releases;
+- enrich release tracks through Redis/Beatport/manual fallback;
+- calculate compatibility score by math;
+- calculate stricter purchase signal;
+- build collection profile for AI context:
+  - BPM min/max/median;
+  - top genres;
+  - top genre families;
+  - top labels;
+  - top artists.
+
+The collection remains local-first. The Redis collection index is temporary compute cache, not the source of truth.
+
+### Compatibility Scoring
+
+The score is mathematical and does not use AI:
+
+- Camelot compatibility must be non-zero.
+- BPM compatibility must be non-zero.
+- Genre-family affinity adjusts the score when both genres are known.
+- Unknown genre does not penalize a track.
+- `compatibility_score` is based on harmonic overlap and collection density.
+- Discogs rating affects `purchase_score`, not `compatibility_score`.
+- `purchase_score` is capped when musical compatibility is weak so Discogs rating cannot make a poor musical fit look like a strong buying signal.
+- `recommended` currently requires at least `70/100`, enough overlap, and non-low confidence.
+
+AI may explain these results but must not recalculate them or override `recommended`.
 
 ## Serverless API
 
@@ -262,7 +313,7 @@ Current API functions:
 - `api/bpm.js` - GetSongBPM proxy using `GETSONGBPM_KEY`.
 - `api/beatport-lookup.js` - Beatport metadata lookup and cache.
 - `api/collection-index.js` - temporary per-user normalized collection index for compatibility analysis.
-- `api/analyze-release.js` - Discogs release lookup, BPM/Camelot enrichment, and mathematical compatibility scoring.
+- `api/analyze-release.js` - Discogs release lookup, BPM/Camelot enrichment, mathematical compatibility scoring, and `action: "ai_verdict"` AI explanation mode.
 - `api/discogs-ingest.js` - ingest local vinyl track metadata into shared cache/proposal flow.
 - `api/telegram-webhook.js` - Telegram admin callback webhook.
 - `api/admin/approve.js` - approve metadata proposal.
@@ -276,6 +327,8 @@ Vercel Hobby currently allows no more than 12 Serverless Functions. Adding an en
 ## Server Libraries
 
 - `lib/redis-cache.js` - Redis REST commands, Beatport cache, track proposals, import/export helpers.
+- `lib/compatibility-analysis.js` - release-to-collection scoring, Discogs release context, temporary collection index.
+- `lib/ai-verdict.js` - Gemini/Groq AI DJ breakdown, prompt-versioned multilingual cache.
 - `lib/beatport-auth.js` - Beatport token acquisition and refresh.
 - `lib/telegram-auth.js` - Telegram Mini App auth validation and admin notifications.
 - `lib/vk-auth.js` - VK launch param validation and admin check.
@@ -299,6 +352,17 @@ Required or used by code:
 - `EXPORT_TOKEN`
 - `VK_APP_SECRET` optional for VK auth
 - `VK_ADMIN_USER_ID` optional for VK admin
+- `GEMINI_API_KEY` optional for AI DJ breakdown
+- `GEMINI_MODEL` optional, defaults to `gemini-2.0-flash`
+- `GROQ_API_KEY` optional fallback for AI DJ breakdown
+- `GROQ_MODEL` optional, defaults to `llama-3.3-70b-versatile`
+
+AI provider behavior:
+
+- Gemini is tried first when `GEMINI_API_KEY` exists.
+- If Gemini is missing, unavailable, or out of quota, Groq can be used when `GROQ_API_KEY` exists.
+- AI errors must be shown as short human-readable UI messages, not raw provider logs.
+- AI answers are generated in the current app language: RU, EN, ZH, or JA.
 
 ## Service Worker
 

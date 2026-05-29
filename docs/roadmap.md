@@ -39,7 +39,29 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Improve partial-failure behavior when metadata sources fail.
 - Make source labels clear for BPM/Key results.
 - Preserve manual values over uncertain auto-detected values.
-- Continue improving "Will this record fit?" with better selection UI and real-world scoring checks.
+- Continue improving "Will this record fit?" with better selection UI, real-world scoring checks, and safer recommendation thresholds.
+
+### AI DJ Breakdown Quality
+
+- Keep AI subordinate to mathematical compatibility.
+- Prevent AI from recommending purchases when `recommended=false`.
+- Keep AI answers aligned with the current app language.
+- Improve release context using available Discogs fields:
+  - styles;
+  - genres;
+  - notes;
+  - video titles;
+  - label;
+  - year;
+  - format;
+  - marketplace/rating signals.
+- Improve collection context using:
+  - top labels;
+  - top artists;
+  - top genres;
+  - top genre families;
+  - BPM range and median BPM.
+- Consider adding a dedicated web-search context provider, but only with an explicit API/key and caching. Do not let AI invent public web facts.
 
 ## Next
 
@@ -74,6 +96,18 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Keep public APIs and admin APIs clearly separated.
 - Keep CORS narrow where possible.
 
+### Release Context Research
+
+- Add optional `release_context:{discogs_id}` cache if web-search context is introduced.
+- Evaluate search providers:
+  - Brave Search API;
+  - Tavily;
+  - SerpAPI;
+  - another lightweight provider with clear pricing.
+- Cache search summaries to reduce cost and latency.
+- Keep source URLs in the server response if public web context influences AI text.
+- Do not scrape or quote large copyrighted content.
+
 ### Documentation
 
 - Keep README short.
@@ -102,6 +136,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Improve confidence scoring across Beatport/GetSongBPM/AcousticBrainz/manual data.
 - Store Discogs release ID and track position as primary metadata identity.
 - Continue supporting normalized artist/title fallback.
+- Consider adding release-level context cache separate from track metadata cache.
 
 ### Architecture Cleanup
 
@@ -137,3 +172,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Added CI smoke workflow.
 - Added `data-testid` selectors for smoke stability.
 - Added the first non-AI core of "Подойдёт ли пластинка?": collection index, release analysis, mathematical scoring, and base UI.
+- Added AI DJ breakdown behind an explicit button, with Gemini first and Groq fallback.
+- Added multilingual AI responses based on current app language.
+- Added Discogs release cover, notes, video-title context, styles, genres, marketplace signal, and collection-profile context for compatibility analysis.
+- Tightened purchase recommendation rules so weak compatibility cannot become a strong buying recommendation because of Discogs rating alone.

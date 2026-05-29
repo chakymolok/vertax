@@ -193,13 +193,71 @@ Metadata sources are imperfect. Preserve user control.
 - Partial failures should not kill the whole flow.
 - Compatibility score must be calculated by math, not by AI.
 - AI/DJ verdicts, when present, may explain the result but must not decide compatibility.
+- AI must never upgrade a weak mathematical fit into a buying recommendation.
+- If `recommended=false`, AI must not say "buy", "worth buying", or "стоит рассмотреть к покупке".
+- If `compatibility_score < 70`, AI may describe the release as a possible contrast/special tool only when the data supports it.
+- Discogs rating, price, or scarcity signals must not mask poor BPM/Camelot/genre compatibility.
+- When release context is thin, AI must say "по доступным данным" or equivalent rather than inventing facts.
+- AI responses must use the current app language.
+
+## Compatibility Analysis Rules
+
+The "Подойдёт ли пластинка?" feature has two layers:
+
+1. Math layer:
+   - lives in `lib/compatibility-analysis.js`;
+   - calculates BPM, Camelot, style affinity, overlap, density, confidence, compatibility score, purchase signal, and recommendation label;
+   - may use Discogs release data, Redis/Beatport enrichment, manual fallback, and collection profile.
+2. AI explanation layer:
+   - lives in `lib/ai-verdict.js`;
+   - explains the result only after explicit user action;
+   - must follow `recommended` and `recommendation_label`;
+   - must not recalculate score;
+   - must not invent web facts, Discogs comments, rarity, or historical importance.
+
+Current collection profile fields used for analysis/AI:
+
+- `track_count`;
+- `bpm_min`;
+- `bpm_max`;
+- `bpm_median`;
+- `top_genres`;
+- `top_genre_families`;
+- `top_labels`;
+- `top_artists`.
+
+Current release context fields used for analysis/AI:
+
+- artist;
+- title;
+- label;
+- catalog number;
+- year;
+- country;
+- format;
+- genres;
+- styles;
+- Discogs notes;
+- Discogs video titles/descriptions;
+- rating and rating count;
+- marketplace price/availability;
+- cover image URL;
+- Discogs URL.
+
+General web search is not currently part of the product. To add it:
+
+- add an explicit server-side provider/API;
+- cache public release context separately, e.g. `release_context:{discogs_id}`;
+- include source URLs;
+- avoid long copyrighted quotes;
+- never use AI model memory as if it were verified web research.
 
 ## Redis TTL Rules
 
 Temporary compatibility keys may expire:
 
 - `collection_index:{user_id}:{collection_hash}` gets a sliding 30-day TTL.
-- future `ai_verdict:{release_id}:{collection_hash}` may also use a 30-day TTL.
+- `ai_verdict:{prompt_version}:{lang}:{release_id}:{collection_hash}` gets a 30-day TTL.
 
 Shared metadata keys must not receive that TTL:
 
