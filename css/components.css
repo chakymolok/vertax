@@ -298,6 +298,7 @@
 }
 #laiso-app .dig-card,
 #laiso-app .dig-briefs,
+#laiso-app .dig-candidates-panel,
 #laiso-app .dig-camelot,
 #laiso-app .dig-bpm{
   min-width:0;
@@ -309,6 +310,7 @@
 }
 #laiso-app .dig-card h2,
 #laiso-app .dig-briefs h2,
+#laiso-app .dig-candidates-panel h2,
 #laiso-app .dig-camelot h2,
 #laiso-app .dig-bpm h2{
   margin:0 0 12px;
@@ -322,6 +324,17 @@
   max-width:760px;
   color:var(--text-secondary,#666158);
   line-height:1.55;
+}
+#laiso-app .dig-candidates-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+}
+#laiso-app .dig-candidates-panel p{
+  margin:0;
+  color:var(--text-secondary,#666158);
+  line-height:1.45;
 }
 #laiso-app .dig-actions{
   display:flex;
@@ -510,6 +523,119 @@
   color:var(--text-secondary,#666158);
   line-height:1.45;
 }
+#laiso-app .dig-gap-candidates{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--border,#E2D9CD);
+}
+#laiso-app .dig-gap-candidates-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+#laiso-app .dig-gap-candidates-head strong{
+  font-size:13px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#laiso-app .dig-gap-candidates-head span{
+  font-family:var(--font-mono,monospace);
+  font-size:10px;
+  color:var(--text-secondary,#666158);
+}
+#laiso-app .candidate-list{
+  display:grid;
+  gap:10px;
+  margin-top:10px;
+}
+#laiso-app .candidate-card{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr);
+  gap:12px;
+  align-items:start;
+  min-width:0;
+  border:1px solid var(--border,#E2D9CD);
+  border-radius:8px;
+  background:var(--surface-muted,#F7F4ED);
+  padding:10px;
+}
+#laiso-app .candidate-card--strong{
+  border-color:rgba(196,245,66,.85);
+}
+#laiso-app .candidate-card--saved{
+  box-shadow:0 0 0 2px rgba(196,245,66,.25);
+}
+#laiso-app .candidate-cover{
+  width:72px;
+  aspect-ratio:1;
+  object-fit:cover;
+  border-radius:8px;
+  background:#111;
+}
+#laiso-app .candidate-cover--empty{
+  display:block;
+}
+#laiso-app .candidate-main{
+  min-width:0;
+  display:grid;
+  gap:7px;
+}
+#laiso-app .candidate-kicker{
+  font-family:var(--font-mono,monospace);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--text-secondary,#666158);
+}
+#laiso-app .candidate-card h3{
+  margin:0;
+  min-width:0;
+  font-size:16px;
+  line-height:1.12;
+  letter-spacing:0;
+  overflow-wrap:anywhere;
+}
+#laiso-app .candidate-meta{
+  margin:0;
+  color:var(--text-secondary,#666158);
+  font-size:12px;
+  line-height:1.3;
+}
+#laiso-app .candidate-score{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  color:var(--text-primary,#111);
+}
+#laiso-app .candidate-score strong{
+  font-family:var(--font-mono,monospace);
+  font-size:34px;
+  line-height:.95;
+}
+#laiso-app .candidate-score span{
+  font-family:var(--font-mono,monospace);
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--text-secondary,#666158);
+}
+#laiso-app .candidate-why{
+  display:grid;
+  gap:4px;
+  margin:0;
+  padding-left:18px;
+  color:var(--text-secondary,#666158);
+  font-size:12px;
+  line-height:1.35;
+}
+#laiso-app .candidate-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
 #laiso-app .dig-bpm-histogram{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
@@ -580,15 +706,29 @@
   }
   #laiso-app .dig-card,
   #laiso-app .dig-briefs,
+  #laiso-app .dig-candidates-panel,
   #laiso-app .dig-camelot,
   #laiso-app .dig-bpm{
     padding:14px;
+  }
+  #laiso-app .dig-candidates-panel{
+    grid-template-columns:1fr;
   }
   #laiso-app .dig-confidence{
     flex-direction:column;
   }
   #laiso-app .dig-confidence-label{
     width:100%;
+  }
+  #laiso-app .candidate-card{
+    grid-template-columns:56px minmax(0,1fr);
+    gap:10px;
+  }
+  #laiso-app .candidate-cover{
+    width:56px;
+  }
+  #laiso-app .candidate-score strong{
+    font-size:28px;
   }
 }
 @media(max-width:620px){

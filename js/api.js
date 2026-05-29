@@ -151,6 +151,20 @@ async function vertaxAnalyzeRelease(payload) {
   }
   return body;
 }
+async function vertaxLoadCandidates(payload) {
+  var res = await fetch(vertaxApiUrl('/api/candidates').toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-User-Id': vertaxUserId() },
+    body: JSON.stringify(payload || {}),
+  });
+  var body = await res.json().catch(function () {
+    return {};
+  });
+  if (body && body.error === 'collection_index_missing')
+    throw new Error('collection_index_missing');
+  if (!res.ok || !body.ok) throw new Error(body.error || body.message || 'candidates-failed');
+  return body;
+}
 async function vertaxGetDjVerdict(analysis) {
   var release = (analysis && analysis.release) || {};
   var lang = window.__vertaxAppLang || 'ru';

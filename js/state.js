@@ -110,7 +110,14 @@ ALL_KEYS.forEach(function (k) {
       fitCheckAiLoading: false,
       fitCheckAiError: null,
       fitCheckAiVerdict: null,
-      dig: { force_show: false, show_all_briefs: false },
+      dig: {
+        force_show: false,
+        show_all_briefs: false,
+        candidates_loading: false,
+        candidates_error: null,
+        candidates_result: null,
+        candidates_hash: null,
+      },
     },
   };
 

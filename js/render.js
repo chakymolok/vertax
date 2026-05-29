@@ -2461,7 +2461,138 @@ function renderDigCamelotGrid(analysis) {
     '</div></div>'
   );
 }
-function renderDigGapCard(gap) {
+function digRenderCandidateStatusMap() {
+  try {
+    return JSON.parse(localStorage.getItem('vertax_candidate_status') || '{}') || {};
+  } catch (_) {
+    return {};
+  }
+}
+function digRenderGapKey(gap) {
+  if (!gap) return '';
+  if (gap.type === 'bpm' || gap.bpm_range)
+    return 'bpm:' + (gap.bpm_range || gap.target_bpm_range || '');
+  return 'camelot:' + (gap.camelot || '');
+}
+function digRenderGroupsByGap(result) {
+  var map = {};
+  ((result && result.groups) || []).forEach(function (group) {
+    map[digRenderGapKey(group.gap)] = group;
+  });
+  return map;
+}
+function renderDigCandidateCard(candidate, bucket) {
+  var statuses = digRenderCandidateStatusMap();
+  var status =
+    statuses[String(candidate.discogs_id)] && statuses[String(candidate.discogs_id)].status;
+  if (status === 'hidden' || status === 'owned') return '';
+  var score = candidate.scores && candidate.scores.compatibility_score;
+  var market = candidate.marketplace || {};
+  var price = market.average_price || market.lowest_price;
+  var marketText = price
+    ? (market.average_price ? 'средняя ' : 'от ') +
+      price +
+      (market.currency ? ' ' + market.currency : '')
+    : 'цена неизвестна';
+  var title = [candidate.artist, candidate.title].filter(Boolean).join(' — ');
+  return (
+    '<article class="candidate-card candidate-card--' +
+    esc(bucket) +
+    (status === 'wishlist' ? ' candidate-card--saved' : '') +
+    '" data-discogs-id="' +
+    esc(candidate.discogs_id) +
+    '">' +
+    (candidate.cover_url
+      ? '<img class="candidate-cover" src="' + esc(candidate.cover_url) + '" alt="">'
+      : '<div class="candidate-cover candidate-cover--empty"></div>') +
+    '<div class="candidate-main"><div class="candidate-kicker">' +
+    esc(bucket === 'strong' ? 'Strong fit' : bucket === 'probable' ? 'Probable fit' : 'Explore') +
+    (status === 'wishlist' ? ' · wishlist' : '') +
+    '</div><h3>' +
+    esc(title || 'Discogs release #' + candidate.discogs_id) +
+    '</h3><p class="candidate-meta">' +
+    esc([candidate.label, candidate.year, candidate.catalog_number].filter(Boolean).join(' · ')) +
+    '</p><div class="candidate-score"><strong>' +
+    esc(score == null ? '—' : score) +
+    '</strong><span>совместимость</span></div><ul class="candidate-why">' +
+    ((candidate.why || [])
+      .map(function (item) {
+        return '<li>' + esc(item) + '</li>';
+      })
+      .join('') || '<li>Есть пересечение с текущим gap.</li>') +
+    (candidate.scores && candidate.scores.purchase_score
+      ? '<li>Реко к покупке ' + esc(candidate.scores.purchase_score) + '/100</li>'
+      : '') +
+    (market.lowest_price || market.num_for_sale
+      ? '<li>Цена на Discogs: ' +
+        esc(marketText) +
+        (market.num_for_sale ? ', ' + esc(market.num_for_sale) + ' в продаже' : '') +
+        '</li>'
+      : '') +
+    '</ul><div class="candidate-actions"><button class="laiso-btn laiso-btn-sm laiso-btn-main" data-action="candidate-analyze">Анализировать</button><button class="laiso-btn laiso-btn-sm laiso-btn-secondary" data-action="candidate-wishlist">В wishlist</button><button class="laiso-btn laiso-btn-sm laiso-btn-secondary" data-action="candidate-hide">Скрыть</button><button class="laiso-btn laiso-btn-sm laiso-btn-secondary" data-action="candidate-owned">Уже есть</button></div></div></article>'
+  );
+}
+function renderDigCandidatesForGap(group) {
+  if (!group) return '';
+  var strong = (group.strong || []).map(function (candidate) {
+    return renderDigCandidateCard(candidate, 'strong');
+  });
+  var probable = (group.probable || []).map(function (candidate) {
+    return renderDigCandidateCard(candidate, 'probable');
+  });
+  var explore = (group.explore || []).map(function (candidate) {
+    return renderDigCandidateCard(candidate, 'explore');
+  });
+  var cards = strong.concat(probable, explore).filter(Boolean);
+  if (!cards.length) return '';
+  return (
+    '<div class="dig-gap-candidates"><div class="dig-gap-candidates-head"><strong>Кандидаты</strong><span>' +
+    esc(group.match_scope || '') +
+    '</span></div><p class="dig-muted">' +
+    esc(group.summary || '') +
+    '</p><div class="candidate-list">' +
+    cards.join('') +
+    '</div></div>'
+  );
+}
+function renderDigCandidatesControls(analysis) {
+  var ui = (state.ui && state.ui.dig) || {};
+  if ((analysis.record_count || 0) < 5) return '';
+  var totalGroups =
+    ui.candidates_result && ui.candidates_result.groups ? ui.candidates_result.groups.length : 0;
+  var totalEmpty =
+    ui.candidates_result && ui.candidates_result.empty_groups
+      ? ui.candidates_result.empty_groups.length
+      : 0;
+  return (
+    '<section class="dig-candidates-panel"><div><h2>Кандидаты-релизы</h2><p>' +
+    ((analysis.record_count || 0) < 20
+      ? 'Коллекция ещё небольшая, поэтому рекомендации будут осторожными.'
+      : 'Можно подобрать конкретные пластинки из серверной базы кандидатов под самые заметные gaps.') +
+    '</p></div><button class="laiso-btn laiso-btn-main" data-action="dig-load-candidates" data-testid="dig-load-candidates" ' +
+    (ui.candidates_loading ? 'disabled' : '') +
+    '>' +
+    (ui.candidates_loading ? '<span class="laiso-spinner"></span> Ищу…' : 'Найти кандидатов') +
+    '</button>' +
+    (ui.candidates_error
+      ? '<p class="laiso-hint laiso-hint-warn">' + esc(ui.candidates_error) + '</p>'
+      : '') +
+    (ui.candidates_result && !totalGroups
+      ? '<p class="dig-muted">' +
+        esc(
+          totalEmpty
+            ? 'Пока не нашли конкретных релизов под эти gaps. База кандидатов ещё пополняется.'
+            : 'База кандидатов ещё не заполнена.'
+        ) +
+        '</p>'
+      : '') +
+    (ui.candidates_result && totalGroups
+      ? '<p class="dig-muted">Найдено групп с кандидатами: ' + esc(totalGroups) + '.</p>'
+      : '') +
+    '</section>'
+  );
+}
+function renderDigGapCard(gap, group) {
   return (
     '<article class="dig-gap-card" data-testid="dig-gap-card" data-camelot="' +
     esc(gap.camelot) +
@@ -2481,7 +2612,9 @@ function renderDigGapCard(gap) {
       : '') +
     '</header><p class="dig-gap-brief">' +
     esc(gap.brief) +
-    '</p></article>'
+    '</p>' +
+    renderDigCandidatesForGap(group) +
+    '</article>'
   );
 }
 function renderDigBpm(analysis) {
@@ -2517,6 +2650,9 @@ function renderDigBpm(analysis) {
 }
 function renderDigAnalysis(analysis) {
   var coveragePct = Math.round((analysis.metadata_coverage || 0) * 100);
+  var groupsByGap = digRenderGroupsByGap(
+    state.ui && state.ui.dig && state.ui.dig.candidates_result
+  );
   return (
     '<section class="dig-meta"><div class="dig-confidence dig-confidence--' +
     esc(analysis.confidence) +
@@ -2532,11 +2668,20 @@ function renderDigAnalysis(analysis) {
     esc(coveragePct) +
     '%</span></div></section>' +
     renderDigBriefs(analysis) +
+    renderDigCandidatesControls(analysis) +
     '<section class="dig-camelot"><h2>Camelot</h2>' +
     renderDigCamelotGrid(analysis) +
     '<div class="dig-camelot-gaps">' +
     (analysis.camelot_gaps.length
-      ? analysis.camelot_gaps.slice(0, 12).map(renderDigGapCard).join('')
+      ? analysis.camelot_gaps
+          .slice(0, 12)
+          .map(function (gap) {
+            return renderDigGapCard(
+              gap,
+              groupsByGap[digRenderGapKey({ type: 'camelot', camelot: gap.camelot })]
+            );
+          })
+          .join('')
       : '<p class="dig-muted">Критичных Camelot-провалов не видно.</p>') +
     '</div></section><section class="dig-bpm"><h2>BPM</h2>' +
     renderDigBpm(analysis) +
@@ -2551,7 +2696,11 @@ function renderDigAnalysis(analysis) {
               esc(gap.range) +
               ' BPM</span></header><p class="dig-gap-brief">' +
               esc(gap.brief) +
-              '</p></article>'
+              '</p>' +
+              renderDigCandidatesForGap(
+                groupsByGap[digRenderGapKey({ type: 'bpm', bpm_range: gap.range })]
+              ) +
+              '</article>'
             );
           })
           .join('')

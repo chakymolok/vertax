@@ -59,6 +59,7 @@ Main capabilities:
 - Set builder.
 - "Will this record fit?" compatibility check against the local collection.
 - "Что докопать" local collection gaps analysis: Camelot/BPM gaps, metadata coverage, and rule-based digging briefs.
+- "Что докопать" release candidates: seeded server-side records matched into local collection gaps.
 - AI DJ breakdown for compatibility results, generated only on demand.
 - Live set mode.
 - Backup and restore.
@@ -155,11 +156,15 @@ The AI DJ breakdown does not decide compatibility. It explains the already-compu
 2. Vertax analyzes the local collection already loaded in memory.
 3. Vertax flattens records into tracks and counts BPM/Camelot coverage.
 4. Vertax shows a Camelot heatmap, BPM histogram, weak zones, and short rule-based digging briefs.
-5. Empty and tiny collections show onboarding instead of confident recommendations.
+5. User can click "Найти кандидатов".
+6. Vertax refreshes a temporary collection index and asks `/api/candidates` for seeded release candidates grouped by gap.
+7. Candidate cards appear inside the relevant gap cards, not as a separate shop window.
+8. User can analyze a candidate with the existing "Подойдёт ли пластинка?" flow, save it to wishlist, hide it, or mark it as already owned.
+9. Empty and tiny collections show onboarding instead of confident recommendations.
 
-This is a local-first helper for crate direction, not a server-side recommendation engine. Stage 1 does not call AI, Discogs, Beatport, or new APIs.
+This is a local-first helper for crate direction. The gap analysis remains client-side and non-AI. Candidate selection is mathematical and uses the server-side candidate database; AI is not involved.
 
-Stage 2 prepares the server-side candidate release database for future "Что докопать" recommendations. Users do not see candidates yet. Admins can manually seed candidate releases from Discogs release IDs or Discogs label IDs; Stage 3 will connect those candidates to the UI.
+Stage 2 prepared the server-side candidate release database. Stage 3 connects collection gaps with concrete release candidates from that database.
 
 ### Backup And Restore
 
@@ -173,6 +178,8 @@ Stage 2 prepares the server-side candidate release database for future "Что �
 The primary collection lives locally in the user's browser via IndexedDB. Vertax should treat local user data as the source of truth for the app experience.
 
 Server-side cache is used for shared metadata acceleration and admin/proposal workflows, not as the user's primary collection storage.
+
+For "Что докопать" recommendations, Vertax may temporarily send a normalized collection index to the server for compatibility calculations. The index has a sliding 30-day TTL and is used only for analysis. Wishlist, hidden, and owned candidate statuses stay local on the device in `localStorage`.
 
 For compatibility analysis, Vertax temporarily stores a normalized collection index on the server under an anonymous local UUID. This index is used only for compatibility math and expires after inactivity. The Redis key is `collection_index:{user_id}:{collection_hash}` with a sliding 30-day TTL.
 

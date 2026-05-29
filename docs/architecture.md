@@ -198,11 +198,19 @@ It:
 
 Digging briefs in dig view are rule-generated and RU-only in Stage 1. Translations will be added after templates stabilize.
 
-Stage 1 creates no new API endpoints, no serverless functions, no IndexedDB stores, and no IndexedDB migrations. The view reads from `state.collection` only.
+Stage 1 created no new API endpoints, no serverless functions, no IndexedDB stores, and no IndexedDB migrations. The base gap view still reads from `state.collection` only.
+
+Stage 3 adds candidate loading on top of the same view:
+
+- `dig-load-candidates` computes the current collection hash and syncs `/api/collection-index`;
+- the client sends only top gaps, `collection_hash`, local excluded IDs, and a compact collection profile to `/api/candidates`;
+- candidate cards are rendered inside matching gap cards;
+- candidate actions are local-only: wishlist, hidden, and owned live in `localStorage` under `vertax_candidate_status`;
+- hidden and owned IDs are sent as one-request exclusions, but the server does not persist those statuses.
 
 ### Release Candidate Database
 
-Stage 2 adds a persistent Redis database of candidate releases for future "Что докопать" recommendations. This is admin-seeded only; there is no user-facing `/api/candidates` endpoint yet.
+Stage 2 added a persistent Redis database of candidate releases. Stage 3 adds the user-facing `/api/candidates` endpoint that reads this database and groups candidates by collection gaps.
 
 Full release records:
 
@@ -243,6 +251,29 @@ POST /api/admin/maintenance { "action": "export_candidates" }
 ```
 
 The seed flow accepts `release_ids` or `label_id` batches. It does not create user recommendations in Stage 2.
+
+### Candidate Recommendations
+
+`api/candidates.js` accepts:
+
+- `X-User-Id`, the anonymous local UUID;
+- `collection_hash`, pointing to `collection_index:{user_id}:{collection_hash}`;
+- up to eight client-computed gaps;
+- local `excluded_ids` and `owned_ids`;
+- optional `collection_profile` with top labels, artists, and genre families.
+
+The endpoint never accepts or stores the full collection. It loads the temporary collection index with `getCollectionIndex()`, which also refreshes the sliding 30-day TTL.
+
+`lib/candidate-recommendations.js` owns:
+
+- reading Redis candidate indexes;
+- matching Camelot gaps through `vertax:candidates:by_camelot:*`, BPM buckets, and genre family indexes;
+- matching BPM gaps through `vertax:candidates:by_bpm_bucket:*` plus nearby Camelot sets;
+- expansion scopes such as exact gap, without family, and Camelot-only/BPM-only;
+- mathematical candidate scoring through the same `trackCompatibility()` logic used by release analysis;
+- grouping candidates into `strong`, `probable`, and `explore`.
+
+No AI is used for candidate selection. Candidate release records and indexes remain permanent and have no TTL.
 
 ## Event Handling
 
@@ -384,18 +415,20 @@ Current API functions:
 - `api/beatport-lookup.js` - Beatport metadata lookup and cache.
 - `api/collection-index.js` - temporary per-user normalized collection index for compatibility analysis.
 - `api/analyze-release.js` - Discogs release lookup, BPM/Camelot enrichment, mathematical compatibility scoring, and `action: "ai_verdict"` AI explanation mode.
+- `api/candidates.js` - matches seeded release candidates into "Что докопать" gap cards using the temporary collection index.
 - `api/discogs-ingest.js` - ingest local vinyl track metadata into shared cache/proposal flow.
 - `api/telegram-webhook.js` - Telegram admin callback webhook.
 - `api/admin/proposals.js` - list, approve, and reject metadata proposals.
 - `api/admin/maintenance.js` - import backup, rebuild Beatport cache, seed release candidates, candidate stats, and candidate export.
 
-Vercel Hobby currently allows no more than 12 Serverless Functions. The admin consolidation reduced the current API function count to 9.
+Vercel Hobby currently allows no more than 12 Serverless Functions. The admin consolidation reduced the API function count to 9; adding `/api/candidates` brings it to 10.
 
 ## Server Libraries
 
 - `lib/redis-cache.js` - Redis REST commands, Beatport cache, track proposals, import/export helpers.
 - `lib/compatibility-analysis.js` - release-to-collection scoring, Discogs release context, temporary collection index.
 - `lib/release-candidates.js` - persistent candidate release database, indexes, manual seed, stats, and export.
+- `lib/candidate-recommendations.js` - gap-to-candidate lookup, candidate scoring, and response grouping.
 - `lib/ai-verdict.js` - Gemini/Groq AI DJ breakdown, prompt-versioned multilingual cache.
 - `lib/beatport-auth.js` - Beatport token acquisition and refresh.
 - `lib/telegram-auth.js` - Telegram Mini App auth validation and admin notifications.

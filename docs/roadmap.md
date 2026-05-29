@@ -43,9 +43,8 @@ This roadmap is organized by practical product and engineering priorities. It is
 
 ### What To Dig Next / Collection Gaps
 
-- Stage 3: add a candidates endpoint and show release candidates inside gap cards.
-- Stage 3: add wishlist, hidden, and owned statuses.
 - Stage 4: consider cron/digest flows after candidate quality is proven.
+- Stage 4: add smarter candidate refresh, digest, and price-alert experiments after recommendation quality is proven.
 
 ### AI DJ Breakdown Quality
 
@@ -170,6 +169,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Added `/vk` placeholder route.
 - Added Stage 1 "Что докопать / Collection Gaps": local Camelot/BPM gap analysis, metadata coverage, onboarding gates, and rule-based digging briefs without new APIs.
 - Added Stage 2 "Что докопать / Release Candidates Database": consolidated admin functions, added persistent Redis candidate releases, candidate indexes, manual seed by release IDs or label ID, candidate stats, and candidate export.
+- Added Stage 3 "Что докопать / Candidate Recommendations": `/api/candidates`, gap-grouped release candidates, local wishlist/hidden/owned statuses, and candidate-to-analysis flow.
 - Added build output to `public/`.
 - Added `vercel.json`.
 - Added bundled/minified JS and CSS outputs.

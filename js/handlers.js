@@ -274,6 +274,230 @@ on('dig-camelot-cell', function (_, el) {
   var card = document.querySelector('.dig-gap-card[data-camelot="' + cell + '"]');
   if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
+function digCandidateStatuses() {
+  try {
+    return JSON.parse(localStorage.getItem('vertax_candidate_status') || '{}') || {};
+  } catch (_) {
+    return {};
+  }
+}
+function digSetCandidateStatus(id, status) {
+  if (!id) return;
+  var map = digCandidateStatuses();
+  if (!status || status === 'none') delete map[id];
+  else map[id] = { status: status, updated_at: new Date().toISOString() };
+  try {
+    localStorage.setItem('vertax_candidate_status', JSON.stringify(map));
+  } catch (_) {}
+}
+function digClientGenreFamily(value) {
+  var text = String(value || '').toLowerCase();
+  if (!text) return null;
+  if (
+    text.indexOf('drum') >= 0 ||
+    text.indexOf('jungle') >= 0 ||
+    text.indexOf('breakbeat') >= 0 ||
+    text.indexOf('breaks') >= 0 ||
+    text.indexOf('garage') >= 0 ||
+    text.indexOf('footwork') >= 0 ||
+    text.indexOf('bassline') >= 0 ||
+    text.indexOf('bass') >= 0
+  )
+    return 'bass';
+  if (text.indexOf('dubstep') >= 0 || text.indexOf('grime') >= 0 || text.indexOf('140') >= 0)
+    return 'dub';
+  if (text.indexOf('house') >= 0 || text.indexOf('techno') >= 0 || text.indexOf('disco') >= 0)
+    return 'house_techno';
+  return 'other';
+}
+function digCollectionProfile(collection) {
+  var labels = {};
+  var artists = {};
+  var families = {};
+  (collection || []).forEach(function (vinyl) {
+    if (vinyl.label) labels[vinyl.label] = (labels[vinyl.label] || 0) + 1;
+    if (vinyl.artist) artists[vinyl.artist] = (artists[vinyl.artist] || 0) + 1;
+    var family = digClientGenreFamily([vinyl.genre, vinyl.style].filter(Boolean).join(' '));
+    if (family) families[family] = (families[family] || 0) + 1;
+    (vinyl.tracklist || []).forEach(function (track) {
+      var trackFamily = digClientGenreFamily(
+        [track.genre, track.style, vinyl.genre, vinyl.style].filter(Boolean).join(' ')
+      );
+      if (trackFamily) families[trackFamily] = (families[trackFamily] || 0) + 1;
+    });
+  });
+  function top(obj, limit) {
+    return Object.keys(obj)
+      .map(function (name) {
+        return { name: name, count: obj[name] };
+      })
+      .sort(function (a, b) {
+        return b.count - a.count;
+      })
+      .slice(0, limit || 8);
+  }
+  return {
+    top_labels: top(labels, 10),
+    top_artists: top(artists, 10),
+    genre_families: top(families, 4).map(function (item) {
+      return item.name;
+    }),
+  };
+}
+function digDominantBpmRange(analysis) {
+  var rows = (analysis && analysis.bpm_histogram) || [];
+  var best = rows.slice().sort(function (a, b) {
+    return (b.count || 0) - (a.count || 0);
+  })[0];
+  return best && best.count ? best.range : null;
+}
+function digTopCamelots(analysis) {
+  var grid = (analysis && analysis.camelot_grid) || {};
+  return Object.keys(grid)
+    .map(function (camelot) {
+      return {
+        camelot: camelot,
+        count: grid[camelot] && grid[camelot].count ? grid[camelot].count : 0,
+      };
+    })
+    .sort(function (a, b) {
+      return b.count - a.count;
+    })
+    .slice(0, 3)
+    .map(function (item) {
+      return item.camelot;
+    });
+}
+function digBuildCandidateGaps(analysis, profile) {
+  var family = profile && profile.genre_families && profile.genre_families[0];
+  var dominantBpm = digDominantBpmRange(analysis);
+  var camelot = ((analysis && analysis.camelot_gaps) || []).slice(0, 6).map(function (gap) {
+    return {
+      type: 'camelot',
+      camelot: gap.camelot,
+      priority: gap.priority,
+      level: gap.level,
+      target_bpm_range: dominantBpm,
+      genre_family: family || null,
+    };
+  });
+  var bpm = ((analysis && analysis.bpm_gaps) || []).slice(0, 2).map(function (gap) {
+    return {
+      type: 'bpm',
+      bpm_range: gap.range,
+      nearby_camelots: digTopCamelots(analysis),
+      genre_family: family || null,
+    };
+  });
+  return camelot.concat(bpm).slice(0, 8);
+}
+function digExcludedCandidateIds() {
+  var statuses = digCandidateStatuses();
+  return Object.keys(statuses).filter(function (id) {
+    return statuses[id] && (statuses[id].status === 'hidden' || statuses[id].status === 'owned');
+  });
+}
+function digOwnedCandidateIds() {
+  var statuses = digCandidateStatuses();
+  return Object.keys(statuses).filter(function (id) {
+    return statuses[id] && statuses[id].status === 'owned';
+  });
+}
+function digRemoveCandidateFromResult(id) {
+  var result = state.ui.dig && state.ui.dig.candidates_result;
+  if (!result || !Array.isArray(result.groups)) return;
+  result.groups.forEach(function (group) {
+    ['strong', 'probable', 'explore'].forEach(function (bucket) {
+      group[bucket] = (group[bucket] || []).filter(function (candidate) {
+        return String(candidate.discogs_id) !== String(id);
+      });
+    });
+  });
+}
+on('dig-load-candidates', async function () {
+  state.ui = state.ui || {};
+  state.ui.dig = state.ui.dig || {};
+  var collection = vertaxFlattenCollectionForAnalysis();
+  if (!collection.length) {
+    state.ui.dig.candidates_error = 'В коллекции пока нет треков для рекомендаций.';
+    render();
+    return;
+  }
+  var analysis = computeDigAnalysis(state.collection || []);
+  var profile = digCollectionProfile(state.collection || []);
+  var gaps = digBuildCandidateGaps(analysis, profile);
+  if (!gaps.length) {
+    state.ui.dig.candidates_error = 'Явных gaps для подбора кандидатов пока не видно.';
+    render();
+    return;
+  }
+  state.ui.dig.candidates_loading = true;
+  state.ui.dig.candidates_error = null;
+  render();
+  try {
+    var hash = await vertaxCollectionHash(collection);
+    state.ui.dig.candidates_hash = hash;
+    await vertaxSyncCollectionIndex(collection, hash);
+    var payload = {
+      collection_hash: hash,
+      gaps: gaps,
+      excluded_ids: digExcludedCandidateIds(),
+      owned_ids: digOwnedCandidateIds(),
+      limit_per_gap: 6,
+      include_explore: false,
+      collection_profile: profile,
+    };
+    var result;
+    try {
+      result = await vertaxLoadCandidates(payload);
+    } catch (e) {
+      if (String((e && e.message) || e) !== 'collection_index_missing') throw e;
+      await vertaxSyncCollectionIndex(collection, hash);
+      result = await vertaxLoadCandidates(payload);
+    }
+    state.ui.dig.candidates_result = result;
+  } catch (error) {
+    state.ui.dig.candidates_error =
+      'Не удалось найти кандидатов: ' + String((error && error.message) || error);
+  } finally {
+    state.ui.dig.candidates_loading = false;
+    render();
+  }
+});
+on('candidate-wishlist', function (_, el) {
+  var card = el && el.closest ? el.closest('[data-discogs-id]') : null;
+  var id = card && card.dataset && card.dataset.discogsId;
+  if (!id) return;
+  digSetCandidateStatus(id, 'wishlist');
+  render();
+});
+on('candidate-hide', function (_, el) {
+  var card = el && el.closest ? el.closest('[data-discogs-id]') : null;
+  var id = card && card.dataset && card.dataset.discogsId;
+  if (!id) return;
+  digSetCandidateStatus(id, 'hidden');
+  digRemoveCandidateFromResult(id);
+  render();
+});
+on('candidate-owned', function (_, el) {
+  var card = el && el.closest ? el.closest('[data-discogs-id]') : null;
+  var id = card && card.dataset && card.dataset.discogsId;
+  if (!id) return;
+  digSetCandidateStatus(id, 'owned');
+  digRemoveCandidateFromResult(id);
+  render();
+});
+on('candidate-analyze', function (_, el) {
+  var card = el && el.closest ? el.closest('[data-discogs-id]') : null;
+  var id = card && card.dataset && card.dataset.discogsId;
+  if (!id) return;
+  state.view = 'fit-check';
+  state.ui.fitCheckError = null;
+  state.ui.fitCheckCandidates = [];
+  state.ui.fitCheckResult = null;
+  render();
+  runFitCheck({ releaseId: id });
+});
 on('go-set', function () {
   if (getAllSessionTracks().length === 0) {
     showToast('Сначала добавь пластинки и треклисты');
