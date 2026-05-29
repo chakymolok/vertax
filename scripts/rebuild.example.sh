@@ -10,8 +10,10 @@ LIMIT="${LIMIT:-20}"
 while true; do
   echo "Batch starting at offset $OFFSET..."
 
-  RESULT=$(curl -s -X POST "$BASE/api/admin/rebuild?offset=$OFFSET&limit=$LIMIT" \
-    -H "Authorization: Bearer $ADMIN_TOKEN")
+  RESULT=$(curl -s -X POST "$BASE/api/admin/maintenance" \
+    -H "Authorization: Bearer $ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"action\":\"rebuild\",\"offset\":$OFFSET,\"limit\":$LIMIT}")
 
   echo "$RESULT" | jq '{total, offset, limit, processed_in_batch, updated, failed, skipped_no_match, next_offset, has_more, errors}'
 

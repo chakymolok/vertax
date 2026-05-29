@@ -43,11 +43,6 @@ This roadmap is organized by practical product and engineering priorities. It is
 
 ### What To Dig Next / Collection Gaps
 
-- Stage 2 prerequisite: consolidate backend functions before adding candidate endpoints:
-  - merge `api/admin/approve.js`, `api/admin/reject.js`, and `api/admin/proposals.js` into `api/admin/proposals.js` with `GET`, `POST { action: "approve" }`, and `POST { action: "reject" }`;
-  - merge `api/admin/import-backup.js` and `api/admin/rebuild.js` into `api/admin/maintenance.js` with `POST { action: "import_backup" }` and `POST { action: "rebuild" }`;
-  - reserve room for candidate ingestion without exceeding Vercel Hobby function limits.
-- Stage 2: design a release-candidates database for common gaps.
 - Stage 3: add a candidates endpoint and show release candidates inside gap cards.
 - Stage 3: add wishlist, hidden, and owned statuses.
 - Stage 4: consider cron/digest flows after candidate quality is proven.
@@ -174,6 +169,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Added `/about` landing page.
 - Added `/vk` placeholder route.
 - Added Stage 1 "Что докопать / Collection Gaps": local Camelot/BPM gap analysis, metadata coverage, onboarding gates, and rule-based digging briefs without new APIs.
+- Added Stage 2 "Что докопать / Release Candidates Database": consolidated admin functions, added persistent Redis candidate releases, candidate indexes, manual seed by release IDs or label ID, candidate stats, and candidate export.
 - Added build output to `public/`.
 - Added `vercel.json`.
 - Added bundled/minified JS and CSS outputs.

@@ -159,6 +159,8 @@ The AI DJ breakdown does not decide compatibility. It explains the already-compu
 
 This is a local-first helper for crate direction, not a server-side recommendation engine. Stage 1 does not call AI, Discogs, Beatport, or new APIs.
 
+Stage 2 prepares the server-side candidate release database for future "Что докопать" recommendations. Users do not see candidates yet. Admins can manually seed candidate releases from Discogs release IDs or Discogs label IDs; Stage 3 will connect those candidates to the UI.
+
 ### Backup And Restore
 
 1. User opens backup.

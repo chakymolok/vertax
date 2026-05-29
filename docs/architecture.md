@@ -200,6 +200,50 @@ Digging briefs in dig view are rule-generated and RU-only in Stage 1. Translatio
 
 Stage 1 creates no new API endpoints, no serverless functions, no IndexedDB stores, and no IndexedDB migrations. The view reads from `state.collection` only.
 
+### Release Candidate Database
+
+Stage 2 adds a persistent Redis database of candidate releases for future "Что докопать" recommendations. This is admin-seeded only; there is no user-facing `/api/candidates` endpoint yet.
+
+Full release records:
+
+```text
+vertax:release:{discogs_id}
+```
+
+Index sets:
+
+```text
+vertax:candidates:all
+vertax:candidates:by_label:{label_slug}
+vertax:candidates:by_genre_family:{family}
+vertax:candidates:by_camelot:{camelot}
+vertax:candidates:by_bpm_bucket:{range}
+```
+
+Candidate releases and candidate indexes have no TTL. They are a permanent curated database, separate from temporary `collection_index:*` and `ai_verdict:*` caches.
+
+`lib/release-candidates.js` owns:
+
+- Discogs release and label ingestion;
+- release normalization;
+- track enrichment through existing Beatport/Redis helpers;
+- `bpmBucket()` using 5 BPM buckets such as `170-174`;
+- `genreFamily()` MVP mapping;
+- `saveReleaseCandidate()`;
+- `indexReleaseCandidate()`;
+- `candidateStats()`;
+- `exportCandidates()`.
+
+Admin seeding runs through:
+
+```text
+POST /api/admin/maintenance { "action": "seed_candidates" }
+POST /api/admin/maintenance { "action": "candidate_stats" }
+POST /api/admin/maintenance { "action": "export_candidates" }
+```
+
+The seed flow accepts `release_ids` or `label_id` batches. It does not create user recommendations in Stage 2.
+
 ## Event Handling
 
 `js/handlers.js` defines:
@@ -342,18 +386,16 @@ Current API functions:
 - `api/analyze-release.js` - Discogs release lookup, BPM/Camelot enrichment, mathematical compatibility scoring, and `action: "ai_verdict"` AI explanation mode.
 - `api/discogs-ingest.js` - ingest local vinyl track metadata into shared cache/proposal flow.
 - `api/telegram-webhook.js` - Telegram admin callback webhook.
-- `api/admin/approve.js` - approve metadata proposal.
-- `api/admin/reject.js` - reject metadata proposal.
-- `api/admin/proposals.js` - list proposals.
-- `api/admin/import-backup.js` - import backup into shared cache/admin flow.
-- `api/admin/rebuild.js` - rebuild Beatport cache.
+- `api/admin/proposals.js` - list, approve, and reject metadata proposals.
+- `api/admin/maintenance.js` - import backup, rebuild Beatport cache, seed release candidates, candidate stats, and candidate export.
 
-Vercel Hobby currently allows no more than 12 Serverless Functions. Adding an endpoint requires removing or combining another endpoint unless the deployment plan changes.
+Vercel Hobby currently allows no more than 12 Serverless Functions. The admin consolidation reduced the current API function count to 9.
 
 ## Server Libraries
 
 - `lib/redis-cache.js` - Redis REST commands, Beatport cache, track proposals, import/export helpers.
 - `lib/compatibility-analysis.js` - release-to-collection scoring, Discogs release context, temporary collection index.
+- `lib/release-candidates.js` - persistent candidate release database, indexes, manual seed, stats, and export.
 - `lib/ai-verdict.js` - Gemini/Groq AI DJ breakdown, prompt-versioned multilingual cache.
 - `lib/beatport-auth.js` - Beatport token acquisition and refresh.
 - `lib/telegram-auth.js` - Telegram Mini App auth validation and admin notifications.
