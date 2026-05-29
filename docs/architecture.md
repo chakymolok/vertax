@@ -191,8 +191,9 @@ It:
 - prefers manual BPM/Camelot override fields over automatic fields when present;
 - builds a 24-cell Camelot grid for `1A-12A` and `1B-12B`;
 - detects weak and critical Camelot gaps using neighboring Camelot density;
-- builds 2 BPM bins only inside the collection's actual BPM range;
-- detects isolated BPM gaps between dense neighboring bins;
+- builds compact BPM bands around common electronic-music tempo zones;
+- labels BPM bands with rough genre context such as house/techno, 140, jungle, and drum and bass;
+- detects empty BPM bands between dense neighboring tempo zones;
 - generates rule-based RU digging briefs.
 
 Digging briefs in dig view are rule-generated and RU-only in Stage 1. Translations will be added after templates stabilize.

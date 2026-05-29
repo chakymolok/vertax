@@ -121,8 +121,8 @@ const digSynthetic = await page.evaluate(() => {
 });
 assert.equal(digSynthetic.camelot_grid['9A'].level, 'strong', '9A should be strong');
 assert.ok(
-  digSynthetic.bpm_gaps.some((gap) => gap.range === '172-173'),
-  '172-173 BPM should be detected as isolated gap'
+  digSynthetic.bpm_histogram.some((row) => row.range === '170-179' && row.count === 20),
+  '170-179 BPM band should collect DnB/Jungle tempo tracks'
 );
 
 await renderView('home');

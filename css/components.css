@@ -279,6 +279,8 @@
 #laiso-app .dig-view{
   display:grid;
   gap:16px;
+  max-width:100%;
+  overflow:hidden;
 }
 #laiso-app .dig-header{
   display:flex;
@@ -291,11 +293,14 @@
   font-size:clamp(26px,4vw,44px);
   line-height:1;
   letter-spacing:0;
+  min-width:0;
+  overflow-wrap:anywhere;
 }
 #laiso-app .dig-card,
 #laiso-app .dig-briefs,
 #laiso-app .dig-camelot,
 #laiso-app .dig-bpm{
+  min-width:0;
   border:1px solid var(--border,#E2D9CD);
   border-radius:8px;
   background:var(--surface,#FFFDF7);
@@ -388,9 +393,10 @@
 }
 #laiso-app .dig-camelot-grid{
   display:grid;
-  grid-template-columns:32px repeat(12, minmax(40px,1fr));
+  grid-template-columns:32px repeat(12, 44px);
   gap:6px;
-  min-width:560px;
+  width:max-content;
+  min-width:100%;
 }
 #laiso-app .dig-camelot-axis{
   display:flex;
@@ -445,7 +451,7 @@
 #laiso-app .dig-camelot-gaps,
 #laiso-app .dig-bpm-gaps{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
   gap:10px;
   margin-top:14px;
 }
@@ -506,25 +512,48 @@
 }
 #laiso-app .dig-bpm-histogram{
   display:grid;
-  gap:7px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:10px;
 }
 #laiso-app .dig-bpm-row{
   display:grid;
-  grid-template-columns:72px minmax(120px,1fr) 44px;
+  grid-template-columns:1fr auto;
+  grid-template-areas:"label count" "bar bar";
   align-items:center;
-  gap:8px;
+  gap:8px 10px;
+  min-width:0;
+  border:1px solid var(--border,#E2D9CD);
+  border-radius:8px;
+  background:var(--surface-muted,#F7F4ED);
+  padding:10px;
+}
+#laiso-app .dig-bpm-label{
+  grid-area:label;
+  display:grid;
+  gap:2px;
+  min-width:0;
 }
 #laiso-app .dig-bpm-range,
 #laiso-app .dig-bpm-count{
   font-family:var(--font-mono,monospace);
-  font-size:11px;
+  font-size:12px;
   font-weight:850;
+  color:var(--text-primary,#111);
+}
+#laiso-app .dig-bpm-genre{
   color:var(--text-secondary,#666158);
+  font-size:11px;
+  line-height:1.2;
+  overflow-wrap:anywhere;
 }
 #laiso-app .dig-bpm-count{
+  grid-area:count;
   text-align:right;
+  min-width:32px;
+  font-size:18px;
 }
 #laiso-app .dig-bpm-bar-wrap{
+  grid-area:bar;
   position:relative;
   height:14px;
   border-radius:999px;
@@ -545,8 +574,9 @@
 }
 @media(max-width:620px){
   #laiso-app .dig-header{
-    align-items:flex-start;
-    flex-direction:column;
+    align-items:center;
+    flex-direction:row;
+    flex-wrap:wrap;
   }
   #laiso-app .dig-card,
   #laiso-app .dig-briefs,
@@ -559,9 +589,6 @@
   }
   #laiso-app .dig-confidence-label{
     width:100%;
-  }
-  #laiso-app .dig-bpm-row{
-    grid-template-columns:62px minmax(90px,1fr) 32px;
   }
 }
 @media(max-width:620px){

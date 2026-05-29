@@ -2117,6 +2117,19 @@ var DIG_CAMELOT_CELLS = (function () {
   });
   return out;
 })();
+var DIG_BPM_BANDS = [
+  { range: '70-89', min: 70, max: 89, genre: 'downtempo / halftime' },
+  { range: '90-109', min: 90, max: 109, genre: 'trip-hop / slow breaks' },
+  { range: '110-119', min: 110, max: 119, genre: 'disco / slow house' },
+  { range: '120-129', min: 120, max: 129, genre: 'house / techno' },
+  { range: '130-139', min: 130, max: 139, genre: 'electro / breaks' },
+  { range: '140-149', min: 140, max: 149, genre: 'dubstep / grime / UKG' },
+  { range: '150-159', min: 150, max: 159, genre: 'footwork / juke' },
+  { range: '160-169', min: 160, max: 169, genre: 'jungle / fast breaks' },
+  { range: '170-179', min: 170, max: 179, genre: 'drum & bass / jungle' },
+  { range: '180-189', min: 180, max: 189, genre: 'fast dnb / breakcore' },
+  { range: '190+', min: 190, max: 260, genre: 'hardcore / footwork' },
+];
 function digNormalizeCamelot(value) {
   var text = String(value || '')
     .trim()
@@ -2207,9 +2220,6 @@ function digBriefPrefix(confidence) {
   if (confidence === 'low') return 'Предварительно видно: ';
   return '';
 }
-function digBpmRangeLabel(min, max) {
-  return Math.round(min) + '-' + Math.round(max);
-}
 function computeDigAnalysis(collection) {
   var records = Array.isArray(collection) ? collection : [];
   var tracks = digFlattenCollection(records);
@@ -2294,23 +2304,18 @@ function computeDigAnalysis(collection) {
       return Number.isFinite(Number(bpm)) && Number(bpm) > 0;
     })
     .map(Number);
-  var bpmHistogram = [];
-  if (bpmValues.length) {
-    var minBpm = Math.floor(Math.min.apply(null, bpmValues) / 2) * 2;
-    var maxBpm = Math.floor(Math.max.apply(null, bpmValues) / 2) * 2;
-    for (var b = minBpm; b <= maxBpm; b += 2) {
-      var max = b + 1;
-      bpmHistogram.push({
-        range: digBpmRangeLabel(b, max),
-        min: b,
-        max: max,
-        count: bpmValues.filter(function (value) {
-          return value >= b && value <= max;
-        }).length,
-        isolated_gap: false,
-      });
-    }
-  }
+  var bpmHistogram = DIG_BPM_BANDS.map(function (band) {
+    return {
+      range: band.range,
+      min: band.min,
+      max: band.max,
+      genre: band.genre,
+      count: bpmValues.filter(function (value) {
+        return value >= band.min && value <= band.max;
+      }).length,
+      isolated_gap: false,
+    };
+  });
   var bpmGaps = [];
   for (var i = 1; i < bpmHistogram.length - 1; i++) {
     var row = bpmHistogram[i];
@@ -2323,13 +2328,16 @@ function computeDigAnalysis(collection) {
       row.isolated_gap = true;
       bpmGaps.push({
         range: row.range,
+        genre: row.genre,
         left_density: left.count,
         right_density: right.count,
         brief:
           soft +
           'В диапазоне ' +
           row.range +
-          ' BPM провал между двумя плотными зонами (' +
+          ' BPM (' +
+          row.genre +
+          ') провал между двумя плотными зонами (' +
           left.count +
           ' слева, ' +
           right.count +
@@ -2491,9 +2499,11 @@ function renderDigBpm(analysis) {
               (row.isolated_gap ? ' dig-bpm-row--gap' : '') +
               '" data-bpm-range="' +
               esc(row.range) +
-              '"><span class="dig-bpm-range">' +
+              '"><div class="dig-bpm-label"><span class="dig-bpm-range">' +
               esc(row.range) +
-              '</span><div class="dig-bpm-bar-wrap"><div class="dig-bpm-bar" style="--bar-scale:' +
+              ' BPM</span><span class="dig-bpm-genre">' +
+              esc(row.genre || '') +
+              '</span></div><div class="dig-bpm-bar-wrap"><div class="dig-bpm-bar" style="--bar-scale:' +
               esc(scale) +
               '"></div></div><span class="dig-bpm-count">' +
               esc(row.count) +
