@@ -123,6 +123,7 @@ Important views include:
 - `discogs-import`
 - `backup`
 - `about`
+- `dig`
 - `live-set`
 - `runt26-source`
 
@@ -169,10 +170,34 @@ Do not change store names or key shapes without a migration and fallback.
 - `viewSet`
 - `viewCollection`
 - `viewAbout`
+- `viewDig`
 - modal renderers
 - Camelot wheel renderers
 
 The code uses HTML strings. All untrusted dynamic values should pass through `esc()`.
+
+### Collection Gaps / Dig View
+
+`state.view = 'dig'` renders the Stage 1 "Что докопать" flow.
+
+Client analysis is handled by `computeDigAnalysis(collection)` in `js/render.js`.
+
+It:
+
+- flattens `state.collection` records into tracks;
+- treats `record_count` as the number of saved records/releases;
+- treats `track_count` as the number of flattened tracks;
+- counts tracks with BPM and normalized Camelot as enriched;
+- prefers manual BPM/Camelot override fields over automatic fields when present;
+- builds a 24-cell Camelot grid for `1A-12A` and `1B-12B`;
+- detects weak and critical Camelot gaps using neighboring Camelot density;
+- builds 2 BPM bins only inside the collection's actual BPM range;
+- detects isolated BPM gaps between dense neighboring bins;
+- generates rule-based RU digging briefs.
+
+Digging briefs in dig view are rule-generated and RU-only in Stage 1. Translations will be added after templates stabilize.
+
+Stage 1 creates no new API endpoints, no serverless functions, no IndexedDB stores, and no IndexedDB migrations. The view reads from `state.collection` only.
 
 ## Event Handling
 

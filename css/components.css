@@ -274,6 +274,296 @@
 #laiso-app [contenteditable="true"]{
   caret-color:var(--text-primary,#111)!important;
 }
+
+/* Collection gaps / "Что докопать" */
+#laiso-app .dig-view{
+  display:grid;
+  gap:16px;
+}
+#laiso-app .dig-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:2px;
+}
+#laiso-app .dig-header h1{
+  margin:0;
+  font-size:clamp(26px,4vw,44px);
+  line-height:1;
+  letter-spacing:0;
+}
+#laiso-app .dig-card,
+#laiso-app .dig-briefs,
+#laiso-app .dig-camelot,
+#laiso-app .dig-bpm{
+  border:1px solid var(--border,#E2D9CD);
+  border-radius:8px;
+  background:var(--surface,#FFFDF7);
+  padding:18px;
+  box-shadow:0 10px 30px rgba(20,16,10,.05);
+}
+#laiso-app .dig-card h2,
+#laiso-app .dig-briefs h2,
+#laiso-app .dig-camelot h2,
+#laiso-app .dig-bpm h2{
+  margin:0 0 12px;
+  font-size:16px;
+  line-height:1.2;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#laiso-app .dig-card p{
+  margin:0 0 16px;
+  max-width:760px;
+  color:var(--text-secondary,#666158);
+  line-height:1.55;
+}
+#laiso-app .dig-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+#laiso-app .dig-meta{
+  margin:0;
+}
+#laiso-app .dig-confidence{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  border:1px solid var(--border,#E2D9CD);
+  border-radius:8px;
+  background:var(--surface,#FFFDF7);
+  padding:14px 16px;
+  color:var(--text-primary,#111);
+  line-height:1.45;
+}
+#laiso-app .dig-confidence-label{
+  flex:0 0 auto;
+  border-radius:999px;
+  padding:7px 10px;
+  background:var(--chip-bg,#F1F0EA);
+  color:var(--text-primary,#111);
+  font-family:var(--font-mono,monospace);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+#laiso-app .dig-confidence--none,
+#laiso-app .dig-confidence--low{
+  border-color:var(--accent-warning,#fa3);
+}
+#laiso-app .dig-confidence--high{
+  border-color:var(--accent-success,#4c9);
+}
+#laiso-app .dig-briefs ul{
+  display:grid;
+  gap:8px;
+  margin:0;
+  padding-left:20px;
+}
+#laiso-app .dig-briefs li{
+  line-height:1.45;
+}
+#laiso-app .dig-link-btn{
+  margin-top:12px;
+  border:0;
+  background:transparent;
+  color:var(--text-primary,#111);
+  font:inherit;
+  font-weight:800;
+  text-decoration:underline;
+  cursor:pointer;
+}
+#laiso-app .dig-muted{
+  margin:0;
+  color:var(--text-secondary,#666158);
+  line-height:1.45;
+}
+#laiso-app .dig-camelot-grid-wrap{
+  width:100%;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+#laiso-app .dig-camelot-grid{
+  display:grid;
+  grid-template-columns:32px repeat(12, minmax(40px,1fr));
+  gap:6px;
+  min-width:560px;
+}
+#laiso-app .dig-camelot-axis{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  color:var(--text-secondary,#666158);
+  font-family:var(--font-mono,monospace);
+  font-size:11px;
+  font-weight:800;
+}
+#laiso-app .dig-camelot-mode{
+  color:var(--text-primary,#111);
+}
+#laiso-app .dig-camelot-cell{
+  display:grid;
+  place-items:center;
+  align-content:center;
+  min-width:40px;
+  min-height:40px;
+  border:1px solid var(--border,#E2D9CD);
+  border-radius:8px;
+  background:var(--surface-muted,#F7F4ED);
+  color:var(--text-primary,#111);
+  cursor:pointer;
+}
+#laiso-app .dig-camelot-cell:hover{
+  border-color:var(--text-primary,#111);
+}
+#laiso-app .dig-camelot-cell--critical{
+  background:rgba(229,84,68,.10);
+}
+#laiso-app .dig-camelot-cell--weak{
+  background:rgba(255,170,51,.14);
+}
+#laiso-app .dig-camelot-cell--ok{
+  background:rgba(120,130,110,.10);
+}
+#laiso-app .dig-camelot-cell--strong{
+  background:rgba(68,204,153,.16);
+}
+#laiso-app .dig-camelot-key{
+  font-family:var(--font-mono,monospace);
+  font-size:11px;
+  font-weight:800;
+}
+#laiso-app .dig-camelot-count{
+  font-size:18px;
+  font-weight:850;
+  line-height:1;
+}
+#laiso-app .dig-camelot-gaps,
+#laiso-app .dig-bpm-gaps{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+#laiso-app .dig-gap-card{
+  border:1px solid var(--border,#E2D9CD);
+  border-radius:8px;
+  background:var(--surface,#FFFDF7);
+  padding:14px;
+}
+#laiso-app .dig-gap-header{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+}
+#laiso-app .dig-gap-cell{
+  font-size:22px;
+  font-weight:900;
+  line-height:1;
+}
+#laiso-app .dig-gap-level,
+#laiso-app .dig-gap-priority{
+  border-radius:999px;
+  padding:5px 8px;
+  background:var(--chip-bg,#F1F0EA);
+  font-family:var(--font-mono,monospace);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+#laiso-app .dig-gap-level--critical{
+  color:var(--accent-critical,#e54);
+}
+#laiso-app .dig-gap-level--weak{
+  color:var(--accent-warning,#fa3);
+}
+#laiso-app .dig-gap-level--ok{
+  color:var(--text-muted,#777);
+}
+#laiso-app .dig-gap-level--strong{
+  color:var(--accent-success,#4c9);
+}
+#laiso-app .dig-gap-priority--high{
+  background:rgba(229,84,68,.12);
+}
+#laiso-app .dig-gap-priority--medium{
+  background:rgba(255,170,51,.14);
+}
+#laiso-app .dig-gap-priority--low{
+  background:rgba(68,204,153,.12);
+}
+#laiso-app .dig-gap-brief{
+  margin:0;
+  color:var(--text-secondary,#666158);
+  line-height:1.45;
+}
+#laiso-app .dig-bpm-histogram{
+  display:grid;
+  gap:7px;
+}
+#laiso-app .dig-bpm-row{
+  display:grid;
+  grid-template-columns:72px minmax(120px,1fr) 44px;
+  align-items:center;
+  gap:8px;
+}
+#laiso-app .dig-bpm-range,
+#laiso-app .dig-bpm-count{
+  font-family:var(--font-mono,monospace);
+  font-size:11px;
+  font-weight:850;
+  color:var(--text-secondary,#666158);
+}
+#laiso-app .dig-bpm-count{
+  text-align:right;
+}
+#laiso-app .dig-bpm-bar-wrap{
+  position:relative;
+  height:14px;
+  border-radius:999px;
+  overflow:hidden;
+  background:var(--chip-bg,#F1F0EA);
+}
+#laiso-app .dig-bpm-bar{
+  width:100%;
+  height:100%;
+  border-radius:inherit;
+  background:var(--accent-lime,#C4F542);
+  transform:scaleX(var(--bar-scale,0));
+  transform-origin:left center;
+}
+#laiso-app .dig-bpm-row--gap .dig-bpm-bar-wrap{
+  border:1px dashed var(--accent-warning,#fa3);
+  background:rgba(255,170,51,.12);
+}
+@media(max-width:620px){
+  #laiso-app .dig-header{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  #laiso-app .dig-card,
+  #laiso-app .dig-briefs,
+  #laiso-app .dig-camelot,
+  #laiso-app .dig-bpm{
+    padding:14px;
+  }
+  #laiso-app .dig-confidence{
+    flex-direction:column;
+  }
+  #laiso-app .dig-confidence-label{
+    width:100%;
+  }
+  #laiso-app .dig-bpm-row{
+    grid-template-columns:62px minmax(90px,1fr) 32px;
+  }
+}
 @media(max-width:620px){
   #laiso-app .runt26-source-page .runt26-tools{
     grid-template-columns:1fr!important;

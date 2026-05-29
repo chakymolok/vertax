@@ -223,6 +223,7 @@ on('back', function () {
   else if (v === 'collection') state.view = 'home';
   else if (v === 'discogs-import') state.view = 'home';
   else if (v === 'fit-check') state.view = 'home';
+  else if (v === 'dig') state.view = 'home';
   else if (v === 'about') state.view = 'home';
   else if (v === 'add') state.view = 'home';
   else state.view = 'home';
@@ -248,6 +249,30 @@ on('goto-fit-check', function () {
   state.view = 'fit-check';
   state.ui.fitCheckError = null;
   render();
+});
+on('open-dig', function () {
+  state.view = 'dig';
+  state.ui = state.ui || {};
+  state.ui.dig = state.ui.dig || { force_show: false, show_all_briefs: false };
+  render();
+});
+on('dig-force-show', function () {
+  state.ui = state.ui || {};
+  state.ui.dig = state.ui.dig || {};
+  state.ui.dig.force_show = true;
+  render();
+});
+on('dig-show-all-briefs', function () {
+  state.ui = state.ui || {};
+  state.ui.dig = state.ui.dig || {};
+  state.ui.dig.show_all_briefs = true;
+  render();
+});
+on('dig-camelot-cell', function (_, el) {
+  var cell = el && el.dataset ? el.dataset.camelot : '';
+  if (!cell || !document.querySelector) return;
+  var card = document.querySelector('.dig-gap-card[data-camelot="' + cell + '"]');
+  if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
 on('go-set', function () {
   if (getAllSessionTracks().length === 0) {
@@ -307,7 +332,11 @@ on('vertax-modal-cancel', function () {
     showToast('Введите запрос');
     return;
   }
-  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Поиск Discogs требует интернет')) return;
+  if (
+    typeof vertaxRequireOnline === 'function' &&
+    !vertaxRequireOnline('Поиск Discogs требует интернет')
+  )
+    return;
   if (state.ui.searchLoading) return;
   state.ui.searchLoading = true;
   state.ui.searchError = null;
@@ -458,7 +487,11 @@ on('recognize-all', function () {
     return v.status === 'awaiting' || v.status === 'not_found';
   });
   if (pending.length === 0) return;
-  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Распознавание требует интернет')) return;
+  if (
+    typeof vertaxRequireOnline === 'function' &&
+    !vertaxRequireOnline('Распознавание требует интернет')
+  )
+    return;
   showToast('Распознаём ' + pending.length + '…', 1500);
   (async function () {
     for (var i = 0; i < pending.length; i++) {
@@ -473,7 +506,11 @@ on('recognize-all', function () {
 on('recognize-one', function (_, el) {
   var v = findVinyl(el.dataset.id);
   if (!v) return;
-  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Распознавание требует интернет')) return;
+  if (
+    typeof vertaxRequireOnline === 'function' &&
+    !vertaxRequireOnline('Распознавание требует интернет')
+  )
+    return;
   if (v.discogsId) {
     loadTracklistFromDiscogsVinyl(v);
     return;
@@ -1447,7 +1484,11 @@ async function loadDiscogsImport() {
     showToast('Введите Discogs username');
     return;
   }
-  if (typeof vertaxRequireOnline === 'function' && !vertaxRequireOnline('Импорт Discogs требует интернет')) return;
+  if (
+    typeof vertaxRequireOnline === 'function' &&
+    !vertaxRequireOnline('Импорт Discogs требует интернет')
+  )
+    return;
   state.ui.discogsImportUsername = username;
   state.ui.discogsImportLoading = true;
   state.ui.discogsImportLoaded = false;

@@ -91,6 +91,41 @@ assert.ok(
 );
 
 await renderView('home');
+await page.getByTestId('open-dig').click();
+await page.waitForFunction(() => window.laisoBuck.state.view === 'dig');
+await page.getByTestId('dig-view').waitFor({ state: 'visible' });
+assert.equal(
+  await page.getByTestId('dig-onboarding-empty').count(),
+  1,
+  'Empty collection should show dig onboarding'
+);
+await page.locator('[data-action="back"]').first().click();
+await page.waitForFunction(() => window.laisoBuck.state.view === 'home');
+
+const digEmpty = await page.evaluate(() => window.computeDigAnalysis([]));
+assert.equal(digEmpty.record_count, 0, 'empty dig analysis record_count');
+assert.equal(digEmpty.track_count, 0, 'empty dig analysis track_count');
+assert.equal(digEmpty.confidence, 'none', 'empty dig analysis confidence');
+
+const digSynthetic = await page.evaluate(() => {
+  const records = Array.from({ length: 10 }, (_, i) => ({
+    id: `r-${i}`,
+    title: `Record ${i}`,
+    artist: 'Smoke Artist',
+    tracklist: [
+      { id: `a-${i}`, title: `Track A ${i}`, bpm: 170 + (i % 2), camelot: '9A' },
+      { id: `b-${i}`, title: `Track B ${i}`, bpm: i < 5 ? 174 : 175, camelot: '9A' },
+    ],
+  }));
+  return window.computeDigAnalysis(records);
+});
+assert.equal(digSynthetic.camelot_grid['9A'].level, 'strong', '9A should be strong');
+assert.ok(
+  digSynthetic.bpm_gaps.some((gap) => gap.range === '172-173'),
+  '172-173 BPM should be detected as isolated gap'
+);
+
+await renderView('home');
 await page.getByTestId('home-add-record').click();
 await page.waitForFunction(() => window.laisoBuck.state.view === 'add');
 assert.ok(

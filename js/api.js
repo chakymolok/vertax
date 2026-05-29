@@ -94,9 +94,13 @@ async function vertaxCollectionHash(collection) {
         mix: vertaxNormalizeHashPart(track.mix),
         bpm: track.bpm || '',
         camelot: String(track.camelot || '').toUpperCase(),
-        genre: vertaxNormalizeHashPart(Array.isArray(track.genre) ? track.genre.join(' ') : track.genre),
+        genre: vertaxNormalizeHashPart(
+          Array.isArray(track.genre) ? track.genre.join(' ') : track.genre
+        ),
         discogs_release_id: track.discogs_release_id || '',
-        position: String(track.position || '').trim().toUpperCase(),
+        position: String(track.position || '')
+          .trim()
+          .toUpperCase(),
       };
     })
     .sort(function (a, b) {
@@ -140,7 +144,8 @@ async function vertaxAnalyzeRelease(payload) {
   var body = await res.json().catch(function () {
     return {};
   });
-  if (body && body.error === 'collection_index_missing') throw new Error('collection_index_missing');
+  if (body && body.error === 'collection_index_missing')
+    throw new Error('collection_index_missing');
   if (!res.ok && !(body && body.status === 'needs_selection')) {
     throw new Error(body.error || body.message || 'analyze-release-failed');
   }

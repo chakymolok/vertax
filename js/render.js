@@ -57,6 +57,9 @@ function render() {
     case 'fit-check':
       viewHtml = viewFitCheck();
       break;
+    case 'dig':
+      viewHtml = viewDig();
+      break;
     case 'backup':
       viewHtml = typeof window.viewBackup === 'function' ? window.viewBackup() : viewHome();
       break;
@@ -169,6 +172,7 @@ function renderVertaxDisplay() {
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-collection" data-testid="home-collection">Коллекция</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-set" data-testid="home-set-builder">Собрать сет</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import" data-testid="home-discogs-import">Импорт из Discogs</button>' +
+    '<button class="laiso-btn laiso-btn-secondary" data-action="open-dig" data-testid="open-dig">Что докопать</button>' +
     '<button class="laiso-btn laiso-btn-secondary vertax-fit-home-cta" data-action="goto-fit-check" data-testid="home-fit-check"><span>Подойдёт ли пластинка?</span><small>проверить релиз по коллекции</small></button>' +
     '</div>' +
     '<div class="laiso-home-stickers">' +
@@ -1938,7 +1942,9 @@ function renderFitCheckMatch(match) {
     '<div class="vertax-fit-chips"><span class="vertax-fit-chip">' +
     esc(best.bpm ? best.bpm + ' BPM' : '— BPM') +
     '</span>' +
-    (best.camelot ? '<span class="vertax-fit-chip vertax-fit-chip-key">' + esc(best.camelot) + '</span>' : '') +
+    (best.camelot
+      ? '<span class="vertax-fit-chip vertax-fit-chip-key">' + esc(best.camelot) + '</span>'
+      : '') +
     '<span class="vertax-fit-chip vertax-fit-chip-score">' +
     formatPercentValue(best.compatibility) +
     '</span></div>' +
@@ -1986,7 +1992,8 @@ function viewFitCheck() {
   var discogsStat = release.rating ? release.rating + '/5' : 'нет рейтинга';
   var discogsSub = release.rating ? (release.rating_count || 0) + ' голосов' : 'Discogs';
   var discogsPrice = market.average_price != null ? market.average_price : market.lowest_price;
-  var marketStat = discogsPrice != null ? discogsPrice + ' ' + (market.currency || '') : 'нет данных';
+  var marketStat =
+    discogsPrice != null ? discogsPrice + ' ' + (market.currency || '') : 'нет данных';
   var marketSub =
     discogsPrice != null
       ? (market.average_price != null ? 'средняя цена' : 'минимальная цена') +
@@ -2012,7 +2019,11 @@ function viewFitCheck() {
       '<div class="laiso-h2">' +
       esc(release.title || '—') +
       '</div><div class="laiso-meta" style="margin-top:4px;">' +
-      esc([release.artist, release.label, release.year, release.catalog_number].filter(Boolean).join(' · ')) +
+      esc(
+        [release.artist, release.label, release.year, release.catalog_number]
+          .filter(Boolean)
+          .join(' · ')
+      ) +
       '</div></div></div><div class="laiso-lcd" style="margin-top:14px;"><div class="laiso-lcd-label">compatibility</div><div class="laiso-lcd-xl">' +
       esc(scores.compatibility_score) +
       '</div><div class="laiso-lcd-label">' +
@@ -2049,7 +2060,15 @@ function viewFitCheck() {
           result.unmatched_release_tracks
             .slice(0, 12)
             .map(function (t) {
-              return '<div class="laiso-hint">' + esc([t.position, t.title, t.bpm && t.bpm + ' BPM', t.camelot].filter(Boolean).join(' · ')) + '</div>';
+              return (
+                '<div class="laiso-hint">' +
+                esc(
+                  [t.position, t.title, t.bpm && t.bpm + ' BPM', t.camelot]
+                    .filter(Boolean)
+                    .join(' · ')
+                ) +
+                '</div>'
+              );
             })
             .join('') +
           '</div></details>'
@@ -2079,10 +2098,472 @@ function viewFitCheck() {
     '<button class="laiso-btn laiso-btn-block" data-action="fit-check-submit" style="margin-top:10px;">' +
     (u.fitCheckLoading ? '<span class="laiso-spinner"></span> Проверяю…' : 'Проверить пластинку') +
     '</button>' +
-    (u.fitCheckError ? '<div class="laiso-hint laiso-hint-warn" style="margin-top:8px;">' + esc(u.fitCheckError) + '</div>' : '') +
+    (u.fitCheckError
+      ? '<div class="laiso-hint laiso-hint-warn" style="margin-top:8px;">' +
+        esc(u.fitCheckError) +
+        '</div>'
+      : '') +
     '</div>' +
     candidates +
     resultHtml +
+    renderFooter()
+  );
+}
+/* ---------- DIG / COLLECTION GAPS ---------- */
+var DIG_CAMELOT_CELLS = (function () {
+  var out = [];
+  ['A', 'B'].forEach(function (mode) {
+    for (var i = 1; i <= 12; i++) out.push(i + mode);
+  });
+  return out;
+})();
+function digNormalizeCamelot(value) {
+  var text = String(value || '')
+    .trim()
+    .toUpperCase();
+  return /^(1[0-2]|[1-9])[AB]$/.test(text) ? text : null;
+}
+function digCleanBpm(value) {
+  var n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 10) / 10 : null;
+}
+function digTrackBpm(track) {
+  return digCleanBpm(
+    track && (track.manualBpm || track.bpmManual || track.bpm_override || track.bpm)
+  );
+}
+function digTrackCamelot(track) {
+  return digNormalizeCamelot(
+    track && (track.manualCamelot || track.camelotManual || track.camelot_override || track.camelot)
+  );
+}
+function digFlattenCollection(collection) {
+  var tracks = [];
+  (Array.isArray(collection) ? collection : []).forEach(function (record) {
+    var list = Array.isArray(record && record.tracklist) ? record.tracklist : null;
+    if (!list && record && record.title) list = [record];
+    (list || []).forEach(function (track) {
+      if (!track || !track.title) return;
+      tracks.push({
+        title: track.title || '',
+        artist: track.artist || record.artist || '',
+        bpm: digTrackBpm(track),
+        camelot: digTrackCamelot(track),
+        genre: track.genre || track.style || record.genre || record.style || null,
+        label: track.label || record.label || '',
+        record_title: record.title || track.record_title || '',
+      });
+    });
+  });
+  return tracks;
+}
+function digConfidence(recordCount, trackCount, metadataCoverage) {
+  if (recordCount < 5) return 'none';
+  if (recordCount < 20 || trackCount < 30 || metadataCoverage < 0.5) return 'low';
+  if (recordCount < 50 || trackCount < 100 || metadataCoverage < 0.75) return 'medium';
+  return 'high';
+}
+function digConfidenceLabel(confidence) {
+  return (
+    {
+      none: 'данных недостаточно',
+      low: 'оценка очень приблизительная',
+      medium: 'оценка рабочая, но не абсолютная',
+      high: 'оценка надёжная',
+    }[confidence] || 'данных недостаточно'
+  );
+}
+function digCamelotLevel(count) {
+  if (count <= 0) return 'critical';
+  if (count <= 2) return 'weak';
+  if (count <= 5) return 'ok';
+  return 'strong';
+}
+function digNeighborCells(cell) {
+  var cam = digNormalizeCamelot(cell);
+  if (!cam) return [];
+  var n = parseInt(cam, 10);
+  var mode = cam.slice(-1);
+  var other = mode === 'A' ? 'B' : 'A';
+  var prev = n === 1 ? 12 : n - 1;
+  var next = n === 12 ? 1 : n + 1;
+  return [n + other, prev + mode, next + mode];
+}
+function digGapPriority(level, count, neighborsDensity) {
+  if (level === 'critical' && count === 0) return neighborsDensity >= 5 ? 'medium' : 'high';
+  if (level === 'weak') return neighborsDensity >= 5 ? 'low' : 'medium';
+  return null;
+}
+function digPriorityRank(value) {
+  var rank = { high: 0, medium: 1, low: 2 };
+  return rank[value] == null ? 9 : rank[value];
+}
+function digLevelRank(value) {
+  var rank = { critical: 0, weak: 1, ok: 2, strong: 3 };
+  return rank[value] == null ? 9 : rank[value];
+}
+function digBriefPrefix(confidence) {
+  if (confidence === 'none') return 'Данных пока мало, но ';
+  if (confidence === 'low') return 'Предварительно видно: ';
+  return '';
+}
+function digBpmRangeLabel(min, max) {
+  return Math.round(min) + '-' + Math.round(max);
+}
+function computeDigAnalysis(collection) {
+  var records = Array.isArray(collection) ? collection : [];
+  var tracks = digFlattenCollection(records);
+  var enriched = tracks.filter(function (track) {
+    return track.bpm && track.camelot;
+  });
+  var trackCount = tracks.length;
+  var coverage = trackCount ? enriched.length / trackCount : 0;
+  var confidence = digConfidence(records.length, trackCount, coverage);
+  var camelotCounts = {};
+  DIG_CAMELOT_CELLS.forEach(function (cell) {
+    camelotCounts[cell] = 0;
+  });
+  enriched.forEach(function (track) {
+    if (track.camelot) camelotCounts[track.camelot] = (camelotCounts[track.camelot] || 0) + 1;
+  });
+  var camelotGrid = {};
+  DIG_CAMELOT_CELLS.forEach(function (cell) {
+    var count = camelotCounts[cell] || 0;
+    var level = digCamelotLevel(count);
+    var neighbors = digNeighborCells(cell);
+    var neighborsDensity = neighbors.reduce(function (sum, item) {
+      return sum + (camelotCounts[item] || 0);
+    }, 0);
+    var strongestNeighbor = neighbors
+      .map(function (item) {
+        return { camelot: item, count: camelotCounts[item] || 0 };
+      })
+      .sort(function (a, b) {
+        return b.count - a.count;
+      })[0] || { camelot: null, count: 0 };
+    var priority = digGapPriority(level, count, neighborsDensity);
+    camelotGrid[cell] = {
+      count: count,
+      level: level,
+      priority: priority,
+      neighbors_density: neighborsDensity,
+      strongest_neighbor: strongestNeighbor,
+    };
+  });
+  var soft = digBriefPrefix(confidence);
+  var camelotGaps = DIG_CAMELOT_CELLS.map(function (cell) {
+    var data = camelotGrid[cell];
+    if (!data.priority) return null;
+    var brief =
+      data.level === 'critical'
+        ? soft +
+          'У тебя ' +
+          data.strongest_neighbor.camelot +
+          '=' +
+          data.strongest_neighbor.count +
+          ' треков, но ' +
+          cell +
+          '=0. Сложно делать гармонические переходы — добери ' +
+          cell +
+          '.'
+        : soft + 'В ' + cell + ' только ' + data.count + ' трек(а) — для манёвра мало.';
+    return {
+      camelot: cell,
+      count: data.count,
+      level: data.level,
+      priority: data.priority,
+      neighbors_density: data.neighbors_density,
+      strongest_neighbor: data.strongest_neighbor,
+      brief: brief,
+    };
+  })
+    .filter(Boolean)
+    .sort(function (a, b) {
+      return (
+        digPriorityRank(a.priority) - digPriorityRank(b.priority) ||
+        digLevelRank(a.level) - digLevelRank(b.level) ||
+        a.count - b.count ||
+        a.neighbors_density - b.neighbors_density
+      );
+    });
+  var bpmValues = tracks
+    .map(function (track) {
+      return track.bpm;
+    })
+    .filter(function (bpm) {
+      return Number.isFinite(Number(bpm)) && Number(bpm) > 0;
+    })
+    .map(Number);
+  var bpmHistogram = [];
+  if (bpmValues.length) {
+    var minBpm = Math.floor(Math.min.apply(null, bpmValues) / 2) * 2;
+    var maxBpm = Math.floor(Math.max.apply(null, bpmValues) / 2) * 2;
+    for (var b = minBpm; b <= maxBpm; b += 2) {
+      var max = b + 1;
+      bpmHistogram.push({
+        range: digBpmRangeLabel(b, max),
+        min: b,
+        max: max,
+        count: bpmValues.filter(function (value) {
+          return value >= b && value <= max;
+        }).length,
+        isolated_gap: false,
+      });
+    }
+  }
+  var bpmGaps = [];
+  for (var i = 1; i < bpmHistogram.length - 1; i++) {
+    var row = bpmHistogram[i];
+    var left = bpmHistogram[i - 1];
+    var right = bpmHistogram[i + 1];
+    if (
+      row.count === 0 &&
+      ((left.count >= 5 && right.count >= 3) || (left.count >= 3 && right.count >= 5))
+    ) {
+      row.isolated_gap = true;
+      bpmGaps.push({
+        range: row.range,
+        left_density: left.count,
+        right_density: right.count,
+        brief:
+          soft +
+          'В диапазоне ' +
+          row.range +
+          ' BPM провал между двумя плотными зонами (' +
+          left.count +
+          ' слева, ' +
+          right.count +
+          ' справа).',
+      });
+    }
+  }
+  var briefs = [];
+  if (coverage < 0.5 && trackCount) {
+    briefs.push(
+      soft +
+        'У ' +
+        Math.round((1 - coverage) * 100) +
+        '% треков нет Camelot или BPM — анализ неполный. Сначала стоит обогатить коллекцию метаданными.'
+    );
+  } else if (coverage < 0.75 && trackCount) {
+    briefs.push(
+      soft +
+        'У ' +
+        Math.round((1 - coverage) * 100) +
+        '% треков нет Camelot или BPM — выводы пока приблизительные.'
+    );
+  }
+  camelotGaps
+    .filter(function (gap) {
+      return gap.level === 'critical';
+    })
+    .forEach(function (gap) {
+      briefs.push(gap.brief);
+    });
+  bpmGaps.forEach(function (gap) {
+    briefs.push(gap.brief);
+  });
+  camelotGaps
+    .filter(function (gap) {
+      return gap.level === 'weak';
+    })
+    .forEach(function (gap) {
+      briefs.push(gap.brief);
+    });
+  return {
+    record_count: records.length,
+    track_count: trackCount,
+    enriched_track_count: enriched.length,
+    metadata_coverage: Math.round(coverage * 100) / 100,
+    confidence: confidence,
+    camelot_grid: camelotGrid,
+    camelot_gaps: camelotGaps,
+    bpm_histogram: bpmHistogram,
+    bpm_gaps: bpmGaps,
+    briefs: briefs,
+  };
+}
+if (typeof window !== 'undefined') window.computeDigAnalysis = computeDigAnalysis;
+function renderDigOnboarding(mode, recordCount) {
+  var empty = mode === 'empty';
+  return (
+    '<div class="dig-onboarding" data-testid="' +
+    (empty ? 'dig-onboarding-empty' : 'dig-onboarding-too-small') +
+    '"><div class="dig-card"><h2>' +
+    (empty ? 'Коллекция пока пустая' : 'Данных пока мало') +
+    '</h2><p>' +
+    (empty
+      ? 'Чтобы анализировать коллекцию, Vertax должен её знать. Добавь несколько пластинок вручную или импортируй коллекцию из Discogs.'
+      : 'В коллекции ' +
+        esc(recordCount) +
+        ' пластинок. Этого мало для полезных рекомендаций. Можно добавить ещё пластинки или импортировать коллекцию из Discogs. Если хочешь просто посмотреть механику — покажем анализ, но уверенность будет очень низкой.') +
+    '</p><div class="dig-actions"><button class="laiso-btn laiso-btn-main" data-action="go-add">Добавить пластинку</button><button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import">Импортировать из Discogs</button>' +
+    (empty
+      ? ''
+      : '<button class="laiso-btn laiso-btn-secondary" data-action="dig-force-show" data-testid="dig-force-show">Показать всё равно</button>') +
+    '</div></div></div>'
+  );
+}
+function renderDigBriefs(analysis) {
+  var ui = (state.ui && state.ui.dig) || {};
+  var briefs = ui.show_all_briefs ? analysis.briefs : analysis.briefs.slice(0, 5);
+  return (
+    '<section class="dig-briefs"><h2>Что важно</h2>' +
+    (briefs.length
+      ? '<ul>' +
+        briefs
+          .map(function (brief) {
+            return '<li>' + esc(brief) + '</li>';
+          })
+          .join('') +
+        '</ul>'
+      : '<p class="dig-muted">Явных провалов не видно. Похоже, ящик уже довольно ровный.</p>') +
+    (!ui.show_all_briefs && analysis.briefs.length > 5
+      ? '<button class="dig-link-btn" data-action="dig-show-all-briefs">Показать все</button>'
+      : '') +
+    '</section>'
+  );
+}
+function renderDigCamelotGrid(analysis) {
+  var head = '<span class="dig-camelot-axis"></span>';
+  for (var i = 1; i <= 12; i++) head += '<span class="dig-camelot-axis">' + i + '</span>';
+  function row(mode) {
+    var html = '<span class="dig-camelot-axis dig-camelot-mode">' + mode + '</span>';
+    for (var n = 1; n <= 12; n++) {
+      var cell = n + mode;
+      var data = analysis.camelot_grid[cell] || { count: 0, level: 'critical' };
+      html +=
+        '<button class="dig-camelot-cell dig-camelot-cell--' +
+        esc(data.level) +
+        '" data-action="dig-camelot-cell" data-camelot="' +
+        esc(cell) +
+        '"><span class="dig-camelot-key">' +
+        esc(cell) +
+        '</span><span class="dig-camelot-count">' +
+        esc(data.count) +
+        '</span></button>';
+    }
+    return html;
+  }
+  return (
+    '<div class="dig-camelot-grid-wrap"><div class="dig-camelot-grid" data-testid="dig-camelot-grid">' +
+    head +
+    row('A') +
+    row('B') +
+    '</div></div>'
+  );
+}
+function renderDigGapCard(gap) {
+  return (
+    '<article class="dig-gap-card" data-testid="dig-gap-card" data-camelot="' +
+    esc(gap.camelot) +
+    '"><header class="dig-gap-header"><span class="dig-gap-cell">' +
+    esc(gap.camelot) +
+    '</span><span class="dig-gap-level dig-gap-level--' +
+    esc(gap.level) +
+    '">' +
+    esc(gap.level) +
+    '</span>' +
+    (gap.priority
+      ? '<span class="dig-gap-priority dig-gap-priority--' +
+        esc(gap.priority) +
+        '">' +
+        esc(gap.priority) +
+        '</span>'
+      : '') +
+    '</header><p class="dig-gap-brief">' +
+    esc(gap.brief) +
+    '</p></article>'
+  );
+}
+function renderDigBpm(analysis) {
+  var maxCount = analysis.bpm_histogram.reduce(function (max, row) {
+    return Math.max(max, row.count);
+  }, 0);
+  return (
+    '<div class="dig-bpm-histogram" data-testid="dig-bpm-histogram">' +
+    (analysis.bpm_histogram.length
+      ? analysis.bpm_histogram
+          .map(function (row) {
+            var scale = maxCount ? Math.max(row.count / maxCount, row.count ? 0.08 : 0) : 0;
+            return (
+              '<div class="dig-bpm-row' +
+              (row.isolated_gap ? ' dig-bpm-row--gap' : '') +
+              '" data-bpm-range="' +
+              esc(row.range) +
+              '"><span class="dig-bpm-range">' +
+              esc(row.range) +
+              '</span><div class="dig-bpm-bar-wrap"><div class="dig-bpm-bar" style="--bar-scale:' +
+              esc(scale) +
+              '"></div></div><span class="dig-bpm-count">' +
+              esc(row.count) +
+              '</span></div>'
+            );
+          })
+          .join('')
+      : '<p class="dig-muted">Пока нет BPM-данных для гистограммы.</p>') +
+    '</div>'
+  );
+}
+function renderDigAnalysis(analysis) {
+  var coveragePct = Math.round((analysis.metadata_coverage || 0) * 100);
+  return (
+    '<section class="dig-meta"><div class="dig-confidence dig-confidence--' +
+    esc(analysis.confidence) +
+    '"><span>Анализ: ' +
+    esc(analysis.record_count) +
+    ' пластинок, ' +
+    esc(analysis.track_count) +
+    ' треков. BPM/Key найден у ' +
+    esc(analysis.enriched_track_count) +
+    '.</span><span class="dig-confidence-label">Уверенность: ' +
+    esc(digConfidenceLabel(analysis.confidence)) +
+    ' · покрытие ' +
+    esc(coveragePct) +
+    '%</span></div></section>' +
+    renderDigBriefs(analysis) +
+    '<section class="dig-camelot"><h2>Camelot</h2>' +
+    renderDigCamelotGrid(analysis) +
+    '<div class="dig-camelot-gaps">' +
+    (analysis.camelot_gaps.length
+      ? analysis.camelot_gaps.slice(0, 12).map(renderDigGapCard).join('')
+      : '<p class="dig-muted">Критичных Camelot-провалов не видно.</p>') +
+    '</div></section><section class="dig-bpm"><h2>BPM</h2>' +
+    renderDigBpm(analysis) +
+    '<div class="dig-bpm-gaps">' +
+    (analysis.bpm_gaps.length
+      ? analysis.bpm_gaps
+          .map(function (gap) {
+            return (
+              '<article class="dig-gap-card" data-testid="dig-gap-card" data-bpm-range="' +
+              esc(gap.range) +
+              '"><header class="dig-gap-header"><span class="dig-gap-cell">' +
+              esc(gap.range) +
+              ' BPM</span></header><p class="dig-gap-brief">' +
+              esc(gap.brief) +
+              '</p></article>'
+            );
+          })
+          .join('')
+      : '<p class="dig-muted">Изолированных BPM-провалов не видно.</p>') +
+    '</div></section>'
+  );
+}
+function viewDig() {
+  var collection = state.collection || [];
+  var ui = (state.ui = state.ui || {});
+  ui.dig = ui.dig || { force_show: false, show_all_briefs: false };
+  var recordCount = collection.length;
+  var forceShow = !!ui.dig.force_show;
+  var body = '';
+  if (recordCount === 0) body = renderDigOnboarding('empty', recordCount);
+  else if (recordCount < 5 && !forceShow) body = renderDigOnboarding('too_small', recordCount);
+  else body = renderDigAnalysis(computeDigAnalysis(collection));
+  return (
+    renderChassis() +
+    '<div class="dig-view" data-testid="dig-view"><header class="dig-header"><button class="laiso-back" data-action="back">← Назад</button><h1>Что докопать</h1></header>' +
+    body +
+    '</div>' +
     renderFooter()
   );
 }

@@ -58,6 +58,7 @@ Main capabilities:
 - Discogs collection import.
 - Set builder.
 - "Will this record fit?" compatibility check against the local collection.
+- "Что докопать" local collection gaps analysis: Camelot/BPM gaps, metadata coverage, and rule-based digging briefs.
 - AI DJ breakdown for compatibility results, generated only on demand.
 - Live set mode.
 - Backup and restore.
@@ -147,6 +148,16 @@ Current intent:
 10. User may request an AI DJ breakdown.
 
 The AI DJ breakdown does not decide compatibility. It explains the already-computed result and may discuss the release context, labels/artists already present in the user's collection, Discogs notes, styles, and possible set use cases. It must not invent web facts or Discogs-owner comments that are not in the provided data.
+
+### Find What To Dig Next
+
+1. User opens "Что докопать".
+2. Vertax analyzes the local collection already loaded in memory.
+3. Vertax flattens records into tracks and counts BPM/Camelot coverage.
+4. Vertax shows a Camelot heatmap, BPM histogram, weak zones, and short rule-based digging briefs.
+5. Empty and tiny collections show onboarding instead of confident recommendations.
+
+This is a local-first helper for crate direction, not a server-side recommendation engine. Stage 1 does not call AI, Discogs, Beatport, or new APIs.
 
 ### Backup And Restore
 
