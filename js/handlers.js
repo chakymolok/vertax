@@ -124,7 +124,7 @@
       if (vkLaunchParams) headers['X-VK-Launch-Params'] = vkLaunchParams;
       if (clientId) headers['X-Vertax-Client-Id'] = clientId;
       var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname || '');
-      var apiUrl = (isLocal ? 'https://vertax-one.vercel.app' : '') + '/api/discogs-ingest';
+      var apiUrl = (isLocal ? 'https://vertax.live' : '') + '/api/discogs-ingest';
       window.__vertaxLastIngest = {
         ok: null,
         status: 'sending',

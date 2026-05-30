@@ -479,7 +479,7 @@ const COPY = {
 
 const VALID_LANGS = ['ru', 'en', 'zh', 'ja'];
 const STORAGE_KEY = 'vertax-lang';
-const BASE_URL = 'https://vertax-one.vercel.app/about';
+const BASE_URL = 'https://vertax.live/about';
 
 // ─── LANG DETECTION ──────────────────────────────────────────────────────────
 

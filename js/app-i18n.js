@@ -76,7 +76,7 @@
       'поддержать VERTAX-01': 'support VERTAX-01',
       'VERTAX-01 · by Laiso Buck / Михаил Проскурин':
         'VERTAX-01 · by Laiso Buck / Michael Proskurin',
-      'Telegram автору': 'Message author',
+      'Telegram Автора': 'Message author',
       'Поддержать проект': 'Support the project',
       'Откройте VERTAX в Telegram': 'Open VERTAX in Telegram',
       'Mini App стабильнее и быстрее. Хаптики, тёмная тема, оффлайн-режим.':
@@ -250,7 +250,7 @@
       support: '支持',
       Донат: '捐助',
       'поддержать VERTAX-01': '支持 VERTAX-01',
-      'Telegram автору': '联系作者',
+      'Telegram Автора': '联系作者',
       'Поддержать проект': '支持项目',
       'Откройте VERTAX в Telegram': '在 Telegram 中打开 VERTAX',
       'Mini App стабильнее и быстрее. Хаптики, тёмная тема, оффлайн-режим.':
@@ -409,7 +409,7 @@
       support: 'サポート',
       Донат: '寄付',
       'поддержать VERTAX-01': 'VERTAX-01 を支援',
-      'Telegram автору': '作者に連絡',
+      'Telegram Автора': '作者に連絡',
       'Поддержать проект': 'プロジェクトを支援',
       'Откройте VERTAX в Telegram': 'VERTAX を Telegram で開く',
       'Mini App стабильнее и быстрее. Хаптики, тёмная тема, оффлайн-режим.':

@@ -33,7 +33,7 @@
   "bugs": {
     "url": "https://github.com/chakymolok/vertax/issues"
   },
-  "homepage": "https://vertax-one.vercel.app",
+  "homepage": "https://vertax.live",
   "devDependencies": {
     "esbuild": "^0.28.0",
     "playwright": "^1.59.1",

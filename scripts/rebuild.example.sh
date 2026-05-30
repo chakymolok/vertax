@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-BASE="${BASE:-https://vertax-one.vercel.app}"
+BASE="${BASE:-https://vertax.live}"
 : "${ADMIN_TOKEN:?Set ADMIN_TOKEN in your shell before running this script}"
 
 OFFSET="${OFFSET:-0}"

@@ -2,7 +2,7 @@
 
 Vertax is a web tool for vinyl DJs: Discogs release lookup, record collection management, BPM/Key lookup, Camelot-aware set building, and backup/export flows. The main app is a static vanilla JS application with a small Vercel `api/` layer for Discogs, Beatport, cache, and admin workflows.
 
-Production: https://vertax-one.vercel.app
+Production: https://vertax.live
 
 ## Local Development
 

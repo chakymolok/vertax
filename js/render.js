@@ -198,7 +198,7 @@ function renderFooter() {
     '' +
     '<div class="laiso-footer">' +
     '<div>VERTAX-01 · by Laiso Buck / Михаил Проскурин</div>' +
-    '<div class="laiso-footer-tg"><a href="https://t.me/michael1994lab" target="_blank" rel="noopener">Telegram автору</a></div>' +
+    '<div class="laiso-footer-tg"><a href="https://t.me/michael1994lab" target="_blank" rel="noopener">Telegram Автора</a></div>' +
     '<div class="laiso-footer-donate"><a href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">Поддержать проект</a></div>' +
     '</div>'
   );

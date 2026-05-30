@@ -1,5 +1,5 @@
 const DISCOGS_BASE = 'https://api.discogs.com';
-const USER_AGENT = 'Vertax/1.0 +https://vertax-one.vercel.app';
+const USER_AGENT = 'Vertax/1.0 +https://vertax.live';
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
