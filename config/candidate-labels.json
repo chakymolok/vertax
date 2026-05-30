@@ -1,0 +1,116 @@
+{
+  "labels": [
+    {
+      "name": "Critical Music",
+      "discogs_label_id": 316138,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "bass",
+      "max_batches_per_run": 3
+    },
+    {
+      "name": "Spearhead Records",
+      "discogs_label_id": 47614,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "bass",
+      "max_batches_per_run": 3
+    },
+    {
+      "name": "1985 Music",
+      "discogs_label_id": 1031619,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "bass",
+      "max_batches_per_run": 3
+    },
+    {
+      "name": "Hospital Records",
+      "discogs_label_id": 1386,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "bass",
+      "max_batches_per_run": 3
+    },
+    {
+      "name": "Signature Records",
+      "discogs_label_id": 16061,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "bass",
+      "max_batches_per_run": 3
+    },
+    {
+      "name": "Shogun Audio",
+      "discogs_label_id": 22976,
+      "priority": "high",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Soul:r",
+      "discogs_label_id": 2354,
+      "priority": "high",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Fokuz Recordings",
+      "discogs_label_id": 2097,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Exit Records",
+      "discogs_label_id": 160726,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Metalheadz",
+      "discogs_label_id": 128,
+      "priority": "high",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Deep Medi Musik",
+      "discogs_label_id": 69832,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "dub",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Hyperdub",
+      "discogs_label_id": 25386,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "dub",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "Dispatch Recordings",
+      "discogs_label_id": 2806,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    },
+    {
+      "name": "The North Quarter",
+      "discogs_label_id": 1070431,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "bass",
+      "max_batches_per_run": 2
+    }
+  ]
+}

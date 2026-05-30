@@ -1,0 +1,33 @@
+name: Seed Vertax Candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: Optional label name or Discogs label ID filter
+        required: false
+        default: ''
+      limit:
+        description: Batch limit, max 25
+        required: false
+        default: '20'
+  schedule:
+    - cron: '0 5 * * 1'
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Seed candidates
+        env:
+          VERTAX_BASE_URL: ${{ secrets.VERTAX_BASE_URL }}
+          VERTAX_ADMIN_TOKEN: ${{ secrets.VERTAX_ADMIN_TOKEN }}
+          LABEL_FILTER: ${{ github.event.inputs.label }}
+          LIMIT: ${{ github.event.inputs.limit || '20' }}
+        run: node scripts/seed-candidates.mjs

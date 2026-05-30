@@ -8,10 +8,11 @@
     "css:audit": "node scripts/css-audit.js",
     "dev": "npm run build && npx serve public -p 4177",
     "lint": "npm run format:check",
+    "seed:candidates": "node scripts/seed-candidates.mjs",
     "smoke": "node smoke.mjs",
     "test": "npm run smoke",
-    "format": "prettier --write \"js/*.js\" \"scripts/*.js\" \"smoke.mjs\"",
-    "format:check": "prettier --check \"js/*.js\" \"scripts/*.js\" \"smoke.mjs\"",
+    "format": "prettier --write \"js/*.js\" \"scripts/*.js\" \"scripts/*.mjs\" \"smoke.mjs\"",
+    "format:check": "prettier --check \"js/*.js\" \"scripts/*.js\" \"scripts/*.mjs\" \"smoke.mjs\"",
     "serve": "npx serve public -p 4177"
   },
   "repository": {

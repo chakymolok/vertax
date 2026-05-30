@@ -43,8 +43,10 @@ This roadmap is organized by practical product and engineering priorities. It is
 
 ### What To Dig Next / Collection Gaps
 
-- Stage 4: consider cron/digest flows after candidate quality is proven.
-- Stage 4: add smarter candidate refresh, digest, and price-alert experiments after recommendation quality is proven.
+- Stage 4B: add marketplace/rating refresh for existing candidate releases.
+- Stage 4C: add admin digest preview for candidate quality checks.
+- Stage 4D: consider Telegram user digest only after opt-in and recommendation quality are proven.
+- Stage 4E: consider price alerts after wishlist semantics are stable.
 
 ### AI DJ Breakdown Quality
 
@@ -170,6 +172,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Added Stage 1 "Что докопать / Collection Gaps": local Camelot/BPM gap analysis, metadata coverage, onboarding gates, and rule-based digging briefs without new APIs.
 - Added Stage 2 "Что докопать / Release Candidates Database": consolidated admin functions, added persistent Redis candidate releases, candidate indexes, manual seed by release IDs or label ID, candidate stats, and candidate export.
 - Added Stage 3 "Что докопать / Candidate Recommendations": `/api/candidates`, gap-grouped release candidates, local wishlist/hidden/owned statuses, and candidate-to-analysis flow.
+- Added Stage 4A "Что докопать / Automated Candidate Seed": GitHub Actions weekly/manual seed, label config, dry-run script, and Redis seed state.
 - Added build output to `public/`.
 - Added `vercel.json`.
 - Added bundled/minified JS and CSS outputs.

@@ -233,6 +233,7 @@ Candidate releases and candidate indexes have no TTL. They are a permanent curat
 `lib/release-candidates.js` owns:
 
 - Discogs release and label ingestion;
+- automated seed state under `vertax:seed:label:{label_id}`;
 - release normalization;
 - track enrichment through existing Beatport/Redis helpers;
 - `bpmBucket()` using 5 BPM buckets such as `170-174`;
@@ -240,6 +241,7 @@ Candidate releases and candidate indexes have no TTL. They are a permanent curat
 - `saveReleaseCandidate()`;
 - `indexReleaseCandidate()`;
 - `candidateStats()`;
+- `candidateSeedStates()`;
 - `exportCandidates()`.
 
 Admin seeding runs through:
@@ -247,10 +249,32 @@ Admin seeding runs through:
 ```text
 POST /api/admin/maintenance { "action": "seed_candidates" }
 POST /api/admin/maintenance { "action": "candidate_stats" }
+POST /api/admin/maintenance { "action": "candidate_seed_state" }
 POST /api/admin/maintenance { "action": "export_candidates" }
 ```
 
-The seed flow accepts `release_ids` or `label_id` batches. It does not create user recommendations in Stage 2.
+The seed flow accepts `release_ids` or `label_id` batches. Label seeds update `vertax:seed:label:{label_id}` and the `vertax:seed:labels` set so automated jobs can continue from the last offset.
+
+### Automated Candidate Seed
+
+Stage 4A uses GitHub Actions, not Vercel Cron, to grow the candidate database safely.
+
+Files:
+
+- `.github/workflows/seed-candidates.yml` runs weekly and supports `workflow_dispatch`.
+- `config/candidate-labels.json` stores enabled Discogs label IDs, priorities, genre families, and `max_batches_per_run`.
+- `scripts/seed-candidates.mjs` reads the config, loads seed state through `candidate_seed_state`, then calls `seed_candidates` batches sequentially.
+
+Safety limits:
+
+- no tokens are committed;
+- the workflow requires `VERTAX_BASE_URL` and `VERTAX_ADMIN_TOKEN` GitHub secrets;
+- each label is capped by `max_batches_per_run`;
+- `LIMIT` is clamped to 25;
+- batches run sequentially with a 2-second pause;
+- one failing label does not stop the whole run.
+
+The workflow does not refresh marketplace data separately, send Telegram digests, send user notifications, or call Beatport directly. All enrichment still happens behind the protected backend endpoint.
 
 ### Candidate Recommendations
 
@@ -419,7 +443,7 @@ Current API functions:
 - `api/discogs-ingest.js` - ingest local vinyl track metadata into shared cache/proposal flow.
 - `api/telegram-webhook.js` - Telegram admin callback webhook.
 - `api/admin/proposals.js` - list, approve, and reject metadata proposals.
-- `api/admin/maintenance.js` - import backup, rebuild Beatport cache, seed release candidates, candidate stats, and candidate export.
+- `api/admin/maintenance.js` - import backup, rebuild Beatport cache, seed release candidates, seed state, candidate stats, and candidate export.
 
 Vercel Hobby currently allows no more than 12 Serverless Functions. The admin consolidation reduced the API function count to 9; adding `/api/candidates` brings it to 10.
 

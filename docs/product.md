@@ -166,6 +166,8 @@ This is a local-first helper for crate direction. The gap analysis remains clien
 
 Stage 2 prepared the server-side candidate release database. Stage 3 connects collection gaps with concrete release candidates from that database.
 
+Stage 4A automates candidate database growth by periodically seeding selected Discogs labels through a protected admin endpoint. This only grows the shared candidate database; it does not send digests, alerts, or user notifications.
+
 ### Backup And Restore
 
 1. User opens backup.

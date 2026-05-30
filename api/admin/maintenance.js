@@ -9,6 +9,7 @@ const {
 } = require('../../lib/redis-cache');
 const {
   candidateStats,
+  candidateSeedStates,
   exportCandidates,
   seedCandidates,
 } = require('../../lib/release-candidates');
@@ -334,6 +335,10 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'candidate_stats') {
       send(res, 200, await candidateStats());
+      return;
+    }
+    if (body.action === 'candidate_seed_state') {
+      send(res, 200, await candidateSeedStates());
       return;
     }
     if (body.action === 'export_candidates') {
