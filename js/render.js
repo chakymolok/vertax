@@ -2470,6 +2470,7 @@ function digRenderCandidateStatusMap() {
 }
 function digRenderGapKey(gap) {
   if (!gap) return '';
+  if (gap.type === 'expand') return 'expand:context';
   if (gap.type === 'bpm' || gap.bpm_range)
     return 'bpm:' + (gap.bpm_range || gap.target_bpm_range || '');
   return 'camelot:' + (gap.camelot || '');
@@ -2568,7 +2569,7 @@ function renderDigCandidatesControls(analysis) {
     '<section class="dig-candidates-panel"><div><h2>Кандидаты-релизы</h2><p>' +
     ((analysis.record_count || 0) < 20
       ? 'Коллекция ещё небольшая, поэтому рекомендации будут осторожными.'
-      : 'Можно подобрать конкретные пластинки из серверной базы кандидатов под самые заметные gaps.') +
+      : 'Можно подобрать пластинки под слабые места или, если ящик ровный, в сильные BPM/Camelot-зоны.') +
     '</p></div><button class="laiso-btn laiso-btn-main" data-action="dig-load-candidates" data-testid="dig-load-candidates" ' +
     (ui.candidates_loading ? 'disabled' : '') +
     '>' +
@@ -2653,6 +2654,7 @@ function renderDigAnalysis(analysis) {
   var groupsByGap = digRenderGroupsByGap(
     state.ui && state.ui.dig && state.ui.dig.candidates_result
   );
+  var expandGroup = groupsByGap['expand:context'];
   return (
     '<section class="dig-meta"><div class="dig-confidence dig-confidence--' +
     esc(analysis.confidence) +
@@ -2669,6 +2671,11 @@ function renderDigAnalysis(analysis) {
     '%</span></div></section>' +
     renderDigBriefs(analysis) +
     renderDigCandidatesControls(analysis) +
+    (expandGroup
+      ? '<section class="dig-camelot"><h2>Кандидаты в твой контекст</h2>' +
+        renderDigCandidatesForGap(expandGroup) +
+        '</section>'
+      : '') +
     '<section class="dig-camelot"><h2>Camelot</h2>' +
     renderDigCamelotGrid(analysis) +
     '<div class="dig-camelot-gaps">' +

@@ -394,6 +394,23 @@ function digTopCamelots(analysis) {
       return item.camelot;
     });
 }
+function digExpansionTargets(analysis, profile) {
+  var family = profile && profile.genre_families && profile.genre_families[0];
+  var dominantBpm = digDominantBpmRange(analysis);
+  var topCamelots = digTopCamelots(analysis).filter(function (item) {
+    return item;
+  });
+  if (!dominantBpm && !topCamelots.length && !family) return [];
+  return [
+    {
+      type: 'expand',
+      target_bpm_range: dominantBpm,
+      nearby_camelots: topCamelots,
+      genre_family: family || null,
+      priority: 'context',
+    },
+  ];
+}
 function digBuildCandidateGaps(analysis, profile) {
   var family = profile && profile.genre_families && profile.genre_families[0];
   var dominantBpm = digDominantBpmRange(analysis);
@@ -415,7 +432,8 @@ function digBuildCandidateGaps(analysis, profile) {
       genre_family: digClientGenreFamily(gap.genre) || family || null,
     };
   });
-  return camelot.concat(bpm).slice(0, 8);
+  var gaps = camelot.concat(bpm).slice(0, 8);
+  return gaps.length ? gaps : digExpansionTargets(analysis, profile);
 }
 function digExcludedCandidateIds() {
   var statuses = digCandidateStatuses();
@@ -453,7 +471,7 @@ on('dig-load-candidates', async function () {
   var profile = digCollectionProfile(state.collection || []);
   var gaps = digBuildCandidateGaps(analysis, profile);
   if (!gaps.length) {
-    state.ui.dig.candidates_error = 'Явных gaps для подбора кандидатов пока не видно.';
+    state.ui.dig.candidates_error = 'В коллекции пока мало BPM/Key-данных для подбора кандидатов.';
     render();
     return;
   }
