@@ -7,6 +7,10 @@ on:
         description: Optional label name or Discogs label ID filter
         required: false
         default: ''
+      genre_family:
+        description: Optional genre family filter
+        required: false
+        default: ''
       limit:
         description: Batch limit, max 25
         required: false
@@ -29,5 +33,6 @@ jobs:
           VERTAX_BASE_URL: ${{ secrets.VERTAX_BASE_URL }}
           VERTAX_ADMIN_TOKEN: ${{ secrets.VERTAX_ADMIN_TOKEN }}
           LABEL_FILTER: ${{ github.event.inputs.label }}
+          GENRE_FILTER: ${{ github.event.inputs.genre_family }}
           LIMIT: ${{ github.event.inputs.limit || '20' }}
         run: node scripts/seed-candidates.mjs

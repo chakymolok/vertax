@@ -168,6 +168,8 @@ Stage 2 prepared the server-side candidate release database. Stage 3 connects co
 
 Stage 4A automates candidate database growth by periodically seeding selected Discogs labels through a protected admin endpoint. This only grows the shared candidate database; it does not send digests, alerts, or user notifications.
 
+Candidate seed genres follow the BPM groups shown in the app, including hip-hop/trip-hop/slow breaks, house and techno, electro/breaks, dubstep/grime/UKG, footwork/juke, DnB/jungle, and leftfield contexts. When seed enrichment finds BPM/Camelot, that metadata also improves the shared lookup cache for future recognition and analysis.
+
 ### Backup And Restore
 
 1. User opens backup.

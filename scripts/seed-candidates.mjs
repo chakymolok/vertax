@@ -33,6 +33,12 @@ function labelMatchesFilter(label, filter) {
   );
 }
 
+function labelMatchesGenre(label, filter) {
+  if (!filter) return true;
+  const needle = String(filter).trim().toLowerCase();
+  return String(label.genre_family || '').toLowerCase() === needle;
+}
+
 async function postJson(baseUrl, token, body) {
   const res = await fetch(`${baseUrl}/api/admin/maintenance`, {
     method: 'POST',
@@ -85,6 +91,7 @@ async function seedLabel(label, options, state) {
         action: 'seed_candidates',
         label_id: label.discogs_label_id,
         label_name: label.name,
+        genre_family: label.genre_family || null,
         offset,
         limit: options.limit,
       });
@@ -112,9 +119,15 @@ async function seedLabel(label, options, state) {
 }
 
 async function main() {
-  const labels = (await readConfig()).filter((label) => label && label.enabled !== false);
   const filter = process.env.LABEL_FILTER || '';
-  const selected = labels.filter((label) => labelMatchesFilter(label, filter));
+  const genreFilter = process.env.GENRE_FILTER || '';
+  const hasExplicitFilter = Boolean(filter || genreFilter);
+  const labels = (await readConfig()).filter(
+    (label) => label && (label.enabled !== false || hasExplicitFilter)
+  );
+  const selected = labels
+    .filter((label) => labelMatchesFilter(label, filter))
+    .filter((label) => labelMatchesGenre(label, genreFilter));
   const limit = cleanLimit(process.env.LIMIT);
   const dryRun = process.env.DRY_RUN === '1' || process.env.DRY_RUN === 'true';
 
@@ -123,7 +136,7 @@ async function main() {
   );
   selected.forEach((label) => {
     console.log(
-      `- ${label.name} id=${label.discogs_label_id || 'TODO'} max_batches=${label.max_batches_per_run || 1}`
+      `- ${label.name} id=${label.discogs_label_id || 'TODO'} family=${label.genre_family || 'other'} max_batches=${label.max_batches_per_run || 1}`
     );
   });
 

@@ -172,7 +172,7 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Added Stage 1 "Что докопать / Collection Gaps": local Camelot/BPM gap analysis, metadata coverage, onboarding gates, and rule-based digging briefs without new APIs.
 - Added Stage 2 "Что докопать / Release Candidates Database": consolidated admin functions, added persistent Redis candidate releases, candidate indexes, manual seed by release IDs or label ID, candidate stats, and candidate export.
 - Added Stage 3 "Что докопать / Candidate Recommendations": `/api/candidates`, gap-grouped release candidates, local wishlist/hidden/owned statuses, and candidate-to-analysis flow.
-- Added Stage 4A "Что докопать / Automated Candidate Seed": GitHub Actions weekly/manual seed, label config, dry-run script, and Redis seed state.
+- Added Stage 4A "Что докопать / Automated Candidate Seed": GitHub Actions weekly/manual seed, BPM-band genre families, label config, dry-run script, Redis seed state, and permanent shared metadata upsert from seeded tracks.
 - Added build output to `public/`.
 - Added `vercel.json`.
 - Added bundled/minified JS and CSS outputs.

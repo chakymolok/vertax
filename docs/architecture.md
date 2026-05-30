@@ -237,7 +237,7 @@ Candidate releases and candidate indexes have no TTL. They are a permanent curat
 - release normalization;
 - track enrichment through existing Beatport/Redis helpers;
 - `bpmBucket()` using 5 BPM buckets such as `170-174`;
-- `genreFamily()` MVP mapping;
+- `genreFamily()` mapping aligned with the BPM bands in the dig UI.
 - `saveReleaseCandidate()`;
 - `indexReleaseCandidate()`;
 - `candidateStats()`;
@@ -264,6 +264,7 @@ Files:
 - `.github/workflows/seed-candidates.yml` runs weekly and supports `workflow_dispatch`.
 - `config/candidate-labels.json` stores enabled Discogs label IDs, priorities, genre families, and `max_batches_per_run`.
 - `scripts/seed-candidates.mjs` reads the config, loads seed state through `candidate_seed_state`, then calls `seed_candidates` batches sequentially.
+- manual runs can filter by `LABEL_FILTER` or `GENRE_FILTER`; explicit filters can target disabled labels too, while scheduled runs use only `enabled: true`.
 
 Safety limits:
 
@@ -275,6 +276,25 @@ Safety limits:
 - one failing label does not stop the whole run.
 
 The workflow does not refresh marketplace data separately, send Telegram digests, send user notifications, or call Beatport directly. All enrichment still happens behind the protected backend endpoint.
+
+The seed config now uses the same family language as the BPM analysis:
+
+```text
+downtempo_halftime
+hiphop_trip_hop_breaks
+disco_slow_house
+house_and_techno
+electro_breaks
+dubstep_grime_ukg
+footwork_juke
+jungle_fast_breaks
+dnb_jungle
+fast_dnb_breakcore
+hardcore_footwork
+leftfield
+```
+
+`house_and_techno` means house and techno as a broad BPM-zone family, not tech house. Seeded tracks that resolve BPM/Camelot are also upserted into the shared permanent Beatport/Discogs metadata cache, not only into `vertax:release:*`.
 
 ### Candidate Recommendations
 

@@ -1,116 +1,180 @@
 {
   "labels": [
     {
-      "name": "Critical Music",
-      "discogs_label_id": 316138,
+      "name": "Ninja Tune",
+      "discogs_label_id": 109,
       "priority": "high",
       "enabled": true,
-      "genre_family": "bass",
-      "max_batches_per_run": 3
+      "genre_family": "downtempo_halftime",
+      "max_batches_per_run": 1
     },
     {
-      "name": "Spearhead Records",
-      "discogs_label_id": 47614,
+      "name": "Mo Wax",
+      "discogs_label_id": 111,
       "priority": "high",
       "enabled": true,
-      "genre_family": "bass",
-      "max_batches_per_run": 3
+      "genre_family": "hiphop_trip_hop_breaks",
+      "max_batches_per_run": 1
     },
     {
-      "name": "1985 Music",
-      "discogs_label_id": 1031619,
-      "priority": "high",
-      "enabled": true,
-      "genre_family": "bass",
-      "max_batches_per_run": 3
-    },
-    {
-      "name": "Hospital Records",
-      "discogs_label_id": 1386,
-      "priority": "high",
-      "enabled": true,
-      "genre_family": "bass",
-      "max_batches_per_run": 3
-    },
-    {
-      "name": "Signature Records",
-      "discogs_label_id": 16061,
-      "priority": "high",
-      "enabled": true,
-      "genre_family": "bass",
-      "max_batches_per_run": 3
-    },
-    {
-      "name": "Shogun Audio",
-      "discogs_label_id": 22976,
-      "priority": "high",
-      "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
-    },
-    {
-      "name": "Soul:r",
-      "discogs_label_id": 2354,
-      "priority": "high",
-      "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
-    },
-    {
-      "name": "Fokuz Recordings",
-      "discogs_label_id": 2097,
+      "name": "Music From Memory",
+      "discogs_label_id": 578259,
       "priority": "medium",
-      "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
+      "enabled": true,
+      "genre_family": "disco_slow_house",
+      "max_batches_per_run": 1
     },
     {
-      "name": "Exit Records",
-      "discogs_label_id": 160726,
-      "priority": "medium",
-      "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
-    },
-    {
-      "name": "Metalheadz",
-      "discogs_label_id": 128,
+      "name": "Dekmantel",
+      "discogs_label_id": 148054,
       "priority": "high",
-      "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
+      "enabled": true,
+      "genre_family": "house_and_techno",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Central Processing Unit",
+      "discogs_label_id": 424941,
+      "priority": "medium",
+      "enabled": true,
+      "genre_family": "electro_breaks",
+      "max_batches_per_run": 1
     },
     {
       "name": "Deep Medi Musik",
       "discogs_label_id": 69832,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "dubstep_grime_ukg",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Planet Mu",
+      "discogs_label_id": 185,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "footwork_juke",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Astrophonica",
+      "discogs_label_id": null,
       "priority": "medium",
       "enabled": false,
-      "genre_family": "dub",
-      "max_batches_per_run": 2
+      "genre_family": "jungle_fast_breaks",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Critical Music",
+      "discogs_label_id": 316138,
+      "priority": "high",
+      "enabled": true,
+      "genre_family": "dnb_jungle",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Planet Mu",
+      "discogs_label_id": 185,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "fast_dnb_breakcore",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "PRSPCT Recordings",
+      "discogs_label_id": null,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "hardcore_footwork",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Tru Thoughts",
+      "discogs_label_id": 2125,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "downtempo_halftime",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Stones Throw Records",
+      "discogs_label_id": 1217,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "hiphop_trip_hop_breaks",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Running Back",
+      "discogs_label_id": 9291,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "disco_slow_house",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Rush Hour",
+      "discogs_label_id": 1643995,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "house_and_techno",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Craigie Knowes",
+      "discogs_label_id": 921036,
+      "priority": "medium",
+      "enabled": false,
+      "genre_family": "electro_breaks",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Hessle Audio",
+      "discogs_label_id": 85934,
+      "priority": "high",
+      "enabled": false,
+      "genre_family": "dubstep_grime_ukg",
+      "max_batches_per_run": 1
     },
     {
       "name": "Hyperdub",
       "discogs_label_id": 25386,
       "priority": "medium",
       "enabled": false,
-      "genre_family": "dub",
-      "max_batches_per_run": 2
+      "genre_family": "dubstep_grime_ukg",
+      "max_batches_per_run": 1
     },
     {
-      "name": "Dispatch Recordings",
-      "discogs_label_id": 2806,
-      "priority": "medium",
+      "name": "Spearhead Records",
+      "discogs_label_id": 47614,
+      "priority": "high",
       "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
+      "genre_family": "dnb_jungle",
+      "max_batches_per_run": 1
     },
     {
-      "name": "The North Quarter",
-      "discogs_label_id": 1070431,
+      "name": "Hospital Records",
+      "discogs_label_id": 1386,
+      "priority": "high",
+      "enabled": false,
+      "genre_family": "dnb_jungle",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "XL Recordings",
+      "discogs_label_id": 160,
+      "priority": "medium",
+      "enabled": true,
+      "genre_family": "leftfield",
+      "max_batches_per_run": 1
+    },
+    {
+      "name": "Warp Records",
+      "discogs_label_id": null,
       "priority": "medium",
       "enabled": false,
-      "genre_family": "bass",
-      "max_batches_per_run": 2
+      "genre_family": "leftfield",
+      "max_batches_per_run": 1
     }
   ]
 }

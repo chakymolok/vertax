@@ -294,20 +294,46 @@ function digClientGenreFamily(value) {
   var text = String(value || '').toLowerCase();
   if (!text) return null;
   if (
-    text.indexOf('drum') >= 0 ||
-    text.indexOf('jungle') >= 0 ||
-    text.indexOf('breakbeat') >= 0 ||
-    text.indexOf('breaks') >= 0 ||
-    text.indexOf('garage') >= 0 ||
-    text.indexOf('footwork') >= 0 ||
-    text.indexOf('bassline') >= 0 ||
-    text.indexOf('bass') >= 0
+    text.indexOf('drum and bass') >= 0 ||
+    text.indexOf('drum n bass') >= 0 ||
+    text.indexOf('drum & bass') >= 0 ||
+    text.indexOf('dnb') >= 0 ||
+    text.indexOf('liquid funk') >= 0
   )
-    return 'bass';
-  if (text.indexOf('dubstep') >= 0 || text.indexOf('grime') >= 0 || text.indexOf('140') >= 0)
-    return 'dub';
-  if (text.indexOf('house') >= 0 || text.indexOf('techno') >= 0 || text.indexOf('disco') >= 0)
-    return 'house_techno';
+    return 'dnb_jungle';
+  if (text.indexOf('jungle') >= 0 || text.indexOf('fast breaks') >= 0) return 'jungle_fast_breaks';
+  if (text.indexOf('breakcore') >= 0 || text.indexOf('fast dnb') >= 0) return 'fast_dnb_breakcore';
+  if (text.indexOf('hardcore') >= 0 || text.indexOf('gabber') >= 0) return 'hardcore_footwork';
+  if (text.indexOf('footwork') >= 0 || text.indexOf('juke') >= 0) return 'footwork_juke';
+  if (
+    text.indexOf('dubstep') >= 0 ||
+    text.indexOf('grime') >= 0 ||
+    text.indexOf('140') >= 0 ||
+    text.indexOf('uk garage') >= 0 ||
+    text.indexOf('ukg') >= 0 ||
+    text.indexOf('2-step') >= 0 ||
+    text.indexOf('bassline') >= 0
+  )
+    return 'dubstep_grime_ukg';
+  if (text.indexOf('electro') >= 0 || text.indexOf('breakbeat') >= 0 || text.indexOf('breaks') >= 0)
+    return 'electro_breaks';
+  if (text.indexOf('hip hop') >= 0 || text.indexOf('hip-hop') >= 0 || text.indexOf('trip hop') >= 0)
+    return 'hiphop_trip_hop_breaks';
+  if (
+    text.indexOf('downtempo') >= 0 ||
+    text.indexOf('halftime') >= 0 ||
+    text.indexOf('ambient') >= 0
+  )
+    return 'downtempo_halftime';
+  if (text.indexOf('disco') >= 0) return 'disco_slow_house';
+  if (text.indexOf('house') >= 0 || text.indexOf('techno') >= 0) return 'house_and_techno';
+  if (
+    text.indexOf('idm') >= 0 ||
+    text.indexOf('experimental') >= 0 ||
+    text.indexOf('leftfield') >= 0
+  )
+    return 'leftfield';
+  if (text.indexOf('garage') >= 0 || text.indexOf('bass') >= 0) return 'bass';
   return 'other';
 }
 function digCollectionProfile(collection) {
@@ -386,7 +412,7 @@ function digBuildCandidateGaps(analysis, profile) {
       type: 'bpm',
       bpm_range: gap.range,
       nearby_camelots: digTopCamelots(analysis),
-      genre_family: family || null,
+      genre_family: digClientGenreFamily(gap.genre) || family || null,
     };
   });
   return camelot.concat(bpm).slice(0, 8);
