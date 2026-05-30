@@ -278,3 +278,70 @@ run synchronously from `installRuntAndVertaxExtensions`. Future work:
 
 4. **Replace `window.prompt` in manual meta flows** — `prompt()` is
    broken in Telegram/VK WebView. Use the existing modal infrastructure.
+
+---
+
+## Stage 4B + housekeeping pass (this session)
+
+### New: marketplace refresh batches (4B)
+
+- `release.marketplace.refreshed_at` timestamp added.
+  - Set on initial ingest in `normalizeReleaseCandidate()`.
+  - Used as freshness key by the new refresh batch.
+- `refreshMarketplaceBatch({ limit, older_than_hours })` in
+  `lib/release-candidates.js`. Linear scan up to `limit*6` records,
+  picks oldest stale, calls `loadMarketplace()` (Discogs only), saves
+  via direct SET (no re-indexing — marketplace doesn't affect indexes).
+- Admin endpoint: `POST /api/admin/maintenance` action `refresh_marketplace`.
+- GitHub Action: `.github/workflows/refresh-marketplace.yml`. Schedule
+  Sundays 04:00 UTC. Inputs: `limit` (25), `older_than_hours` (168 = 1w),
+  `batches` (1). Loops sequentially with 5s rest between batches.
+
+### Tightened: strict vinyl-only candidate filter
+
+`looksLikeVinylFormat()` now requires `formats[].name === 'Vinyl'` when
+formats array is present (no more accepting CD-LPs because they contain
+the word "Album"). Text fallback rejects flac/wav/mp3/digital alongside cd.
+`ingestReleaseCandidate` rejects non-vinyl at intake; `seedCandidates`
+counts them in new `skipped_non_vinyl` field. Use `{ allow_non_vinyl: true }`
+to override.
+
+### New: Beatport track previews
+
+`api/beatport-lookup.js` → `mapTrack()` captures `sample_url` and
+`sample_duration_ms`. `lib/release-candidates.js` → `normalizeTrackFromCache()`
+forwards both. Direct CDN MP3 URL (no embed/iframe needed).
+
+UI integration is open: render a play button on the track row when
+`sample_url` is non-null; fall back to `beatport_url` link otherwise.
+
+### Refactor: shared metadata predicates
+
+`js/state.js` adds `vertaxMetaHasAny / vertaxMetaIsEmpty / vertaxMetaIsFull /
+vertaxMetaHasKey / vertaxMetaSource`. Deezer BPM patch and Beatport BPM
+patch in `js/app.js` now delegate their local `metadataEmpty` / `metadataFull` /
+`hasMeta` / `hasFullMeta` / `sourceName` to these. No behavior change —
+just deduplicated logic.
+
+### Docs
+
+- `docs/architecture.md` gets sections: **Stage 4B Marketplace Refresh**,
+  **Stage 4F Beatport Track Previews**, **AI Verdict Prompt Versioning**,
+  **Shared Metadata Predicates**.
+
+### Roadmap status
+
+- 4A automatic candidate seed → already in place (`seed-candidates.yml`).
+- **4B marketplace refresh → DONE this session.**
+- 4C admin digest preview → not started.
+- 4D opt-in Telegram digest → not started.
+- 4E price alerts → not started; may be skipped depending on wishlist usage.
+- 4F Beatport previews → backend ready; UI integration pending.
+
+### Deferred to next session
+
+- `!important` cleanup in `themes.css` (256) and `display.css` (228).
+  Wants visual regression smoke before mass removal.
+- AI verdict cache GC: stale `ai_verdict:v3:*` and earlier are still in
+  Redis. Optional admin action to scan/delete.
+- UI integration of `sample_url` (play button on track rows).

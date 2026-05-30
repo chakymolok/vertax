@@ -1,0 +1,60 @@
+name: Refresh Marketplace
+
+# Stage 4B: weekly batch refresh of marketplace data (lowest_price,
+# num_for_sale, currency) for candidate releases whose marketplace
+# timestamp is older than the threshold. Does NOT touch BPM/Camelot
+# or candidate indexes — cheap Discogs-only refresh.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Releases to refresh per batch (max 50)
+        required: false
+        default: '25'
+      older_than_hours:
+        description: Skip releases refreshed within this many hours
+        required: false
+        default: '168'
+      batches:
+        description: How many batches to run sequentially (1-10)
+        required: false
+        default: '1'
+  schedule:
+    # Sundays 04:00 UTC — light hour before EU/RU evening listening.
+    - cron: '0 4 * * 0'
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh marketplace batches
+        env:
+          VERTAX_BASE_URL: ${{ secrets.VERTAX_BASE_URL }}
+          VERTAX_ADMIN_TOKEN: ${{ secrets.VERTAX_ADMIN_TOKEN }}
+          LIMIT: ${{ github.event.inputs.limit || '25' }}
+          OLDER_THAN_HOURS: ${{ github.event.inputs.older_than_hours || '168' }}
+          BATCHES: ${{ github.event.inputs.batches || '1' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERTAX_BASE_URL:-}" ] || [ -z "${VERTAX_ADMIN_TOKEN:-}" ]; then
+            echo "::error::VERTAX_BASE_URL and VERTAX_ADMIN_TOKEN secrets must be set"
+            exit 1
+          fi
+          for i in $(seq 1 "$BATCHES"); do
+            echo "::group::Batch $i / $BATCHES"
+            RESP=$(curl -sS -X POST "$VERTAX_BASE_URL/api/admin/maintenance" \
+              -H "Authorization: Bearer $VERTAX_ADMIN_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"action\":\"refresh_marketplace\",\"limit\":$LIMIT,\"older_than_hours\":$OLDER_THAN_HOURS}")
+            echo "$RESP" | jq '{refreshed, failed, stale_found, scanned, catalog_size, errors: (.errors|length)}'
+            STALE=$(echo "$RESP" | jq -r '.stale_found // 0')
+            if [ "$STALE" = "0" ]; then
+              echo "No more stale records. Stopping early."
+              echo "::endgroup::"
+              break
+            fi
+            echo "::endgroup::"
+            # gentle pause between batches to avoid hot-looping Discogs
+            sleep 5
+          done

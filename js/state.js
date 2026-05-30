@@ -211,3 +211,24 @@ function findTrack(vinyl, trackId) {
     }) || null
   );
 }
+
+/* ============================================================
+   SHARED METADATA PREDICATES
+   Used by Deezer + Beatport BPM patches in app.js to avoid
+   duplicating identical helpers in two separate IIFEs.
+   ============================================================ */
+function vertaxMetaHasAny(meta) {
+  return !!(meta && (meta.bpm || meta.key || meta.camelot));
+}
+function vertaxMetaIsEmpty(meta) {
+  return !meta || (!meta.bpm && !meta.key && !meta.camelot);
+}
+function vertaxMetaIsFull(meta) {
+  return !!(meta && meta.bpm && (meta.key || meta.camelot));
+}
+function vertaxMetaHasKey(meta) {
+  return !!(meta && (meta.key || meta.camelot));
+}
+function vertaxMetaSource(meta) {
+  return String((meta && (meta.source || meta.bpmSource || meta.keySource)) || '').toLowerCase();
+}

@@ -172,6 +172,11 @@ function mapTrack(track, confidence, wanted) {
     release_year: getYear(track),
     mix_name: track && track.mix_name || null,
     beatport_url: beatportUrl(track, wanted && wanted.artist || artist, wanted && wanted.title || title),
+    sample_url: (track && track.sample_url) || null,
+    sample_duration_ms:
+      track && track.sample_start_ms != null && track.sample_end_ms != null
+        ? Math.max(0, Number(track.sample_end_ms) - Number(track.sample_start_ms))
+        : null,
     confidence: Math.round(confidence * 100) / 100,
     source: 'beatport',
     savedAt: new Date().toISOString(),

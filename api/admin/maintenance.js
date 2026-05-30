@@ -11,6 +11,7 @@ const {
   candidateStats,
   candidateSeedStates,
   exportCandidates,
+  refreshMarketplaceBatch,
   seedCandidates,
 } = require('../../lib/release-candidates');
 const {
@@ -344,6 +345,11 @@ module.exports = async function adminMaintenance(req, res) {
     if (body.action === 'export_candidates') {
       const candidates = await exportCandidates(body.limit);
       send(res, 200, { ok: true, type: 'candidates', count: candidates.length, candidates });
+      return;
+    }
+    if (body.action === 'refresh_marketplace') {
+      const result = await refreshMarketplaceBatch(body);
+      send(res, result.ok ? 200 : 400, result);
       return;
     }
     send(res, 400, { error: 'unknown_action' });

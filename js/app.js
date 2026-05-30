@@ -1124,21 +1124,12 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   if (window.__vertaxDeezerBpmPatchInstalled) return;
   window.__vertaxDeezerBpmPatchInstalled = true;
 
-  function metadataEmpty(meta) {
-    return !meta || (!meta.bpm && !meta.key && !meta.camelot);
-  }
-
-  function metadataFull(meta) {
-    return !!(meta && meta.bpm && (meta.key || meta.camelot));
-  }
-
-  function hasKey(meta) {
-    return !!(meta && (meta.key || meta.camelot));
-  }
-
-  function sourceName(meta) {
-    return String((meta && (meta.source || meta.bpmSource || meta.keySource)) || '').toLowerCase();
-  }
+  /* Delegate to shared predicates in state.js; kept as thin wrappers so
+   the rest of this patch body doesn't need rewriting. */
+  function metadataEmpty(meta) { return vertaxMetaIsEmpty(meta); }
+  function metadataFull(meta)  { return vertaxMetaIsFull(meta); }
+  function hasKey(meta)        { return vertaxMetaHasKey(meta); }
+  function sourceName(meta)    { return vertaxMetaSource(meta); }
 
   function normalizeSearchText(value) {
     return String(value || '')
@@ -1654,17 +1645,10 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   if (window.__vertaxBeatportBpmPatchInstalled) return;
   window.__vertaxBeatportBpmPatchInstalled = true;
 
-  function hasMeta(meta) {
-    return !!(meta && (meta.bpm || meta.key || meta.camelot));
-  }
-
-  function hasFullMeta(meta) {
-    return !!(meta && meta.bpm && (meta.key || meta.camelot));
-  }
-
-  function sourceName(meta) {
-    return String((meta && (meta.source || meta.bpmSource || meta.keySource)) || '').toLowerCase();
-  }
+  /* Delegate to shared predicates in state.js. */
+  function hasMeta(meta)      { return vertaxMetaHasAny(meta); }
+  function hasFullMeta(meta)  { return vertaxMetaIsFull(meta); }
+  function sourceName(meta)   { return vertaxMetaSource(meta); }
 
   function normalizeBeatportKey(keyName, camelot) {
     if (camelot && typeof CAMELOT_TO_KEY !== 'undefined' && CAMELOT_TO_KEY[camelot])

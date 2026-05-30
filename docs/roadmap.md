@@ -43,10 +43,28 @@ This roadmap is organized by practical product and engineering priorities. It is
 
 ### What To Dig Next / Collection Gaps
 
-- Stage 4B: add marketplace/rating refresh for existing candidate releases.
-- Stage 4C: add admin digest preview for candidate quality checks.
-- Stage 4D: consider Telegram user digest only after opt-in and recommendation quality are proven.
-- Stage 4E: consider price alerts after wishlist semantics are stable.
+- Stage 4B: DONE. `refreshMarketplaceBatch` + `refresh_marketplace` admin
+  action + `.github/workflows/refresh-marketplace.yml` (Sundays 04:00 UTC).
+  Schema: `release.marketplace.refreshed_at` ISO timestamp.
+- Stage 4C: NEXT. Admin digest preview endpoint + page. Render the
+  hypothetical weekly digest for a given user before any 4D sending.
+  Add approve/reject flag in Redis. First few weeks 4D should only fire
+  on approved digests.
+- Stage 4D: After 4C runs dry for 2-3 weeks. Telegram digest gated on
+  explicit user opt-in (Mini-App button → POST `/api/digest/subscribe`
+  with verified initData). Unsubscribe button inline in each digest message.
+- Stage 4E: Optional. Server-side price watches. Only worth doing if
+  wishlist sees real use; otherwise skip.
+- Stage 4F: Beatport sample previews. Backend captures `sample_url` per
+  track (Stage 4B session). UI integration pending — render play button
+  on track rows where `sample_url` is present.
+
+### Vinyl-only candidate intake
+
+Strict filter live since Stage 4B session. Discogs labels often expose CDs
+and files in the same listing — `looksLikeVinylFormat` now rejects them
+at ingest. `seedCandidates` returns `skipped_non_vinyl` counter so we can
+see how many non-vinyl items were filtered per batch.
 
 ### AI DJ Breakdown Quality
 

@@ -554,3 +554,93 @@ Smoke test:
 - `smoke.mjs`
 - uses Playwright;
 - should prefer `data-testid` selectors over visible Russian text.
+
+## Stage 4B — Marketplace Refresh
+
+Candidate releases carry a `marketplace` object with current Discogs price and stock data.
+Because prices/stock change daily but BPM/Camelot is static, marketplace data has a
+dedicated refresh path that does NOT re-enrich tracks through Beatport.
+
+### Shape
+
+`release.marketplace`:
+
+```
+{
+  lowest_price: number | null,
+  currency: 'EUR' | 'USD' | null,
+  num_for_sale: number | null,
+  median_price: number | null,
+  average_price: number | null,
+  price_source: 'discogs_lowest_price' | 'discogs_marketplace_stats' | 'discogs_price_suggestions' | null,
+  refreshed_at: ISO-8601 timestamp     // ← used to find stale records
+}
+```
+
+`refreshed_at` is set on initial ingest (`normalizeReleaseCandidate`) and on every
+`refreshMarketplaceBatch` pass. It is intentionally separate from the record-level
+`updated_at` (which moves on any save).
+
+### Refresh path
+
+- Function: `refreshMarketplaceBatch({ limit, older_than_hours })` in `lib/release-candidates.js`.
+- Admin action: `POST /api/admin/maintenance { action: 'refresh_marketplace', limit, older_than_hours }`.
+- Schedule: `.github/workflows/refresh-marketplace.yml` runs Sundays 04:00 UTC.
+- Defaults: `limit = 25`, `older_than_hours = 168` (1 week).
+- The batch picks oldest stale records first, calls `loadMarketplace()` (Discogs only),
+  saves with `SET` (no re-indexing — marketplace fields don't affect label/genre/camelot/bpm indexes).
+- ~1.1s pause between releases to stay under Discogs token rate limit (60 req/min).
+
+### Vinyl-only filter
+
+`looksLikeVinylFormat(item)` in `lib/release-candidates.js` is STRICT:
+
+1. If `formats[]` array is present, require at least one entry with `name === 'Vinyl'` (case-insensitive).
+2. If `formats[]` is missing (legacy data), fall back to text scan that rejects `cd|file|flac|wav|mp3|cassette|cdr|dvd|digital` and requires `vinyl|12"|lp`.
+
+`ingestReleaseCandidate` rejects non-vinyl releases at ingest, returning
+`{ ok: false, error: 'not_vinyl' }`. `seedCandidates` counts these in
+`skipped_non_vinyl`. To bypass for special cases, pass `{ allow_non_vinyl: true }`.
+
+## Stage 4F — Beatport Track Previews
+
+Beatport tracks now carry `sample_url` (CDN MP3, ~30s preview, no auth) plus
+`sample_duration_ms`. Captured in `api/beatport-lookup.js` → `mapTrack()` and
+propagated through `lib/release-candidates.js` → `normalizeTrackFromCache()`.
+
+UI can render a play button per track whenever `sample_url` is present.
+The URL is a direct CDN link — no embed iframe needed. Fallback when missing:
+link to `beatport_url`.
+
+## AI Verdict Prompt Versioning
+
+`lib/ai-verdict.js` uses `AI_PROMPT_VERSION` constant (currently `v4`) as part
+of the Redis cache key:
+
+```
+ai_verdict:<version>:<lang>:<release_id>:<collection_hash>
+```
+
+**To bump the prompt:**
+
+1. Edit `buildPrompt()` in `lib/ai-verdict.js`.
+2. Increment `AI_PROMPT_VERSION` (`v4` → `v5`).
+3. All previous verdicts become unreachable — Redis will GC them naturally
+   after TTL (30 days). To force-clear, add an action in `api/admin/maintenance.js`
+   that SCANs `ai_verdict:v4:*` and DELs the keys.
+
+**Languages supported:** ru, en, zh, ja (others fall back to ru). Adding a
+language requires updating `languageInstruction()` map.
+
+**Providers:** Gemini Flash (primary, via `GEMINI_API_KEY`) → fallback to
+Groq (`GROQ_API_KEY`). Both fail → returns 503 `ai_unavailable`. There is
+no third fallback by design — math result still works without AI.
+
+## Shared Metadata Predicates
+
+`js/state.js` exposes `vertaxMetaHasAny / vertaxMetaIsEmpty / vertaxMetaIsFull /
+vertaxMetaHasKey / vertaxMetaSource` for use across Deezer/Beatport BPM
+patches in `app.js`. The patches keep local wrappers (`metadataEmpty`,
+`metadataFull`, `hasMeta`, `hasFullMeta`, `sourceName`) that delegate to these
+shared functions — wrappers retained so internal patch code doesn't need
+rewriting.
