@@ -147,7 +147,12 @@ async function vertaxAnalyzeRelease(payload) {
   if (body && body.error === 'collection_index_missing')
     throw new Error('collection_index_missing');
   if (!res.ok && !(body && body.status === 'needs_selection')) {
-    throw new Error(body.error || body.message || 'analyze-release-failed');
+    /* Surface the underlying server message so the toast is actionable.
+     * Example: 'discogs_token_missing' is much more useful than
+     * the bare 'analyze_release_failed' code. */
+    var code = body && body.error ? body.error : 'analyze-release-failed';
+    var msg = body && body.message;
+    throw new Error(msg ? code + ': ' + msg : code);
   }
   return body;
 }

@@ -8,6 +8,18 @@ const {
   MISS_TTL_SECONDS
 } = require('../lib/redis-cache');
 
+/* Defensive fetch wrapper: aborts after `timeoutMs` so a stuck Beatport
+ * call can't eat the entire serverless function budget. */
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs || 6000);
+  try {
+    return await fetch(url, Object.assign({}, options || {}, { signal: controller.signal }));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const API_BASE = 'https://api.beatport.com/v4';
 const lookupCache = new Map();
 
@@ -246,13 +258,13 @@ async function beatportSearchQuery(token, query) {
   url.searchParams.set('per_page', '10');
   url.searchParams.set('page', '1');
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchWithTimeout(url.toString(), {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/json',
       'User-Agent': 'VERTAX-01'
     }
-  });
+  }, 6000);
   if (response.status === 429) {
     const err = new Error('Beatport rate limited');
     err.status = 429;
@@ -287,13 +299,13 @@ async function beatportSearch(token, artist, title, label) {
 }
 
 async function fetchBeatportTrack(token, id) {
-  const response = await fetch(API_BASE + '/catalog/tracks/' + encodeURIComponent(id) + '/', {
+  const response = await fetchWithTimeout(API_BASE + '/catalog/tracks/' + encodeURIComponent(id) + '/', {
     headers: {
       'Authorization': 'Bearer ' + token,
       'Accept': 'application/json',
       'User-Agent': 'VERTAX-01'
     }
-  });
+  }, 6000);
   if (response.status === 429) {
     const err = new Error('Beatport rate limited');
     err.status = 429;

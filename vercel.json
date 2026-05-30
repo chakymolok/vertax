@@ -1,5 +1,10 @@
 {
   "outputDirectory": "public",
   "buildCommand": "npm run build",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci",
+  "functions": {
+    "api/analyze-release.js":   { "maxDuration": 60 },
+    "api/candidates.js":        { "maxDuration": 30 },
+    "api/admin/maintenance.js": { "maxDuration": 60 }
+  }
 }
