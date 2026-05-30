@@ -1415,6 +1415,22 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
         track.beatportUrl = meta.beatport.url;
         changed = true;
       }
+      /* Stage 4F: pull through Beatport preview URL if present. Either
+       * camelCase from a normalized wrapper or snake_case from raw API. */
+      var sample =
+        meta.beatport.sampleUrl ||
+        meta.beatport.sample_url ||
+        meta.beatport.preview_url ||
+        null;
+      if (sample && !track.sample_url) {
+        track.sample_url = sample;
+        changed = true;
+      }
+    }
+    /* Also accept sample_url directly on the meta envelope (Beatport proxy). */
+    if (!track.sample_url && (meta.sample_url || meta.sampleUrl)) {
+      track.sample_url = meta.sample_url || meta.sampleUrl;
+      changed = true;
     }
     if (!track.bpm && meta.bpm) {
       track.bpm = meta.bpm;
@@ -1773,8 +1789,11 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
           releaseYear: data.release_year || null,
           mixName: data.mix_name || null,
           url: data.beatport_url || null,
+          sampleUrl: data.sample_url || data.preview_url || null,
+          sampleDurationMs: data.sample_duration_ms || null,
           confidence: data.confidence || null,
         },
+        sample_url: data.sample_url || data.preview_url || null,
       };
     } catch (e) {
       window.__vertaxBeatportLastLookup = {

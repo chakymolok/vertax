@@ -939,6 +939,7 @@ function renderManualMetaModal() {
           '<span class="laiso-track-title" data-action="edit-track" data-id="' +
           esc(t.id) +
           '">' +
+          renderTrackPreviewButton(t) +
           esc(t.title || '—') +
           (t.excludeFromSets
             ? ' <span style="color:var(--text-tertiary);font-size:10px;">[не в сете]</span>'
