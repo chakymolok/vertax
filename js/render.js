@@ -1989,10 +1989,11 @@ function renderFitCheckMatch(match) {
     esc(rt.position || '—') +
     '</span><div><strong>' +
     esc(rt.title || '—') +
-    '</strong><small>' +
+    '</strong>' +
+    renderTrackPreviewButton(rt) +
+    '<small>' +
     esc(releaseMeta) +
     '</small></div></div>' +
-    renderTrackPreviewButton(rt) +
     '<div class="vertax-fit-score"><strong>' +
     formatPercentValue(best.compatibility) +
     '</strong><span>match</span></div></div>' +
