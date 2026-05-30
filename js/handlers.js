@@ -564,6 +564,19 @@ on('open-about', function () {
   state.modal = 'about';
   render();
 });
+on('open-donate', function () {
+  state.modal = 'donate';
+  render();
+});
+on('preview-play', function (e, el) {
+  var url = el && el.dataset && el.dataset.sampleUrl;
+  if (!url) return;
+  if (typeof vertaxPlayPreview === 'function') vertaxPlayPreview(el, url);
+});
+on('dismiss-tg-suggest', function () {
+  try { localStorage.setItem('vertaxTgSuggestDismissed', '1'); } catch (_) {}
+  render();
+});
 on('open-help', function () {
   state.modal = 'help';
   render();

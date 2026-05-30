@@ -1585,3 +1585,256 @@ body #laiso-app .vertax-fit-reasons strong {
     font-size: 22px;
   }
 }
+
+/* ============================================================
+   HOME CTA #2: "Что докопать"
+   Mirrors vertax-fit-home-cta layout but uses a warmer accent
+   (lime → blue tint) so the two CTAs read as a related pair, not duplicates.
+   ============================================================ */
+body #laiso-app .laiso-home-grid .vertax-dig-home-cta {
+  grid-column: 1 / -1 !important;
+  aspect-ratio: auto !important;
+  min-height: 86px !important;
+  padding: 16px 18px !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background:
+    linear-gradient(115deg, rgba(200,255,46,.05), rgba(255,255,255,0) 34%),
+    linear-gradient(180deg, #18221C, #0F1410) !important;
+  border: 1px solid rgba(200,255,46,.30) !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  text-align: left !important;
+}
+body #laiso-app .laiso-home-grid .vertax-dig-home-cta::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(105deg, transparent 35%, rgba(200,255,46,.18) 48%, rgba(255,255,255,.10) 52%, transparent 65%);
+  transform: translateX(-58%) rotate(8deg);
+  animation: vertax-fit-sheen 5.2s ease-in-out infinite;
+  animation-delay: 1.6s;
+  pointer-events: none;
+}
+body #laiso-app .laiso-home-grid .vertax-dig-home-cta span,
+body #laiso-app .laiso-home-grid .vertax-dig-home-cta small {
+  position: relative;
+  z-index: 1;
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
+}
+body #laiso-app .laiso-home-grid .vertax-dig-home-cta span {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.08;
+}
+body #laiso-app .laiso-home-grid .vertax-dig-home-cta small {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.70) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.70) !important;
+}
+
+/* ============================================================
+   TELEGRAM SUGGEST BANNER
+   ============================================================ */
+#laiso-app .vertax-tg-suggest {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 14px 16px 14px 14px;
+  background: linear-gradient(135deg, #0088CC 0%, #229ED9 100%);
+  border: 1px solid rgba(0,0,0,.18);
+  border-radius: 14px;
+  color: #FFFFFF;
+  box-shadow: 0 6px 18px rgba(0,136,204,.22);
+}
+#laiso-app .vertax-tg-suggest-body strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin-bottom: 4px;
+}
+#laiso-app .vertax-tg-suggest-body p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255,255,255,.88);
+}
+#laiso-app .vertax-tg-suggest-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 999px;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background .18s ease;
+}
+#laiso-app .vertax-tg-suggest-cta:hover { background: rgba(255,255,255,.28); }
+#laiso-app .vertax-tg-suggest-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,.72);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+#laiso-app .vertax-tg-suggest-close:hover { color: #FFF; }
+@media (max-width: 480px) {
+  #laiso-app .vertax-tg-suggest { grid-template-columns: 1fr; padding-bottom: 12px; }
+  #laiso-app .vertax-tg-suggest-cta { justify-self: stretch; justify-content: center; }
+}
+
+/* ============================================================
+   DONATE STICKER + MODAL
+   ============================================================ */
+#laiso-app .laiso-sticker-donate {
+  background:
+    linear-gradient(135deg, rgba(255,182,76,.14), rgba(255,255,255,0) 60%),
+    var(--runt-card, #FFFFFF) !important;
+  border-color: rgba(255,138,76,.40) !important;
+}
+#laiso-app .laiso-sticker-donate strong { color: #B7461A !important; -webkit-text-fill-color: #B7461A !important; }
+body.vertax-theme-dark #laiso-app .laiso-sticker-donate {
+  background: linear-gradient(135deg, rgba(255,138,76,.18), rgba(255,255,255,0) 60%), #1B1714 !important;
+  border-color: rgba(255,138,76,.45) !important;
+}
+body.vertax-theme-dark #laiso-app .laiso-sticker-donate strong { color: #FFB876 !important; -webkit-text-fill-color: #FFB876 !important; }
+
+#laiso-app .vertax-donate-modal .vertax-donate-body p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+#laiso-app .vertax-donate-options { margin: 18px 0 12px; }
+#laiso-app .vertax-donate-cta {
+  display: flex !important;
+  justify-content: center !important;
+  background: linear-gradient(180deg, #FFB257 0%, #E66A2C 100%) !important;
+  border-color: #B7461A !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  text-decoration: none !important;
+  font-weight: 800 !important;
+  letter-spacing: .04em !important;
+}
+#laiso-app .vertax-donate-cta:hover { filter: brightness(1.05); }
+#laiso-app .vertax-donate-hint {
+  margin-top: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--text-tertiary, #888);
+  text-align: center;
+  text-transform: uppercase;
+}
+#laiso-app .vertax-donate-thanks {
+  margin-top: 14px !important;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  font-style: italic;
+}
+
+/* ============================================================
+   BEATPORT SAMPLE PREVIEW BUTTON
+   Small inline play button. Rendered next to BPM/Camelot info
+   on track cards. Has loading and playing states.
+   ============================================================ */
+#laiso-app .vertax-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 8px;
+  padding: 0;
+  background: var(--runt-lcd, #10110F);
+  color: var(--runt-accent, #C8FF2E);
+  border: 1px solid rgba(200,255,46,.45);
+  border-radius: 50%;
+  cursor: pointer;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s ease, box-shadow .25s ease;
+  flex-shrink: 0;
+}
+#laiso-app .vertax-preview-btn:hover { transform: scale(1.06); box-shadow: 0 0 12px rgba(200,255,46,.35); }
+#laiso-app .vertax-preview-btn:active { transform: scale(.96); }
+/* Triangle play / two-bar pause via clip-path on a solid block.
+   currentColor inherits from the button, so light/dark theme just works. */
+#laiso-app .vertax-preview-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  background: currentColor;
+  clip-path: polygon(15% 0%, 100% 50%, 15% 100%);
+  margin-left: 2px;
+}
+#laiso-app .vertax-preview-btn.is-playing .vertax-preview-icon {
+  /* Switch triangle → two vertical bars (pause) by rendering pseudo-element. */
+  background: transparent;
+  clip-path: none;
+  margin-left: 0;
+  position: relative;
+}
+#laiso-app .vertax-preview-btn.is-playing .vertax-preview-icon::before,
+#laiso-app .vertax-preview-btn.is-playing .vertax-preview-icon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: currentColor;
+  border-radius: 1px;
+}
+#laiso-app .vertax-preview-btn.is-playing .vertax-preview-icon::before { left: 2px; }
+#laiso-app .vertax-preview-btn.is-playing .vertax-preview-icon::after  { right: 2px; }
+#laiso-app .vertax-preview-btn-bp {
+  background: #A6FF4D;
+  color: #101010;
+  border-color: #82CC00;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+#laiso-app .vertax-preview-btn.is-playing {
+  background: var(--runt-accent, #C8FF2E);
+  color: #101010;
+}
+#laiso-app .vertax-preview-btn.is-loading {
+  background: var(--runt-lcd, #10110F);
+  border-color: rgba(200,255,46,.65);
+}
+#laiso-app .vertax-preview-btn.is-loading .vertax-preview-icon {
+  animation: vertax-preview-pulse 1.1s ease-in-out infinite;
+}
+@keyframes vertax-preview-pulse {
+  0%, 100% { opacity: .5; }
+  50% { opacity: 1; }
+}

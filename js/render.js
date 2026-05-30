@@ -172,9 +172,10 @@ function renderVertaxDisplay() {
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-collection" data-testid="home-collection">Коллекция</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="go-set" data-testid="home-set-builder">Собрать сет</button>' +
     '<button class="laiso-btn laiso-btn-secondary" data-action="goto-discogs-import" data-testid="home-discogs-import">Импорт из Discogs</button>' +
-    '<button class="laiso-btn laiso-btn-secondary" data-action="open-dig" data-testid="open-dig">Что докопать</button>' +
+    '<button class="laiso-btn laiso-btn-secondary vertax-dig-home-cta" data-action="open-dig" data-testid="open-dig"><span>Что докопать</span><small>подобрать релизы под коллекцию</small></button>' +
     '<button class="laiso-btn laiso-btn-secondary vertax-fit-home-cta" data-action="goto-fit-check" data-testid="home-fit-check"><span>Подойдёт ли пластинка?</span><small>проверить релиз по коллекции</small></button>' +
     '</div>' +
+    renderTelegramSuggestBanner() +
     '<div class="laiso-home-stickers">' +
     '<button class="laiso-sticker laiso-sticker-backup" data-action="goto-backup" data-testid="home-backup">' +
     '<span>service</span><strong>Резервная копия</strong><small>сохранить коллекцию</small>' +
@@ -182,9 +183,9 @@ function renderVertaxDisplay() {
     '<button class="laiso-sticker laiso-sticker-about" data-action="open-about" data-testid="home-about">' +
     '<span>about</span><strong>О проекте</strong><small>что это за штука</small>' +
     '</button>' +
-    '<a class="laiso-sticker laiso-sticker-donate" href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">' +
-    '<span>support</span><strong>Донат</strong><small>поддержать VERTAX-01</small>' +
-    '</a>' +
+    '<button class="laiso-sticker laiso-sticker-donate" data-action="open-donate" data-testid="home-donate">' +
+    '<span>♥ support</span><strong>Поддержать проект</strong><small>помочь развитию VERTAX</small>' +
+    '</button>' +
     '</div>' +
     renderFooter() +
     '</div>'
@@ -197,6 +198,31 @@ function renderFooter() {
     '<div>VERTAX-01 · by Laiso Buck / Михаил Проскурин</div>' +
     '<div class="laiso-footer-tg"><a href="https://t.me/michael1994lab" target="_blank" rel="noopener">Telegram автору</a></div>' +
     '<div class="laiso-footer-donate"><a href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">Поддержать проект</a></div>' +
+    '</div>'
+  );
+}
+
+/* Telegram-suggest banner: shown only when the app is NOT running inside
+ * Telegram WebApp and user hasn't dismissed it. Multilingual via i18n. */
+function renderTelegramSuggestBanner() {
+  if (typeof window === 'undefined') return '';
+  try {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.initData) return ''; /* inside Telegram — skip */
+    if (typeof getHostWebApp === 'function' && getHostWebApp()) return '';
+    var dismissed = false;
+    try { dismissed = localStorage.getItem('vertaxTgSuggestDismissed') === '1'; } catch (_) {}
+    if (dismissed) return '';
+  } catch (_) {}
+  /* Hardcoded RU; app-i18n.js will translate via its DOM walker. */
+  return (
+    '<div class="vertax-tg-suggest" data-testid="tg-suggest-banner">' +
+      '<button class="vertax-tg-suggest-close" data-action="dismiss-tg-suggest" aria-label="Закрыть">×</button>' +
+      '<div class="vertax-tg-suggest-body">' +
+        '<strong>Откройте VERTAX в Telegram</strong>' +
+        '<p>Mini App стабильнее и быстрее. Хаптики, тёмная тема, оффлайн-режим.</p>' +
+      '</div>' +
+      '<a class="vertax-tg-suggest-cta" href="https://t.me/vertaksbot/app" target="_blank" rel="noopener">Открыть в Telegram →</a>' +
     '</div>'
   );
 }
@@ -604,6 +630,26 @@ function renderConfirmClearModal() {
     '</div></div>'
   );
 }
+function renderDonateModal() {
+  return (
+    '<div class="laiso-modal-bg" data-action="close-modal-bg"><div class="laiso-modal vertax-donate-modal" data-stop>' +
+    '<div class="laiso-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+    '<h2 class="laiso-modal-title">♥ Поддержать VERTAX</h2>' +
+    '<button class="laiso-back" data-action="close-modal">Закрыть</button>' +
+    '</div>' +
+    '<div class="vertax-donate-body">' +
+    '<p>VERTAX-01 — независимый проект для виниловых DJ. Без рекламы, без подписки, без сбора персональных данных.</p>' +
+    '<p>Если приложение помогает тебе собирать сеты или ищет нужные релизы — поддержи разработку любой суммой. Это идёт на: ' +
+    '<strong>хостинг Vercel, Redis-кэш, Beatport API, домен, новые фичи</strong>.</p>' +
+    '<div class="vertax-donate-options">' +
+    '<a class="laiso-btn laiso-btn-main vertax-donate-cta" href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">Перевести через Т-Банк →</a>' +
+    '<div class="vertax-donate-hint">Откроется страница Т-Банка. Можно с любой банковской карты.</div>' +
+    '</div>' +
+    '<p class="vertax-donate-thanks">Спасибо, что слушаешь винил и поддерживаешь инди-разработку.</p>' +
+    '</div>' +
+    '</div></div>'
+  );
+}
 function renderModal() {
   if (state.modal && state.modal.type === 'confirm') return renderRuntimeConfirmModal(state.modal);
   if (state.modal && state.modal.type === 'prompt') return renderRuntimePromptModal(state.modal);
@@ -612,6 +658,7 @@ function renderModal() {
   if (state.modal === 'manual-vinyl') return renderManualVinylModal();
   if (state.modal === 'about') return renderAboutModal();
   if (state.modal === 'help') return renderHelpModal();
+  if (state.modal === 'donate') return renderDonateModal();
   if (state.modal === 'confirm-clear') return renderConfirmClearModal();
   return '';
 }
@@ -1933,6 +1980,7 @@ function renderFitCheckMatch(match) {
     '</strong><small>' +
     esc(releaseMeta) +
     '</small></div></div>' +
+    renderTrackPreviewButton(rt) +
     '<div class="vertax-fit-score"><strong>' +
     formatPercentValue(best.compatibility) +
     '</strong><span>match</span></div></div>' +
@@ -1953,6 +2001,32 @@ function renderFitCheckMatch(match) {
       : '') +
     '</article>'
   );
+}
+
+/* Renders a small play button when the track has a Beatport sample_url.
+ * Falls back to "open in Beatport" link when only beatport_url is present.
+ * Returns empty string otherwise. */
+function renderTrackPreviewButton(track) {
+  if (!track) return '';
+  var sample = track.sample_url || '';
+  var bp = track.beatport_url || '';
+  if (sample) {
+    return (
+      '<button class="vertax-preview-btn" data-action="preview-play" data-sample-url="' +
+      esc(sample) +
+      '" aria-label="Прослушать превью" type="button">' +
+      '<span class="vertax-preview-icon" aria-hidden="true"></span>' +
+      '</button>'
+    );
+  }
+  if (bp) {
+    return (
+      '<a class="vertax-preview-btn vertax-preview-btn-bp" href="' +
+      esc(bp) +
+      '" target="_blank" rel="noopener" aria-label="Открыть на Beatport">BP</a>'
+    );
+  }
+  return '';
 }
 function renderFitCheckManualTrack(track, idx) {
   var key = esc(track.position || String(idx));

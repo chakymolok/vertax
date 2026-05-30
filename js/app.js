@@ -131,6 +131,68 @@ try {
 /* Run once on script load; render() will also sync class via vertaxAfterRender. */
 setTimeout(vertaxSyncOnlineClass, 0);
 
+/* ============================================================
+   BEATPORT SAMPLE PREVIEW PLAYER
+   Single shared <audio> element. Clicking the same button toggles
+   pause/play; clicking another button switches the source.
+   Buttons get an .is-playing / .is-loading state class.
+   ============================================================ */
+function vertaxGetPreviewAudio() {
+  if (window.__vertaxPreviewAudio) return window.__vertaxPreviewAudio;
+  try {
+    var a = document.createElement('audio');
+    a.preload = 'none';
+    a.crossOrigin = 'anonymous';
+    window.__vertaxPreviewAudio = a;
+    a.addEventListener('ended', vertaxResetAllPreviewButtons);
+    a.addEventListener('pause', vertaxResetAllPreviewButtons);
+    a.addEventListener('playing', function () {
+      var btn = window.__vertaxPreviewActiveBtn;
+      if (btn) {
+        btn.classList.remove('is-loading');
+        btn.classList.add('is-playing');
+      }
+    });
+    a.addEventListener('error', function () {
+      vertaxResetAllPreviewButtons();
+      if (typeof showToast === 'function') showToast('Не удалось загрузить превью');
+    });
+    return a;
+  } catch (_) {
+    return null;
+  }
+}
+function vertaxResetAllPreviewButtons() {
+  document.querySelectorAll('.vertax-preview-btn.is-playing, .vertax-preview-btn.is-loading')
+    .forEach(function (b) { b.classList.remove('is-playing', 'is-loading'); });
+  window.__vertaxPreviewActiveBtn = null;
+}
+function vertaxPlayPreview(button, url) {
+  if (!url || !button) return;
+  var audio = vertaxGetPreviewAudio();
+  if (!audio) return;
+  var same = window.__vertaxPreviewActiveBtn === button;
+  if (same && !audio.paused) {
+    try { audio.pause(); } catch (_) {}
+    return;
+  }
+  vertaxResetAllPreviewButtons();
+  window.__vertaxPreviewActiveBtn = button;
+  button.classList.add('is-loading');
+  try { audio.src = url; } catch (_) {}
+  var p = audio.play();
+  if (p && typeof p.catch === 'function') {
+    p.catch(function () {
+      button.classList.remove('is-loading');
+      window.__vertaxPreviewActiveBtn = null;
+      if (typeof showToast === 'function') showToast('Браузер заблокировал автоплей. Нажми ещё раз.');
+    });
+  }
+  /* haptic feedback if available */
+  if (typeof haptic === 'function') haptic('light');
+}
+window.vertaxPlayPreview = vertaxPlayPreview;
+
 function vertaxResolveRuntimeModal(value) {
   var modal = state && state.modal;
   if (modal && typeof modal.resolve === 'function') modal.resolve(value);
