@@ -91,11 +91,13 @@ function renderAttribution() {
   return (
     '<div style="margin-top:24px;padding:12px 0;border-top:1px solid var(--border);text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:0.04em;">' +
     'BPM/KEY · POWERED BY ' +
+    '<a href="https://www.beatport.com" target="_blank" rel="noopener" style="color:#A6FF4D;text-decoration:underline;">Beatport</a>' +
+    ' AND ' +
     '<a href="https://www.getsongbpm.com" target="_blank" rel="noopener" style="color:var(--accent-lime-dark);text-decoration:underline;">GetSongBPM</a>' +
     ' AND ' +
     '<a href="https://acousticbrainz.org" target="_blank" rel="noopener" style="color:#3a8fd8;text-decoration:underline;">AcousticBrainz</a>' +
     ' AND ' +
-    '<a href="https://open.spotify.com" target="_blank" rel="noopener" style="color:#1db954;text-decoration:underline;">Spotify</a>' +
+    '<a href="https://www.deezer.com" target="_blank" rel="noopener" style="color:#A238FF;text-decoration:underline;">Deezer</a>' +
     '</div>'
   );
 }
@@ -593,12 +595,21 @@ function inputField(label, id, val) {
     '<div class="laiso-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">' +
     '<h2 class="laiso-modal-title">О VERTAX-01</h2><button class="laiso-back" data-action="close-modal" data-testid="about-modal-close">Закрыть</button></div>' +
     '<div class="laiso-stack">' +
-    '<p>Цифровой DJ-компаньон для винила. Добавь до ' +
-    SESSION_LIMIT +
-    ' пластинок, посмотри треклист, проставь BPM/Key, собери сет по правилу «не два трека с одной пластинки подряд».</p>' +
-    '<p style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);">Discogs · GetSongBPM · AcousticBrainz · IndexedDB</p>' +
+    '<p>VERTAX — цифровой компаньон для DJ‑ев и диггеров винила. Помогает искать пластинки, держать коллекцию в порядке, обогащать треки BPM и тональностью, собирать сеты по Camelot‑совместимости.</p>' +
+    '<p><strong>Что умеет:</strong></p>' +
+    '<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.55;">' +
+    '<li>Поиск и импорт пластинок из Discogs (включая всю коллекцию по username)</li>' +
+    '<li>Автоматический BPM/Key из Beatport, GetSongBPM, AcousticBrainz, Deezer</li>' +
+    '<li>Превью треков прямо из приложения, когда есть данные с Beatport</li>' +
+    '<li>Сборщик сета: режимы tempo‑safe, camelot‑safe, best‑flow, energy</li>' +
+    '<li>Live‑режим со счётчиком проигранных и подсказкой следующего</li>' +
+    '<li>Анализ «подойдёт ли пластинка» — релиз против твоей коллекции</li>' +
+    '<li>Рекомендации «что докопать» с учётом пробелов в коллекции</li>' +
+    '<li>Резервная копия в JSON, оффлайн‑режим через service worker</li>' +
+    '</ul>' +
+    '<p style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);letter-spacing:.04em;">Discogs · Beatport · GetSongBPM · AcousticBrainz · Deezer · Redis · IndexedDB · Vercel</p>' +
     '<p>by <strong>Laiso Buck / Михаил Проскурин</strong> · <a href="https://t.me/michael1994lab" target="_blank" rel="noopener">t.me/michael1994lab</a></p>' +
-    '<p><a href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">Поддержать проект</a></p>' +
+    '<p><button class="laiso-btn laiso-btn-sm laiso-btn-secondary" data-action="open-donate" type="button">♥ Поддержать проект</button></p>' +
     '</div></div></div>'
   );
 }

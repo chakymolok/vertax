@@ -227,6 +227,66 @@ async function runImportBackup(body) {
   };
 }
 
+/* One-shot backfill: for cached Beatport tracks that lack sample_url,
+ * re-fetch the track from Beatport and merge sample_url + sample_duration_ms
+ * back into the cache. Existing entries pre-date the sample_url change. */
+async function backfillBeatportSamples(body) {
+  const limit = Math.max(1, Math.min(50, Number(body && body.limit) || 25));
+  const dryRun = !!(body && body.dry_run);
+  const keys = await scanKeys(TRACK_KEY_PATTERN);
+  let examined = 0;
+  let missing = 0;
+  let updated = 0;
+  let skipped_no_id = 0;
+  let failed = 0;
+  const errors = [];
+  for (const key of keys) {
+    if (updated >= limit) break;
+    examined++;
+    const raw = await safeRedis('GET', [key], null);
+    if (!raw) continue;
+    let record;
+    try { record = JSON.parse(raw); } catch (_) { continue; }
+    const flat = readTrack(record) || {};
+    if (flat.sample_url) continue;
+    missing++;
+    const tid = flat.beatport_track_id || flat.id;
+    if (!tid) { skipped_no_id++; continue; }
+    if (dryRun) continue;
+    try {
+      const fresh = await fetchBeatportTrack(tid);
+      if (fresh) {
+        const mapped = mapTrack(fresh, 1, { artist: flat.artist_original, title: flat.title_original });
+        if (mapped && mapped.sample_url) {
+          /* Merge only the sample fields — don't disturb other curated data. */
+          const merged = Object.assign({}, flat, {
+            sample_url: mapped.sample_url,
+            sample_duration_ms: mapped.sample_duration_ms || flat.sample_duration_ms || null,
+          });
+          await safeRedis('SET', [key, JSON.stringify(merged)], null);
+          updated++;
+        }
+      }
+      await new Promise((r) => setTimeout(r, 350));
+    } catch (error) {
+      failed++;
+      if (errors.length < 20)
+        errors.push({ key, error: error && error.message ? error.message : String(error) });
+    }
+  }
+  return {
+    ok: true,
+    keys_scanned: keys.length,
+    examined,
+    missing_sample: missing,
+    updated,
+    skipped_no_id,
+    failed,
+    dry_run: dryRun,
+    errors,
+  };
+}
+
 async function runRebuild(body, query) {
   const startedAt = Date.now();
   const offset = Math.max(0, Number(body.offset || query.offset || 0) || 0);
@@ -349,6 +409,11 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'refresh_marketplace') {
       const result = await refreshMarketplaceBatch(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'backfill_beatport_samples') {
+      const result = await backfillBeatportSamples(body);
       send(res, result.ok ? 200 : 400, result);
       return;
     }

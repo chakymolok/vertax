@@ -659,9 +659,30 @@ body.vertax-theme-light > .vertax-backup-toast {
   -webkit-text-fill-color: var(--runt-accent, #C8FF2E) !important;
 }
 
+/* Donate sticker — warmer orange tint so "support" reads as the right action.
+   Wins over the lime base.css rule via higher specificity + !important. */
 #laiso-app .laiso-home-stickers .laiso-sticker-donate {
-  background: linear-gradient(180deg, var(--runt-lcd-2, #1A1B18), var(--runt-lcd, #10110F)) !important;
-  border-color: rgba(200,255,46,.28) !important;
+  background: linear-gradient(180deg, #FFB257 0%, #E66A2C 100%) !important;
+  border-color: #B7461A !important;
+  box-shadow: 0 6px 16px rgba(230,106,44,.22) !important;
+}
+#laiso-app .laiso-home-stickers .laiso-sticker-donate span,
+#laiso-app .laiso-home-stickers .laiso-sticker-donate small,
+#laiso-app .laiso-home-stickers .laiso-sticker-donate strong {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+#laiso-app .laiso-home-stickers .laiso-sticker-donate small {
+  color: rgba(255,255,255,.82) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.82) !important;
+}
+#laiso-app .laiso-home-stickers .laiso-sticker-donate:after {
+  background: #FFFFFF !important;
+  box-shadow: 0 0 8px rgba(255,255,255,.5) !important;
+}
+body.vertax-theme-dark #laiso-app .laiso-home-stickers .laiso-sticker-donate {
+  background: linear-gradient(180deg, #E66A2C 0%, #B7461A 100%) !important;
+  border-color: rgba(255,138,76,.65) !important;
 }
 
 @media (max-width: 620px) {
@@ -1712,18 +1733,8 @@ body #laiso-app .laiso-home-grid .vertax-dig-home-cta small {
 /* ============================================================
    DONATE STICKER + MODAL
    ============================================================ */
-#laiso-app .laiso-sticker-donate {
-  background:
-    linear-gradient(135deg, rgba(255,182,76,.14), rgba(255,255,255,0) 60%),
-    var(--runt-card, #FFFFFF) !important;
-  border-color: rgba(255,138,76,.40) !important;
-}
-#laiso-app .laiso-sticker-donate strong { color: #B7461A !important; -webkit-text-fill-color: #B7461A !important; }
-body.vertax-theme-dark #laiso-app .laiso-sticker-donate {
-  background: linear-gradient(135deg, rgba(255,138,76,.18), rgba(255,255,255,0) 60%), #1B1714 !important;
-  border-color: rgba(255,138,76,.45) !important;
-}
-body.vertax-theme-dark #laiso-app .laiso-sticker-donate strong { color: #FFB876 !important; -webkit-text-fill-color: #FFB876 !important; }
+/* (donate sticker design moved up to a higher-specificity rule near
+   .laiso-home-stickers .laiso-sticker-donate; this block intentionally empty) */
 
 #laiso-app .vertax-donate-modal .vertax-donate-body p {
   margin: 0 0 12px;
