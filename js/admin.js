@@ -4,7 +4,8 @@
     token: sessionStorage.getItem(tokenKey) || '',
     data: null,
     candidates: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'updated_at', sortDir: 'desc' },
-    tracks: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'savedAt', sortDir: 'desc' },
+    tracks: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'savedAt', sortDir: 'desc', selected: {} },
+    coll: { mode: 'releases', rows: [], offset: 0, limit: 50, total: 0, sortBy: 'updated_at', sortDir: 'desc', detail: null },
   };
 
   /* ============================================================
@@ -116,7 +117,27 @@
     }[name] || 'Дашборд';
     if (name === 'candidates') loadCandidates();
     if (name === 'users') loadUsersTab();
-    if (name === 'collection') loadTracks();
+    if (name === 'collection') loadCollection();
+  }
+
+  function setCollMode(mode) {
+    state.coll.mode = mode;
+    document.querySelectorAll('.admin-subtab').forEach(function (el) {
+      el.classList.toggle('is-active', el.getAttribute('data-cmode') === mode);
+    });
+    document.querySelector('.admin-cmode-releases').hidden = (mode !== 'releases');
+    document.querySelector('.admin-cmode-tracks').hidden = (mode !== 'tracks');
+    /* Hide detail when switching modes */
+    if (mode === 'tracks') {
+      $('collReleaseDetail').hidden = true;
+      $('collReleasesTable').closest('.admin-card').hidden = false;
+    }
+    loadCollection();
+  }
+
+  function loadCollection() {
+    if (state.coll.mode === 'tracks') return loadTracks();
+    return loadCollReleases();
   }
 
   /* ============================================================
@@ -218,17 +239,20 @@
           String(a.name).localeCompare(String(b.name));
       })
       .slice(0, 24);
-    renderHtmlTable($('seedConfigTable'), ['Label', 'Family', 'Count', 'Action'],
-      seedLabels.map(function (label) {
-        return [
-          esc(label.name) + (label.enabled ? '' : ' <span class="admin-muted">off</span>'),
-          esc(label.genre_family),
-          esc(label.current_family_count || 0),
-          '<button class="admin-mini-button" type="button" data-action="seed-label" data-label-id="' +
-            esc(label.discogs_label_id) + '" data-label-name="' + esc(label.name) +
-            '" data-genre-family="' + esc(label.genre_family) + '">Seed 5</button>',
-        ];
-      }));
+    var seedRows = seedLabels.map(function (label) {
+      return [
+        esc(label.name) + (label.enabled ? '' : ' <span class="admin-muted">off</span>'),
+        esc(label.genre_family),
+        esc(label.current_family_count || 0),
+        '<button class="admin-mini-button" type="button" data-action="seed-label" data-label-id="' +
+          esc(label.discogs_label_id) + '" data-label-name="' + esc(label.name) +
+          '" data-genre-family="' + esc(label.genre_family) + '">Seed 5</button>',
+      ];
+    });
+    renderHtmlTable($('seedConfigTable'), ['Label', 'Family', 'Count', 'Action'], seedRows);
+    /* Duplicate to candidates tab */
+    if ($('seedConfigTableCandidates'))
+      renderHtmlTable($('seedConfigTableCandidates'), ['Label', 'Family', 'Count', 'Action'], seedRows);
     renderRecentReleases(data.recent_candidates || []);
   }
 
@@ -397,6 +421,7 @@
         sort_by: state.tracks.sortBy,
         sort_dir: state.tracks.sortDir,
         q: $('trackSearch').value || '',
+        beatport_track_id: ($('trackBpId') && $('trackBpId').value) || '',
         only_missing_sample: filter === 'missing_sample',
         only_missing_bpm: filter === 'missing_bpm',
         only_manual: filter === 'manual',
@@ -420,9 +445,12 @@
       var sampleBtn = r.sample_url
         ? '<button class="admin-mini-button" type="button" data-action="track-play" data-url="' + esc(r.sample_url) + '">▶</button>'
         : '<span class="admin-muted">—</span>';
+      var checked = state.tracks.selected[r.key] ? ' checked' : '';
       return '<tr data-key="' + esc(r.key) + '">' +
+        '<td><input type="checkbox" class="admin-row-check" data-key="' + esc(r.key) + '"' + checked + ' aria-label="Выбрать" /></td>' +
         '<td>' + esc(r.artist || '—') + '</td>' +
-        '<td>' + esc(r.title || '—') + manualTag + '</td>' +
+        '<td>' + esc(r.title || '—') + manualTag +
+          (r.beatport_track_id ? ' <span class="admin-muted" style="font-size:9px">bp:' + esc(r.beatport_track_id) + '</span>' : '') + '</td>' +
         '<td>' + esc(r.label || '—') + '</td>' +
         '<td><input class="admin-cell-input" type="number" min="0" max="300" value="' + esc(r.bpm || '') +
           '" data-field="bpm" data-key="' + esc(r.key) + '" /></td>' +
@@ -438,7 +466,7 @@
           ' <button class="admin-mini-button" type="button" data-action="enrich-track" data-key="' + esc(r.key) + '">Обогатить</button>' +
         '</td>' +
         '</tr>';
-    }).join('') : '<tr><td colspan="10" class="admin-muted">Ничего не найдено.</td></tr>';
+    }).join('') : '<tr><td colspan="11" class="admin-muted">Ничего не найдено.</td></tr>';
 
     var hasNext = (state.tracks.offset + state.tracks.limit) < state.tracks.total;
     var hasPrev = state.tracks.offset > 0;
@@ -636,6 +664,232 @@
   }
 
   /* ============================================================
+     Collection — Releases sub-view
+     ============================================================ */
+  async function loadCollReleases() {
+    showError('');
+    try {
+      /* Use same backend as Candidates tab */
+      if (!state.labels) {
+        var lr = await adminPost('list_candidate_labels');
+        state.labels = lr.labels || [];
+        populateCollFilters(state.labels);
+      }
+      var result = await adminPost('list_candidates_paged', {
+        offset: state.coll.offset,
+        limit: state.coll.limit,
+        sort_by: state.coll.sortBy,
+        sort_dir: state.coll.sortDir,
+        label: $('collReleaseLabel').value || '',
+        genre_family: $('collReleaseGenre').value || '',
+        q: $('collReleaseSearch').value || '',
+      });
+      state.coll.rows = result.rows || [];
+      state.coll.total = result.total || 0;
+      renderCollReleasesTable();
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError(error.message || 'load failed');
+    }
+  }
+
+  function populateCollFilters(labels) {
+    var labelSel = $('collReleaseLabel');
+    var genreSel = $('collReleaseGenre');
+    if (!labelSel || !genreSel) return;
+    var seenGenres = {};
+    labelSel.innerHTML = '<option value="">Все лейблы</option>' +
+      (labels || []).map(function (l) {
+        return '<option value="' + esc(l.name) + '">' + esc(l.name) +
+          ' (' + (l.candidate_count || 0) + ')</option>';
+      }).join('');
+    (labels || []).forEach(function (l) { if (l.genre_family) seenGenres[l.genre_family] = true; });
+    genreSel.innerHTML = '<option value="">Все жанры</option>' +
+      Object.keys(seenGenres).sort().map(function (g) {
+        return '<option value="' + esc(g) + '">' + esc(g) + '</option>';
+      }).join('');
+  }
+
+  function renderCollReleasesTable() {
+    var rows = state.coll.rows;
+    $('collReleasesTotal').textContent = state.coll.total + ' релизов';
+    $('collReleasesTbody').innerHTML = rows.length ? rows.map(function (r) {
+      var cover = r.cover_url ? '<img class="admin-tiny-cover" src="' + esc(r.cover_url) + '" alt="">'
+                              : '<div class="admin-tiny-cover admin-tiny-cover-empty"></div>';
+      var coverage = Math.round((r.metadata_coverage || 0) * 100) + '%';
+      return '<tr data-id="' + esc(r.discogs_id) + '">' +
+        '<td>' + cover + '</td>' +
+        '<td>' + esc(r.artist || '—') + '</td>' +
+        '<td><a class="admin-link-open" href="#" data-action="open-release" data-id="' + esc(r.discogs_id) + '">' +
+          esc(r.title || '—') + '</a>' +
+          (r.catalog_number ? ' <span class="admin-muted">' + esc(r.catalog_number) + '</span>' : '') + '</td>' +
+        '<td>' + esc(r.label || '—') + '</td>' +
+        '<td>' + esc(r.year || '—') + '</td>' +
+        '<td>' + esc(r.genre_family || '—') + '</td>' +
+        '<td>' + esc((r.enriched_track_count || 0) + '/' + (r.track_count || 0)) + '</td>' +
+        '<td>' + esc(coverage) + '</td>' +
+        '<td>' + esc(dateShort(r.updated_at)) + '</td>' +
+        '<td>' +
+          '<button class="admin-mini-button" type="button" data-action="open-release" data-id="' + esc(r.discogs_id) + '">Открыть</button> ' +
+          '<button class="admin-mini-button" type="button" data-action="enrich-candidate" data-id="' + esc(r.discogs_id) + '">Обогатить</button>' +
+        '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="10" class="admin-muted">Ничего не найдено.</td></tr>';
+
+    var hasNext = (state.coll.offset + state.coll.limit) < state.coll.total;
+    $('collReleasesNext').disabled = !hasNext;
+    $('collReleasesPrev').disabled = state.coll.offset <= 0;
+    var shown = Math.min(state.coll.total, state.coll.offset + rows.length);
+    $('collReleasesPagerInfo').textContent = (state.coll.total ? (state.coll.offset + 1) : 0) + '–' + shown + ' из ' + state.coll.total;
+
+    document.querySelectorAll('#collReleasesTable thead th[data-sort-coll]').forEach(function (th) {
+      th.classList.toggle('is-sorted', th.getAttribute('data-sort-coll') === state.coll.sortBy);
+      th.classList.toggle('asc', state.coll.sortDir === 'asc');
+      th.classList.toggle('desc', state.coll.sortDir === 'desc');
+    });
+  }
+
+  async function openReleaseDetail(id) {
+    if (!id) return;
+    showError('');
+    try {
+      var result = await adminPost('get_release_detail', { discogs_id: id });
+      if (!result.ok) throw new Error(result.error || 'detail failed');
+      state.coll.detail = result.release;
+      renderReleaseDetail();
+      $('collReleaseDetail').hidden = false;
+      $('collReleasesTable').closest('.admin-card').hidden = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError('Open release failed: ' + (error.message || 'unknown'));
+    }
+  }
+
+  function closeReleaseDetail() {
+    $('collReleaseDetail').hidden = true;
+    $('collReleasesTable').closest('.admin-card').hidden = false;
+    state.coll.detail = null;
+  }
+
+  function renderReleaseDetail() {
+    var r = state.coll.detail || {};
+    $('collDetailTitle').textContent = (r.artist || '—') + ' — ' + (r.title || '—');
+    $('collDetailMeta').textContent = [r.label, r.year, r.catalog_number, r.genre_family]
+      .filter(Boolean).join(' · ');
+
+    var cover = r.cover_url
+      ? '<img class="admin-detail-cover" src="' + esc(r.cover_url) + '" alt="">' : '';
+    var stats = '<div class="admin-detail-stats">' +
+      statBox('Треков', (r.tracks || []).length) +
+      statBox('Обогащено', r.enriched_track_count || 0) +
+      statBox('Coverage', Math.round((r.metadata_coverage || 0) * 100) + '%') +
+      statBox('Жанр', r.genre_family || '—') +
+      '</div>';
+    var actions = '<div style="margin-top:10px;">' +
+      (r.discogs_url ? '<a class="admin-mini-link" href="' + esc(r.discogs_url) +
+        '" target="_blank" rel="noopener">Discogs ↗</a> ' : '') +
+      '<button class="admin-mini-button" type="button" data-action="enrich-candidate" data-id="' +
+        esc(r.discogs_id) + '">Обогатить релиз</button>' +
+      '</div>';
+    $('collDetailHeader').innerHTML = '<div class="admin-detail-head">' + cover +
+      '<div>' + stats + actions + '</div></div>';
+
+    var tracks = Array.isArray(r.tracks) ? r.tracks : [];
+    $('collDetailTbody').innerHTML = tracks.length ? tracks.map(function (t, idx) {
+      var key = t.cache_key || ('vertax:beatport:track:' + (t.beatport_track_id || ('idx-' + idx)));
+      var manual = String(t.meta_status || '').toLowerCase() === 'admin' ||
+                   String(t.bpm_source || '').toLowerCase() === 'admin';
+      var manualTag = manual ? ' <span class="admin-muted" style="font-size:9px">[admin]</span>' : '';
+      var sampleBtn = t.sample_url
+        ? '<button class="admin-mini-button" type="button" data-action="track-play" data-url="' + esc(t.sample_url) + '">▶</button>'
+        : '<span class="admin-muted">—</span>';
+      var inputs = t.beatport_track_id ? (
+        '<td><input class="admin-cell-input" type="number" min="0" max="300" value="' + esc(t.bpm || '') +
+          '" data-field="bpm" data-key="' + esc(key) + '" /></td>' +
+        '<td><input class="admin-cell-input admin-cell-narrow" type="text" maxlength="3" value="' + esc(t.camelot || '') +
+          '" data-field="camelot" data-key="' + esc(key) + '" /></td>' +
+        '<td><input class="admin-cell-input admin-cell-key" type="text" maxlength="12" value="' + esc(t.key_name || '') +
+          '" data-field="key_name" data-key="' + esc(key) + '" /></td>'
+      ) : (
+        '<td>' + esc(t.bpm || '—') + '</td>' +
+        '<td>' + esc(t.camelot || '—') + '</td>' +
+        '<td>' + esc(t.key_name || '—') + '</td>'
+      );
+      return '<tr>' +
+        '<td>' + esc(t.position || '—') + '</td>' +
+        '<td>' + esc(t.artist || r.artist || '—') + '</td>' +
+        '<td>' + esc(t.title || '—') + manualTag + '</td>' +
+        inputs +
+        '<td>' + sampleBtn + '</td>' +
+        '<td>' +
+          (t.beatport_url ? '<a class="admin-mini-link" href="' + esc(t.beatport_url) + '" target="_blank" rel="noopener">BP</a>' : '') +
+          (t.beatport_track_id ? ' <button class="admin-mini-button" type="button" data-action="enrich-track" data-key="' + esc(key) + '">Обогатить</button>' : '') +
+        '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="8" class="admin-muted">У релиза нет треков в кэше.</td></tr>';
+  }
+
+  function statBox(label, value) {
+    return '<span class="admin-detail-stat"><strong>' + esc(value) + '</strong><span>' + esc(label) + '</span></span>';
+  }
+
+  /* ============================================================
+     Bulk enrich + select-all for Tracks
+     ============================================================ */
+  function refreshBulkCount() {
+    var n = Object.keys(state.tracks.selected).length;
+    $('tracksBulkCount').textContent = n;
+    $('tracksBulkEnrichBtn').disabled = n === 0;
+  }
+  function toggleTrackSelect(key, on) {
+    if (on) state.tracks.selected[key] = true;
+    else delete state.tracks.selected[key];
+    refreshBulkCount();
+  }
+  async function bulkEnrichTracks() {
+    var keys = Object.keys(state.tracks.selected);
+    if (!keys.length) return;
+    var btn = $('tracksBulkEnrichBtn');
+    btn.disabled = true;
+    var orig = btn.textContent;
+    btn.textContent = 'Обогащаю ' + keys.length + '…';
+    try {
+      var result = await adminPost('enrich_tracks_batch', { keys: keys });
+      showError('Bulk обогащение: ' + result.succeeded + '/' + result.total + ' успешно');
+      state.tracks.selected = {};
+      refreshBulkCount();
+      await loadTracks();
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError('Bulk failed: ' + (error.message || 'unknown'));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  }
+
+  /* Reclassify candidates */
+  async function reclassifyCandidates(dryRun) {
+    var statusEl = $('reclassifyStatus');
+    var outEl = $('reclassifyOutput');
+    statusEl.textContent = dryRun ? 'Считаю изменения…' : 'Применяю…';
+    outEl.hidden = true;
+    try {
+      var result = await adminPost('reclassify_candidates', { dry_run: !!dryRun });
+      statusEl.textContent = 'Examined: ' + result.examined + ', changed: ' + result.changed +
+        (dryRun ? ' (dry run)' : ' (applied)');
+      outEl.hidden = false;
+      outEl.textContent = JSON.stringify(result.sample_changes || [], null, 2);
+      if (!dryRun) await load();
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      statusEl.textContent = 'Ошибка: ' + (error.message || 'unknown');
+    }
+  }
+
+  /* Wrap loadTracks to update beatport_track_id filter */
+  /* ============================================================
      Dashboard load
      ============================================================ */
   async function load() {
@@ -722,10 +976,17 @@
     $('candidatesExportJson').addEventListener('click', function () { exportCandidatesAs('json'); });
     $('seedGenreBtn').addEventListener('click', seedByGenreClick);
     /* Tracks toolbar */
-    $('tracksApplyBtn').addEventListener('click', function () { state.tracks.offset = 0; loadTracks(); });
+    $('tracksApplyBtn').addEventListener('click', function () {
+      state.tracks.offset = 0; state.tracks.selected = {}; refreshBulkCount(); loadTracks();
+    });
     $('trackSearch').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { state.tracks.offset = 0; loadTracks(); }
     });
+    if ($('trackBpId')) {
+      $('trackBpId').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { state.tracks.offset = 0; loadTracks(); }
+      });
+    }
     $('tracksPrev').addEventListener('click', function () {
       state.tracks.offset = Math.max(0, state.tracks.offset - state.tracks.limit);
       loadTracks();
@@ -733,6 +994,40 @@
     $('tracksNext').addEventListener('click', function () {
       state.tracks.offset += state.tracks.limit;
       loadTracks();
+    });
+    /* Bulk + select-all */
+    $('tracksBulkEnrichBtn').addEventListener('click', bulkEnrichTracks);
+    $('tracksSelectAll').addEventListener('change', function (e) {
+      var on = !!e.target.checked;
+      document.querySelectorAll('.admin-row-check').forEach(function (cb) {
+        cb.checked = on;
+        if (on) state.tracks.selected[cb.getAttribute('data-key')] = true;
+        else delete state.tracks.selected[cb.getAttribute('data-key')];
+      });
+      refreshBulkCount();
+    });
+    /* Collection sub-tabs */
+    document.querySelectorAll('.admin-subtab').forEach(function (el) {
+      el.addEventListener('click', function () { setCollMode(el.getAttribute('data-cmode')); });
+    });
+    /* Collection releases toolbar */
+    $('collReleasesApplyBtn').addEventListener('click', function () { state.coll.offset = 0; loadCollReleases(); });
+    $('collReleaseSearch').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { state.coll.offset = 0; loadCollReleases(); }
+    });
+    $('collReleasesPrev').addEventListener('click', function () {
+      state.coll.offset = Math.max(0, state.coll.offset - state.coll.limit);
+      loadCollReleases();
+    });
+    $('collReleasesNext').addEventListener('click', function () {
+      state.coll.offset += state.coll.limit;
+      loadCollReleases();
+    });
+    $('collReleaseBack').addEventListener('click', closeReleaseDetail);
+    /* Reclassify */
+    $('reclassifyDryBtn').addEventListener('click', function () { reclassifyCandidates(true); });
+    $('reclassifyApplyBtn').addEventListener('click', function () {
+      if (confirm('Перезаписать genre_family у всех изменившихся релизов?')) reclassifyCandidates(false);
     });
     /* Inline track edit on blur */
     document.addEventListener('blur', function (event) {
@@ -775,6 +1070,14 @@
       if (enrichTr) { event.preventDefault(); enrichTrack(enrichTr.getAttribute('data-key'), enrichTr); return; }
       var playBtn = event.target && event.target.closest && event.target.closest('[data-action="track-play"]');
       if (playBtn) { event.preventDefault(); playTrackPreview(playBtn); return; }
+      var openRel = event.target && event.target.closest && event.target.closest('[data-action="open-release"]');
+      if (openRel) { event.preventDefault(); openReleaseDetail(openRel.getAttribute('data-id')); return; }
+      /* Row checkboxes — capture via change too, but click bubbles first */
+      var rowCheck = event.target && event.target.matches && event.target.matches('.admin-row-check');
+      if (rowCheck) {
+        toggleTrackSelect(event.target.getAttribute('data-key'), event.target.checked);
+        return;
+      }
     });
     if (state.token) {
       $('tokenInput').value = state.token;

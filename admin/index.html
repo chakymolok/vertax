@@ -239,6 +239,36 @@
             Управление из админки приедет следующим заходом.
           </p>
         </article>
+
+        <!-- Manual seed table — duplicated from dashboard for convenience -->
+        <article class="admin-card">
+          <div class="admin-card-head">
+            <h2>Manual seed по лейблам</h2>
+            <span>limit 5</span>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="seedConfigTableCandidates"></table>
+          </div>
+        </article>
+
+        <!-- Reclassify all candidates -->
+        <article class="admin-card">
+          <div class="admin-card-head">
+            <h2>Пересчитать жанровые семьи</h2>
+            <span class="admin-muted">обновили классификатор</span>
+          </div>
+          <p class="admin-muted">
+            После правок логики <code>genreFamily()</code> прогоняет все существующие релизы
+            через свежий классификатор и переписывает <code>genre_family</code>. Сначала dry-run
+            покажет какие записи изменятся, потом можно применить.
+          </p>
+          <div class="admin-toolbar admin-toolbar-tight" style="margin-top:8px;">
+            <button class="admin-button admin-button-ghost" id="reclassifyDryBtn" type="button">Dry run</button>
+            <button class="admin-button admin-button-secondary" id="reclassifyApplyBtn" type="button">Применить</button>
+            <span id="reclassifyStatus" class="admin-muted" style="align-self:center;"></span>
+          </div>
+          <pre id="reclassifyOutput" class="admin-output" hidden></pre>
+        </article>
       </section>
 
       <!-- ===== ЮЗЕРЫ ===== -->
@@ -262,21 +292,106 @@
         </article>
       </section>
 
-      <!-- ===== КОЛЛЕКЦИЯ (полная база треков) ===== -->
+      <!-- ===== КОЛЛЕКЦИЯ (Релизы / Треки) ===== -->
       <section class="admin-view" data-view="collection" hidden>
-        <article class="admin-card">
+        <!-- Mode toggle -->
+        <nav class="admin-subtabs">
+          <button class="admin-subtab is-active" data-cmode="releases" type="button">Релизы</button>
+          <button class="admin-subtab" data-cmode="tracks" type="button">Треки</button>
+        </nav>
+
+        <!-- ===== Releases sub-view ===== -->
+        <article class="admin-card admin-cmode-releases">
+          <div class="admin-card-head">
+            <h2>База релизов</h2>
+            <span id="collReleasesTotal" class="admin-muted">—</span>
+          </div>
+
+          <div class="admin-toolbar">
+            <input class="admin-input" id="collReleaseSearch" type="search"
+                   placeholder="Поиск по артисту / названию / catno…" />
+            <select class="admin-input" id="collReleaseLabel">
+              <option value="">Все лейблы</option>
+            </select>
+            <select class="admin-input" id="collReleaseGenre">
+              <option value="">Все жанры</option>
+            </select>
+            <button class="admin-button admin-button-secondary" id="collReleasesApplyBtn" type="button">
+              Применить
+            </button>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-table admin-table-sortable" id="collReleasesTable">
+              <thead>
+                <tr>
+                  <th>Cover</th>
+                  <th data-sort-coll="artist">Артист</th>
+                  <th data-sort-coll="title">Название</th>
+                  <th data-sort-coll="label">Лейбл</th>
+                  <th data-sort-coll="year">Год</th>
+                  <th data-sort-coll="genre_family">Жанр</th>
+                  <th data-sort-coll="track_count">Треков</th>
+                  <th data-sort-coll="metadata_coverage">Coverage</th>
+                  <th data-sort-coll="updated_at" class="is-sorted desc">Обновл.</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="collReleasesTbody">
+                <tr><td colspan="10" class="admin-muted">Жми «Применить»…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="admin-pager">
+            <button class="admin-button admin-button-secondary" id="collReleasesPrev" type="button" disabled>← Назад</button>
+            <span id="collReleasesPagerInfo" class="admin-muted">—</span>
+            <button class="admin-button admin-button-secondary" id="collReleasesNext" type="button" disabled>Вперёд →</button>
+          </div>
+        </article>
+
+        <!-- ===== Release detail (drill-down) — hidden by default ===== -->
+        <article class="admin-card admin-release-detail" id="collReleaseDetail" hidden>
+          <div class="admin-card-head">
+            <h2>
+              <button class="admin-mini-button" id="collReleaseBack" type="button" style="margin-right:8px;">← Назад</button>
+              <span id="collDetailTitle">Релиз</span>
+            </h2>
+            <span id="collDetailMeta" class="admin-muted"></span>
+          </div>
+          <div id="collDetailHeader"></div>
+
+          <div class="admin-table-wrap" style="margin-top:14px;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Pos</th>
+                  <th>Артист</th>
+                  <th>Название</th>
+                  <th>BPM</th>
+                  <th>Camelot</th>
+                  <th>Key</th>
+                  <th>▶</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="collDetailTbody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- ===== Tracks sub-view ===== -->
+        <article class="admin-card admin-cmode-tracks" hidden>
           <div class="admin-card-head">
             <h2>Полная база треков</h2>
             <span id="tracksTotal" class="admin-muted">—</span>
           </div>
 
           <div class="admin-toolbar">
-            <input
-              class="admin-input"
-              id="trackSearch"
-              type="search"
-              placeholder="Поиск по артисту / названию / лейблу…"
-            />
+            <input class="admin-input" id="trackSearch" type="search"
+                   placeholder="Поиск по артисту / названию / лейблу…" />
+            <input class="admin-input" id="trackBpId" type="search"
+                   placeholder="beatport_track_id" style="max-width:160px;" />
             <select class="admin-input" id="trackFilter">
               <option value="">Все треки</option>
               <option value="missing_sample">Без sample_url</option>
@@ -286,12 +401,16 @@
             <button class="admin-button admin-button-secondary" id="tracksApplyBtn" type="button">
               Применить
             </button>
+            <button class="admin-button admin-button-ghost" id="tracksBulkEnrichBtn" type="button" disabled>
+              Обогатить выбранные (<span id="tracksBulkCount">0</span>)
+            </button>
           </div>
 
           <div class="admin-table-wrap">
             <table class="admin-table admin-table-sortable" id="tracksTable">
               <thead>
                 <tr>
+                  <th><input type="checkbox" id="tracksSelectAll" aria-label="Выбрать все" /></th>
                   <th data-sort-track="artist">Артист</th>
                   <th data-sort-track="title">Название</th>
                   <th data-sort-track="label">Лейбл</th>
@@ -305,7 +424,7 @@
                 </tr>
               </thead>
               <tbody id="tracksTbody">
-                <tr><td colspan="10" class="admin-muted">Перейди на вкладку и нажми «Применить»…</td></tr>
+                <tr><td colspan="11" class="admin-muted">Перейди на вкладку и нажми «Применить»…</td></tr>
               </tbody>
             </table>
           </div>
@@ -317,9 +436,8 @@
           </div>
 
           <p class="admin-card-foot admin-muted">
-            Клик по BPM/Camelot/Key в строке — inline-редактирование. Сохранится с пометкой
-            <code>meta_status=admin</code> и больше не будет перезаписан автоматическими источниками.
-            «Обогатить» — refetch из Beatport (заполнит пустые поля, не трогая ручные).
+            Чекбокс слева → выбор для bulk-обогащения. Клик по BPM/Camelot/Key — inline-edit
+            с пометкой <code>meta_status=admin</code>. «Обогатить» — refetch из Beatport.
           </p>
         </article>
       </section>

@@ -523,3 +523,86 @@ h2 {
 .admin-cell-input:disabled { opacity: .5; }
 .admin-cell-narrow { max-width: 50px; }
 .admin-cell-key { max-width: 90px; }
+
+/* ============================================================
+   COLLECTION SUB-TABS + RELEASE DETAIL
+   ============================================================ */
+.admin-subtabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.admin-subtab {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  color: rgba(255,255,255,.62);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.admin-subtab:hover { color: #FFFFFF; }
+.admin-subtab.is-active {
+  background: rgba(200,255,46,.16);
+  color: #C8FF2E;
+  border-color: rgba(200,255,46,.4);
+}
+
+.admin-release-detail .admin-detail-head {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 18px;
+  align-items: flex-start;
+}
+.admin-detail-cover {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.admin-detail-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-detail-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  background: rgba(15,17,15,.5);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+}
+.admin-detail-stat strong {
+  font-size: 18px;
+  color: #C8FF2E;
+}
+.admin-detail-stat span {
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.55);
+  text-transform: uppercase;
+}
+.admin-link-open {
+  color: #C8FF2E;
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(200,255,46,.4);
+}
+.admin-link-open:hover { border-bottom-style: solid; }
+.admin-output {
+  margin-top: 12px;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+  background: rgba(15,17,15,.7);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 11px;
+  color: rgba(255,255,255,.75);
+  white-space: pre-wrap;
+}
+.admin-row-check { cursor: pointer; }

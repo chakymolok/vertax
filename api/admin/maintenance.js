@@ -602,6 +602,7 @@ async function listTracksPaged(body) {
   const offset = Math.max(0, Number(body && body.offset) || 0);
   const limit = Math.max(1, Math.min(200, Number(body && body.limit) || 50));
   const q = body && body.q ? String(body.q).toLowerCase() : '';
+  const beatportIdFilter = body && body.beatport_track_id ? String(body.beatport_track_id).trim() : '';
   const onlyMissingSample = !!(body && body.only_missing_sample);
   const onlyMissingBpm = !!(body && body.only_missing_bpm);
   const onlyManual = !!(body && body.only_manual);
@@ -618,6 +619,9 @@ async function listTracksPaged(body) {
     let record;
     try { record = JSON.parse(raw); } catch (_) { continue; }
     const flat = readTrack(record) || {};
+    if (beatportIdFilter) {
+      if (String(flat.beatport_track_id || '') !== beatportIdFilter) continue;
+    }
     if (q) {
       const hay = (
         String(flat.artist_original || flat.artist || '') + ' ' +
@@ -712,6 +716,26 @@ async function updateTrack(body) {
   return { ok: true, key, patch, track: merged };
 }
 
+/* Batch enrich for tracks selected in the admin UI. Same logic as
+ * enrich_track but parallel-ish (sequential with short delay for
+ * Beatport rate-limit). Returns per-key result. */
+async function enrichTracksBatch(body) {
+  const keys = Array.isArray(body && body.keys) ? body.keys.filter(Boolean).slice(0, 50) : [];
+  if (!keys.length) return { ok: false, error: 'keys_required' };
+  const results = [];
+  for (const key of keys) {
+    try {
+      const r = await enrichSingleTrack({ key });
+      results.push({ key, ok: !!r.ok, error: r.error || null });
+      await sleep(250);
+    } catch (e) {
+      results.push({ key, ok: false, error: e && e.message ? e.message : 'failed' });
+    }
+  }
+  const ok = results.filter((r) => r.ok).length;
+  return { ok: true, total: keys.length, succeeded: ok, failed: keys.length - ok, results };
+}
+
 /* Per-track enrich: refetch from Beatport by beatport_track_id and merge
  * the missing fields (sample_url, genre, etc) without touching admin values. */
 async function enrichSingleTrack(body) {
@@ -739,6 +763,60 @@ async function enrichSingleTrack(body) {
   merged.savedAt = new Date().toISOString();
   await safeRedis('SET', [key, JSON.stringify(merged)], null);
   return { ok: true, key, track: merged };
+}
+
+/* Return one release + its full tracklist for the Collection drill-down view. */
+async function getReleaseDetail(body) {
+  const id = String((body && body.discogs_id) || '').trim();
+  if (!id) return { ok: false, error: 'discogs_id_required' };
+  const all = await exportCandidates(10000);
+  const release = all.find((r) => String(r.discogs_id) === id);
+  if (!release) return { ok: false, error: 'not_found', discogs_id: id };
+  return { ok: true, release };
+}
+
+/* ============================================================
+   RECLASSIFY — re-run genreFamily() against all existing candidates
+   ============================================================ */
+async function reclassifyCandidates(body) {
+  const { genreFamily: classify } = require('../../lib/release-candidates');
+  const releases = await exportCandidates(10000);
+  const dryRun = !!(body && body.dry_run);
+  let examined = 0;
+  let changed = 0;
+  const changes = [];
+  const { saveReleaseCandidate } = require('../../lib/release-candidates');
+  for (const release of releases) {
+    examined++;
+    const styles = release.styles || [];
+    const newFamily = classify(
+      Array.isArray(release.genres) ? release.genres[0] : release.genres,
+      null,
+      styles
+    );
+    if (release.genre_family !== newFamily) {
+      changed++;
+      if (changes.length < 50) {
+        changes.push({
+          discogs_id: release.discogs_id,
+          artist: release.artist,
+          title: release.title,
+          from: release.genre_family,
+          to: newFamily,
+          styles: styles,
+        });
+      }
+      if (!dryRun) {
+        release.genre_family = newFamily;
+        /* candidate_index follows genre_family, rebuild it */
+        if (release.candidate_index) {
+          release.candidate_index.genre_families = [newFamily];
+        }
+        await saveReleaseCandidate(release);
+      }
+    }
+  }
+  return { ok: true, examined, changed, dry_run: dryRun, sample_changes: changes };
 }
 
 /* ============================================================
@@ -919,6 +997,21 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'seed_by_genre') {
       const result = await seedByGenre(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'reclassify_candidates') {
+      const result = await reclassifyCandidates(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'enrich_tracks_batch') {
+      const result = await enrichTracksBatch(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'get_release_detail') {
+      const result = await getReleaseDetail(body);
       send(res, result.ok ? 200 : 400, result);
       return;
     }
