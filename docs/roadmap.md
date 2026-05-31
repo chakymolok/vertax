@@ -6,6 +6,12 @@ This roadmap is organized by practical product and engineering priorities. It is
 
 ### Stabilize Core UX
 
+- Keep smoke coverage for the most fragile flows:
+  - single global footer;
+  - track-source set builder;
+  - dig onboarding;
+  - backup page;
+  - `/about`, `/vk`, and `/admin` static routes.
 - Verify back navigation on all main views:
   - add;
   - collection;
@@ -18,6 +24,8 @@ This roadmap is organized by practical product and engineering priorities. It is
 - Continue replacing WebView-hostile browser APIs with in-app UI.
 - Make manual BPM/Key entry consistent everywhere.
 - Ensure all user-facing buttons and modals are covered by app i18n.
+- Keep native `window.prompt` / `window.confirm` out of app JS; WebViews should
+  use in-app modal state.
 
 ### Protect Existing Data
 
@@ -145,6 +153,21 @@ see how many non-vinyl items were filtered per batch.
 - Keep README short.
 - Keep product/architecture/roadmap/AI rules in `docs/`.
 - Update docs when adding a route, endpoint, storage store, or environment variable.
+- Keep docs practical: product behavior in `product.md`, implementation details
+  in `architecture.md`, editing constraints in `ai-rules.md`, and sequencing in
+  this roadmap.
+
+### Known Technical Debt
+
+- `js/handlers.js` contains stacked historical patch installers. Avoid adding
+  another broad wrapper unless a local handler cannot solve the issue.
+- `js/admin.js` and `js/handlers.js` are not Prettier-clean. `npm run lint`
+  fails on formatting only. A formatting-only PR should be separate from product
+  fixes.
+- CSP still allows inline behavior because of inline analytics, inline styles,
+  and legacy HTML-string rendering. Tightening CSP requires a dedicated audit.
+- The main app is local-first; `/admin` user counts only reflect users who touch
+  server-side flows, not all app opens.
 
 ## Later
 
@@ -208,6 +231,8 @@ see how many non-vinyl items were filtered per batch.
 - Added app-level language gate and language switcher.
 - Added CI smoke workflow.
 - Added `data-testid` selectors for smoke stability.
+- Added smoke regression coverage for duplicate footer prevention and
+  track-source set-builder behavior.
 - Added the first non-AI core of "Подойдёт ли пластинка?": collection index, release analysis, mathematical scoring, and base UI.
 - Added AI DJ breakdown behind an explicit button, with Gemini first and Groq fallback.
 - Added multilingual AI responses based on current app language.

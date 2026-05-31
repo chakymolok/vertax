@@ -79,6 +79,9 @@ If you change client JS or CSS, run:
 npm run build
 ```
 
+Do not hand-edit generated `public/dist/*` or `public/index.html`. Edit source
+files and rebuild.
+
 ## IndexedDB Rules
 
 Current database:
@@ -154,6 +157,9 @@ Use:
 - delegated handlers;
 - `syncTelegramChrome`;
 - graceful fallbacks when SDKs are absent.
+
+If a modal helper such as `vertaxPrompt` is not ready, fail softly with a toast
+or disabled state. Do not fall back to native `window.prompt` in app flows.
 
 ## Navigation Rules
 
@@ -300,6 +306,17 @@ npm run lint
 ```
 
 Smoke tests should use `data-testid`, not Russian visible text.
+
+Current smoke coverage intentionally includes:
+
+- app shell served from generated `public/`;
+- `/about`, `/vk`, and `/admin` route rendering;
+- one and only one global BPM/Key footer;
+- track-source set builder selection/search/build/sort behavior;
+- dig empty-collection onboarding.
+
+If you fix a bug that users reported manually, add a smoke assertion when it can
+be checked without external APIs.
 
 ## Documentation Rules
 

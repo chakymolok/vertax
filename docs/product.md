@@ -136,16 +136,21 @@ user counts only include users who touched server-side flows.
 ### Build A Set
 
 1. User opens "Build set".
-2. Vertax routes to source selection when relevant.
-3. User chooses current session, whole collection, or selected records.
-4. User chooses mode:
+2. Vertax shows source selection.
+3. User chooses one of two paths:
+   - from records: select releases, then use the existing record-based builder;
+   - from tracks: select individual tracks from records that are already in the collection.
+4. In track mode, the generated set is a manual list of the selected tracks.
+   Sorting by BPM or Camelot reorders the list and must not drop tracks because
+   they fail strict harmonic/tempo rules.
+5. User chooses mode:
    - best flow;
    - tempo-safe;
    - Camelot-safe;
    - Camelot filter;
    - custom/manual flow in extended patches.
-5. Vertax generates an ordered track list.
-6. User can edit, reorder, export, save, or enter Live Mode.
+6. Vertax generates or reorders an ordered track list.
+7. User can edit BPM, Camelot, side/position, reorder, export, save, or enter Live Mode.
 
 ### Check If A Record Fits
 
@@ -198,11 +203,16 @@ Candidate seed genres follow the BPM groups shown in the app, including hip-hop/
 
 The primary collection lives locally in the user's browser via IndexedDB. Vertax should treat local user data as the source of truth for the app experience.
 
-Server-side cache is used for shared metadata acceleration and admin/proposal workflows, not as the user's primary collection storage.
-
-For "Что докопать" recommendations, Vertax may temporarily send a normalized collection index to the server for compatibility calculations. The index has a sliding 30-day TTL and is used only for analysis. Wishlist, hidden, and owned candidate statuses stay local on the device in `localStorage`.
+Server-side cache is used for shared metadata acceleration, candidate releases,
+compatibility calculations, and admin/proposal workflows. It is not the user's
+primary collection storage.
 
 For compatibility analysis, Vertax temporarily stores a normalized collection index on the server under an anonymous local UUID. This index is used only for compatibility math and expires after inactivity. The Redis key is `collection_index:{user_id}:{collection_hash}` with a sliding 30-day TTL.
+
+For "Что докопать" recommendations, wishlist, hidden, and owned candidate
+statuses stay local on the device in `localStorage`. Hidden/owned IDs may be
+sent as exclusions in one request, but the server does not persist those
+statuses.
 
 AI DJ verdicts are also temporary cached explanations. Their Redis key includes prompt version and language:
 
@@ -231,3 +241,6 @@ They use a 30-day TTL and can be regenerated when prompt logic changes.
 - The app currently does not perform general web search for release research. Any richer public web context should be added through an explicit search API and cached separately.
 - Prompt/confirm dialogs are not reliable in Telegram/VK/MAX WebViews; use in-app modals.
 - The current client architecture is vanilla JS with global state and patch installers. Changes should be careful and localized.
+- The only permanent app-level BPM/Key attribution footer should be the global
+  `.vertax-global-footer` from `index.html`. Do not add duplicate in-view
+  footers.

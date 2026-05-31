@@ -222,9 +222,20 @@ await page.locator('[data-action="set-track-clear"]').click();
 await page.waitForFunction(() =>
   document.querySelector('[data-action="set-track-build"]').textContent.includes('(0)')
 );
-await page.locator('[data-action="set-track-search"]').fill('');
+const trackSearchInput = page.locator('[data-action="set-track-search"]');
+await trackSearchInput.fill('');
+await trackSearchInput.evaluate((input) => {
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+await page.evaluate(() => {
+  window.laisoBuck.state.ui.setTrackSearch = '';
+  window.laisoBuck.render();
+});
 await page.waitForFunction(
-  () => document.querySelectorAll('.vertax-track-source-card:not([hidden])').length === 4
+  () =>
+    window.laisoBuck.state.ui.setTrackSearch === '' &&
+    document.querySelectorAll('.vertax-track-source-card:not([hidden])').length === 4
 );
 await page.locator('[data-action="set-track-select-all"]').click();
 await page.waitForFunction(() =>

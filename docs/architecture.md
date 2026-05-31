@@ -131,6 +131,11 @@ The rendered app root is:
 
 `render()` in `js/render.js` writes the current view into `#laiso-main` and overlays into `#laiso-overlay`.
 
+The BPM/Key attribution footer is intentionally outside `#laiso-root` in
+`index.html` as `.vertax-global-footer`. Do not add a second per-view
+`.laiso-footer` for the same attribution. The smoke test asserts that the
+global footer renders exactly once.
+
 ## Client State
 
 Global state lives in `js/state.js`:
@@ -270,7 +275,7 @@ Candidate releases and candidate indexes have no TTL. They are a permanent curat
 - release normalization;
 - track enrichment through existing Beatport/Redis helpers;
 - `bpmBucket()` using 5 BPM buckets such as `170-174`;
-- `genreFamily()` mapping aligned with the BPM bands in the dig UI.
+- `genreFamily()` mapping aligned with the BPM bands in the dig UI;
 - `saveReleaseCandidate()`;
 - `indexReleaseCandidate()`;
 - `candidateStats()`;
@@ -498,7 +503,15 @@ Current API functions:
 - `api/admin/proposals.js` - list, approve, and reject metadata proposals.
 - `api/admin/maintenance.js` - import backup, rebuild Beatport cache, seed release candidates, seed state, candidate stats, and candidate export.
 
-Vercel Hobby currently allows no more than 12 Serverless Functions. The admin consolidation reduced the API function count to 9; adding `/api/candidates` brings it to 10.
+Vercel Hobby currently allows no more than 12 Serverless Functions. The current
+API function count is 10. Check it before adding any endpoint:
+
+```bash
+find api -type f -name '*.js' | wc -l
+```
+
+If a new endpoint would push the project over the limit, add an action to an
+existing protected endpoint or consolidate first.
 
 ## Server Libraries
 
@@ -586,7 +599,20 @@ Smoke test:
 
 - `smoke.mjs`
 - uses Playwright;
+- serves the generated `public/` directory over local HTTP, not `file://`;
+- asserts the main routes render;
+- asserts the global BPM/Key footer is not duplicated;
+- covers the track-source set-builder flow: search by artist, clear/select all,
+  build from individual tracks, and switch BPM/Camelot ordering without losing
+  the generated set;
 - should prefer `data-testid` selectors over visible Russian text.
+
+Known tooling state:
+
+- `npm run build`, `npm run smoke`, `npm test`, and `git diff --check` should pass.
+- `npm run lint` currently checks Prettier formatting and is expected to fail on
+  legacy large files `js/admin.js` and `js/handlers.js` until a deliberate
+  formatting-only cleanup is done. Do not mix that cleanup with product fixes.
 
 ## Stage 4B — Marketplace Refresh
 

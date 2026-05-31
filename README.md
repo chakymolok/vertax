@@ -20,9 +20,14 @@ Useful commands:
 npm run smoke
 npm test
 npm run css:audit
-npm run format
 npm run lint
+npm run format
 ```
+
+`npm run lint` currently checks Prettier formatting and is expected to fail on
+legacy large files `js/admin.js` and `js/handlers.js` until a dedicated
+format-only cleanup is done. Runtime checks are `npm run build`, `npm run smoke`,
+and `npm test`.
 
 ## Deployment
 
