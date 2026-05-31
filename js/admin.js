@@ -5,7 +5,7 @@
     data: null,
     candidates: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'updated_at', sortDir: 'desc' },
     tracks: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'savedAt', sortDir: 'desc', selected: {} },
-    coll: { mode: 'releases', rows: [], offset: 0, limit: 50, total: 0, sortBy: 'updated_at', sortDir: 'desc', detail: null },
+    coll: { mode: 'releases', rows: [], offset: 0, limit: 50, total: 0, sortBy: 'updated_at', sortDir: 'desc', detail: null, selected: {}, totals: null },
   };
 
   /* ============================================================
@@ -125,13 +125,15 @@
     document.querySelectorAll('.admin-subtab').forEach(function (el) {
       el.classList.toggle('is-active', el.getAttribute('data-cmode') === mode);
     });
-    document.querySelector('.admin-cmode-releases').hidden = (mode !== 'releases');
+    /* Visibility matrix:
+     *   releases + no drill-down → releases card on, detail off, tracks off
+     *   releases + drill-down    → releases card off, detail on,  tracks off
+     *   tracks                   → releases card off, detail off, tracks on   */
+    var inDetail = !!state.coll.detail;
+    document.querySelector('.admin-cmode-releases').hidden = (mode !== 'releases') || inDetail;
+    $('collReleaseDetail').hidden = !(mode === 'releases' && inDetail);
     document.querySelector('.admin-cmode-tracks').hidden = (mode !== 'tracks');
-    /* Hide detail when switching modes */
-    if (mode === 'tracks') {
-      $('collReleaseDetail').hidden = true;
-      $('collReleasesTable').closest('.admin-card').hidden = false;
-    }
+    if (mode === 'tracks') state.coll.detail = null;
     loadCollection();
   }
 
@@ -669,55 +671,60 @@
   async function loadCollReleases() {
     showError('');
     try {
-      /* Use same backend as Candidates tab */
-      if (!state.labels) {
-        var lr = await adminPost('list_candidate_labels');
-        state.labels = lr.labels || [];
-        populateCollFilters(state.labels);
-      }
-      var result = await adminPost('list_candidates_paged', {
+      var result = await adminPost('list_collection_releases', {
         offset: state.coll.offset,
         limit: state.coll.limit,
         sort_by: state.coll.sortBy,
         sort_dir: state.coll.sortDir,
         label: $('collReleaseLabel').value || '',
-        genre_family: $('collReleaseGenre').value || '',
+        source: $('collReleaseSource').value || '',
         q: $('collReleaseSearch').value || '',
       });
       state.coll.rows = result.rows || [];
       state.coll.total = result.total || 0;
+      state.coll.totals = {
+        seeded: result.seeded_count || 0,
+        derived: result.derived_count || 0,
+        scanned: result.track_cache_keys_scanned || 0,
+      };
+      /* Populate label dropdown from observed labels in current data */
+      if (!state.coll.labelsPopulated) {
+        populateCollReleaseLabels(state.coll.rows);
+        state.coll.labelsPopulated = true;
+      }
       renderCollReleasesTable();
     } catch (error) {
       if (error.status === 401) { showAuthScreen(); return; }
-      showError(error.message || 'load failed');
+      showError('Не удалось загрузить релизы: ' + (error.message || 'unknown'));
     }
   }
 
-  function populateCollFilters(labels) {
-    var labelSel = $('collReleaseLabel');
-    var genreSel = $('collReleaseGenre');
-    if (!labelSel || !genreSel) return;
-    var seenGenres = {};
-    labelSel.innerHTML = '<option value="">Все лейблы</option>' +
-      (labels || []).map(function (l) {
-        return '<option value="' + esc(l.name) + '">' + esc(l.name) +
-          ' (' + (l.candidate_count || 0) + ')</option>';
-      }).join('');
-    (labels || []).forEach(function (l) { if (l.genre_family) seenGenres[l.genre_family] = true; });
-    genreSel.innerHTML = '<option value="">Все жанры</option>' +
-      Object.keys(seenGenres).sort().map(function (g) {
-        return '<option value="' + esc(g) + '">' + esc(g) + '</option>';
+  function populateCollReleaseLabels(rows) {
+    var sel = $('collReleaseLabel');
+    if (!sel) return;
+    var seen = {};
+    (rows || []).forEach(function (r) { if (r.label) seen[r.label] = true; });
+    sel.innerHTML = '<option value="">Все лейблы</option>' +
+      Object.keys(seen).sort().map(function (l) {
+        return '<option value="' + esc(l) + '">' + esc(l) + '</option>';
       }).join('');
   }
 
   function renderCollReleasesTable() {
     var rows = state.coll.rows;
-    $('collReleasesTotal').textContent = state.coll.total + ' релизов';
+    var t = state.coll.totals || {};
+    $('collReleasesTotal').textContent = state.coll.total + ' релизов · seeded: ' +
+      (t.seeded || 0) + ', derived: ' + (t.derived || 0) + ' (scan ' + (t.scanned || 0) + ')';
     $('collReleasesTbody').innerHTML = rows.length ? rows.map(function (r) {
+      var checked = state.coll.selected[r.discogs_id] ? ' checked' : '';
       var cover = r.cover_url ? '<img class="admin-tiny-cover" src="' + esc(r.cover_url) + '" alt="">'
                               : '<div class="admin-tiny-cover admin-tiny-cover-empty"></div>';
       var coverage = Math.round((r.metadata_coverage || 0) * 100) + '%';
+      var sourceTag = r.source === 'derived_from_tracks'
+        ? '<span class="admin-tag admin-tag-derived">derived</span>'
+        : '<span class="admin-tag admin-tag-seeded">seeded</span>';
       return '<tr data-id="' + esc(r.discogs_id) + '">' +
+        '<td><input type="checkbox" class="admin-release-check" data-id="' + esc(r.discogs_id) + '"' + checked + ' aria-label="Выбрать" /></td>' +
         '<td>' + cover + '</td>' +
         '<td>' + esc(r.artist || '—') + '</td>' +
         '<td><a class="admin-link-open" href="#" data-action="open-release" data-id="' + esc(r.discogs_id) + '">' +
@@ -728,13 +735,14 @@
         '<td>' + esc(r.genre_family || '—') + '</td>' +
         '<td>' + esc((r.enriched_track_count || 0) + '/' + (r.track_count || 0)) + '</td>' +
         '<td>' + esc(coverage) + '</td>' +
+        '<td>' + sourceTag + '</td>' +
         '<td>' + esc(dateShort(r.updated_at)) + '</td>' +
         '<td>' +
           '<button class="admin-mini-button" type="button" data-action="open-release" data-id="' + esc(r.discogs_id) + '">Открыть</button> ' +
           '<button class="admin-mini-button" type="button" data-action="enrich-candidate" data-id="' + esc(r.discogs_id) + '">Обогатить</button>' +
         '</td>' +
         '</tr>';
-    }).join('') : '<tr><td colspan="10" class="admin-muted">Ничего не найдено.</td></tr>';
+    }).join('') : '<tr><td colspan="12" class="admin-muted">Ничего не найдено.</td></tr>';
 
     var hasNext = (state.coll.offset + state.coll.limit) < state.coll.total;
     $('collReleasesNext').disabled = !hasNext;
@@ -747,6 +755,62 @@
       th.classList.toggle('asc', state.coll.sortDir === 'asc');
       th.classList.toggle('desc', state.coll.sortDir === 'desc');
     });
+  }
+
+  function refreshCollBulkCount() {
+    var n = Object.keys(state.coll.selected).length;
+    $('collReleasesBulkCount').textContent = n;
+    $('collReleasesBulkEnrichBtn').disabled = n === 0;
+  }
+  function toggleCollSelect(id, on) {
+    if (on) state.coll.selected[id] = true;
+    else delete state.coll.selected[id];
+    refreshCollBulkCount();
+  }
+  async function bulkEnrichReleases(idsOverride) {
+    var ids = idsOverride || Object.keys(state.coll.selected);
+    if (!ids.length) return;
+    var btn = idsOverride ? $('collReleasesEnrichAllBtn') : $('collReleasesBulkEnrichBtn');
+    btn.disabled = true;
+    var orig = btn.textContent;
+    btn.textContent = 'Обогащаю ' + ids.length + '…';
+    try {
+      /* Backend takes up to 30 per call. If more, batch into chunks. */
+      var succeeded = 0, failed = 0;
+      for (var i = 0; i < ids.length; i += 30) {
+        var chunk = ids.slice(i, i + 30);
+        var result = await adminPost('enrich_releases_batch', { discogs_ids: chunk });
+        succeeded += result.succeeded || 0;
+        failed += result.failed || 0;
+      }
+      showError('Bulk обогащение: ' + succeeded + '/' + ids.length + ' успешно');
+      if (!idsOverride) { state.coll.selected = {}; refreshCollBulkCount(); }
+      await loadCollReleases();
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError('Bulk failed: ' + (error.message || 'unknown'));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  }
+  async function enrichAllReleasesInFilter() {
+    if (!confirm('Обогатить ВСЕ ' + state.coll.total + ' релизов в текущей выборке? Это займёт время.')) return;
+    /* Pull full filtered list */
+    try {
+      var full = await adminPost('list_collection_releases', {
+        offset: 0, limit: 5000,
+        sort_by: state.coll.sortBy, sort_dir: state.coll.sortDir,
+        label: $('collReleaseLabel').value || '',
+        source: $('collReleaseSource').value || '',
+        q: $('collReleaseSearch').value || '',
+      });
+      var ids = (full.rows || []).map(function (r) { return r.discogs_id; });
+      await bulkEnrichReleases(ids);
+    } catch (e) {
+      if (e.status === 401) { showAuthScreen(); return; }
+      showError('Enrich-all failed: ' + (e.message || 'unknown'));
+    }
   }
 
   async function openReleaseDetail(id) {
@@ -1011,7 +1075,13 @@
       el.addEventListener('click', function () { setCollMode(el.getAttribute('data-cmode')); });
     });
     /* Collection releases toolbar */
-    $('collReleasesApplyBtn').addEventListener('click', function () { state.coll.offset = 0; loadCollReleases(); });
+    $('collReleasesApplyBtn').addEventListener('click', function () {
+      state.coll.offset = 0;
+      state.coll.selected = {};
+      state.coll.labelsPopulated = false; /* repopulate labels for current filter */
+      refreshCollBulkCount();
+      loadCollReleases();
+    });
     $('collReleaseSearch').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { state.coll.offset = 0; loadCollReleases(); }
     });
@@ -1024,6 +1094,17 @@
       loadCollReleases();
     });
     $('collReleaseBack').addEventListener('click', closeReleaseDetail);
+    $('collReleasesBulkEnrichBtn').addEventListener('click', function () { bulkEnrichReleases(); });
+    $('collReleasesEnrichAllBtn').addEventListener('click', enrichAllReleasesInFilter);
+    $('collReleasesSelectAll').addEventListener('change', function (e) {
+      var on = !!e.target.checked;
+      document.querySelectorAll('.admin-release-check').forEach(function (cb) {
+        cb.checked = on;
+        if (on) state.coll.selected[cb.getAttribute('data-id')] = true;
+        else delete state.coll.selected[cb.getAttribute('data-id')];
+      });
+      refreshCollBulkCount();
+    });
     /* Reclassify */
     $('reclassifyDryBtn').addEventListener('click', function () { reclassifyCandidates(true); });
     $('reclassifyApplyBtn').addEventListener('click', function () {
@@ -1076,6 +1157,11 @@
       var rowCheck = event.target && event.target.matches && event.target.matches('.admin-row-check');
       if (rowCheck) {
         toggleTrackSelect(event.target.getAttribute('data-key'), event.target.checked);
+        return;
+      }
+      var relCheck = event.target && event.target.matches && event.target.matches('.admin-release-check');
+      if (relCheck) {
+        toggleCollSelect(event.target.getAttribute('data-id'), event.target.checked);
         return;
       }
     });

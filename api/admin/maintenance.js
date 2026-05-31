@@ -765,6 +765,147 @@ async function enrichSingleTrack(body) {
   return { ok: true, key, track: merged };
 }
 
+/* The REAL collection view: candidates ∪ releases-derived-from-track-cache.
+ * The candidates set covers seeded releases (45-ish). But the Beatport
+ * track cache holds metadata for ANY release the system has ever fetched
+ * BPM/Key for — fit-check usage, recognize-vinyl etc. This function unions
+ * both, dedupes by discogs_id, marks source. */
+async function listCollectionReleases(body) {
+  const offset = Math.max(0, Number(body && body.offset) || 0);
+  const limit = Math.max(1, Math.min(500, Number(body && body.limit) || 50));
+  const q = body && body.q ? String(body.q).toLowerCase() : '';
+  const labelFilter = body && body.label ? String(body.label).toLowerCase() : '';
+  const sourceFilter = body && body.source ? String(body.source) : '';
+  const sortBy = (body && body.sort_by) || 'updated_at';
+  const sortDir = body && body.sort_dir === 'asc' ? 1 : -1;
+
+  /* 1. Seeded candidates: full release records */
+  const seeded = (await exportCandidates(10000)).map((r) => ({
+    discogs_id: r.discogs_id,
+    artist: r.artist || '',
+    title: r.title || '',
+    label: r.label || '',
+    catalog_number: r.catalog_number || '',
+    year: r.year || null,
+    genre_family: r.genre_family || '',
+    cover_url: r.cover_url || '',
+    discogs_url: r.discogs_url || '',
+    track_count: r.track_count || (Array.isArray(r.tracks) ? r.tracks.length : 0),
+    enriched_track_count: r.enriched_track_count || 0,
+    metadata_coverage: r.metadata_coverage || 0,
+    marketplace: r.marketplace || null,
+    updated_at: r.updated_at || r.ingested_at || null,
+    source: 'seeded',
+  }));
+  const seededIds = new Set(seeded.map((r) => String(r.discogs_id)));
+
+  /* 2. Derived: scan track cache, group by discogs_release_id */
+  const trackKeys = await scanKeys(TRACK_KEY_PATTERN);
+  const derived = new Map();
+  for (const key of trackKeys) {
+    const raw = await safeRedis('GET', [key], null);
+    if (!raw) continue;
+    let record;
+    try { record = JSON.parse(raw); } catch (_) { continue; }
+    const flat = readTrack(record) || {};
+    const releaseId = flat.discogs_release_id;
+    if (!releaseId) continue;
+    if (seededIds.has(String(releaseId))) continue; /* dedupe vs seeded */
+    let entry = derived.get(String(releaseId));
+    if (!entry) {
+      entry = {
+        discogs_id: releaseId,
+        artist: flat.artist_original || flat.artist || '',
+        title: flat.title_original || flat.title || '',
+        label: flat.discogs_label || flat.label || '',
+        catalog_number: flat.discogs_catno || '',
+        year: null,
+        genre_family: flat.genre ? flat.genre.toLowerCase() : '',
+        cover_url: '',
+        discogs_url: '',
+        track_count: 0,
+        enriched_track_count: 0,
+        metadata_coverage: 0,
+        marketplace: null,
+        updated_at: flat.savedAt || null,
+        source: 'derived_from_tracks',
+        _enrichedSum: 0,
+      };
+      derived.set(String(releaseId), entry);
+    }
+    entry.track_count += 1;
+    if (flat.bpm) entry._enrichedSum += 1;
+    if (flat.savedAt && (!entry.updated_at || flat.savedAt > entry.updated_at))
+      entry.updated_at = flat.savedAt;
+  }
+  for (const entry of derived.values()) {
+    entry.enriched_track_count = entry._enrichedSum;
+    entry.metadata_coverage = entry.track_count ? entry._enrichedSum / entry.track_count : 0;
+    delete entry._enrichedSum;
+  }
+
+  /* 3. Merge + filter + sort */
+  const all = seeded.concat(Array.from(derived.values()));
+  const filtered = all.filter((r) => {
+    if (sourceFilter && r.source !== sourceFilter) return false;
+    if (labelFilter && String(r.label || '').toLowerCase() !== labelFilter) return false;
+    if (q) {
+      const hay = (
+        String(r.artist || '') + ' ' +
+        String(r.title || '') + ' ' +
+        String(r.catalog_number || '')
+      ).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortBy === 'updated_at') {
+      av = Date.parse(a.updated_at || '') || 0;
+      bv = Date.parse(b.updated_at || '') || 0;
+    } else if (sortBy === 'year' || sortBy === 'track_count' || sortBy === 'enriched_track_count' || sortBy === 'metadata_coverage') {
+      av = Number(a[sortBy]) || 0;
+      bv = Number(b[sortBy]) || 0;
+    } else {
+      av = String(a[sortBy] || '').toLowerCase();
+      bv = String(b[sortBy] || '').toLowerCase();
+      return av < bv ? -1 * sortDir : av > bv ? 1 * sortDir : 0;
+    }
+    return (av - bv) * sortDir;
+  });
+
+  return {
+    ok: true,
+    total: filtered.length,
+    seeded_count: seeded.length,
+    derived_count: derived.size,
+    track_cache_keys_scanned: trackKeys.length,
+    offset,
+    limit,
+    has_more: offset + limit < filtered.length,
+    rows: filtered.slice(offset, offset + limit),
+  };
+}
+
+/* Bulk-enrich releases. Each selected discogs_id goes through enrichSingleCandidate. */
+async function enrichReleasesBatch(body) {
+  const ids = Array.isArray(body && body.discogs_ids) ? body.discogs_ids.filter(Boolean).slice(0, 30) : [];
+  if (!ids.length) return { ok: false, error: 'discogs_ids_required' };
+  const results = [];
+  for (const id of ids) {
+    try {
+      const r = await enrichSingleCandidate({ discogs_id: id });
+      results.push({ discogs_id: id, ok: !!r.ok, samples_updated: r.samples_updated || 0, error: r.error || null });
+      await sleep(500);
+    } catch (e) {
+      results.push({ discogs_id: id, ok: false, error: e && e.message ? e.message : 'failed' });
+    }
+  }
+  const ok = results.filter((r) => r.ok).length;
+  return { ok: true, total: ids.length, succeeded: ok, failed: ids.length - ok, results };
+}
+
 /* Return one release + its full tracklist for the Collection drill-down view. */
 async function getReleaseDetail(body) {
   const id = String((body && body.discogs_id) || '').trim();
@@ -1012,6 +1153,16 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'get_release_detail') {
       const result = await getReleaseDetail(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'list_collection_releases') {
+      const result = await listCollectionReleases(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'enrich_releases_batch') {
+      const result = await enrichReleasesBatch(body);
       send(res, result.ok ? 200 : 400, result);
       return;
     }

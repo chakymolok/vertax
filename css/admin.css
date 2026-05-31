@@ -606,3 +606,27 @@ h2 {
   white-space: pre-wrap;
 }
 .admin-row-check { cursor: pointer; }
+
+/* Source tags in Collection releases */
+.admin-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+.admin-tag-seeded {
+  background: rgba(200,255,46,.16);
+  color: #C8FF2E;
+  border-color: rgba(200,255,46,.36);
+}
+.admin-tag-derived {
+  background: rgba(56,154,234,.16);
+  color: #66B8FF;
+  border-color: rgba(102,184,255,.36);
+}
+.admin-release-check { cursor: pointer; }

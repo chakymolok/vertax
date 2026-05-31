@@ -313,11 +313,20 @@
             <select class="admin-input" id="collReleaseLabel">
               <option value="">Все лейблы</option>
             </select>
-            <select class="admin-input" id="collReleaseGenre">
-              <option value="">Все жанры</option>
+            <select class="admin-input" id="collReleaseSource">
+              <option value="">Все источники</option>
+              <option value="seeded">Кандидаты (seed)</option>
+              <option value="derived_from_tracks">Из трек-кэша</option>
             </select>
             <button class="admin-button admin-button-secondary" id="collReleasesApplyBtn" type="button">
               Применить
+            </button>
+            <button class="admin-button admin-button-ghost" id="collReleasesBulkEnrichBtn" type="button" disabled>
+              Обогатить выбранные (<span id="collReleasesBulkCount">0</span>)
+            </button>
+            <button class="admin-button admin-button-ghost" id="collReleasesEnrichAllBtn" type="button"
+                    title="Обогатить ВСЕ релизы в текущей выборке (по 30 за раз)">
+              Обогатить всё
             </button>
           </div>
 
@@ -325,6 +334,7 @@
             <table class="admin-table admin-table-sortable" id="collReleasesTable">
               <thead>
                 <tr>
+                  <th><input type="checkbox" id="collReleasesSelectAll" aria-label="Выбрать все" /></th>
                   <th>Cover</th>
                   <th data-sort-coll="artist">Артист</th>
                   <th data-sort-coll="title">Название</th>
@@ -333,12 +343,13 @@
                   <th data-sort-coll="genre_family">Жанр</th>
                   <th data-sort-coll="track_count">Треков</th>
                   <th data-sort-coll="metadata_coverage">Coverage</th>
+                  <th>Источник</th>
                   <th data-sort-coll="updated_at" class="is-sorted desc">Обновл.</th>
                   <th>Действия</th>
                 </tr>
               </thead>
               <tbody id="collReleasesTbody">
-                <tr><td colspan="10" class="admin-muted">Жми «Применить»…</td></tr>
+                <tr><td colspan="12" class="admin-muted">Жми «Применить»…</td></tr>
               </tbody>
             </table>
           </div>
