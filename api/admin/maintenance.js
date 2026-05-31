@@ -240,6 +240,7 @@ async function backfillBeatportSamples(body) {
   let skipped_no_id = 0;
   let failed = 0;
   const errors = [];
+  const token = dryRun ? null : await getAccessToken();
   for (const key of keys) {
     if (updated >= limit) break;
     examined++;
@@ -254,7 +255,7 @@ async function backfillBeatportSamples(body) {
     if (!tid) { skipped_no_id++; continue; }
     if (dryRun) continue;
     try {
-      const fresh = await fetchBeatportTrack(tid);
+      const fresh = await fetchBeatportTrack(token, tid);
       if (fresh) {
         const mapped = mapTrack(fresh, 1, { artist: flat.artist_original, title: flat.title_original });
         if (mapped && mapped.sample_url) {

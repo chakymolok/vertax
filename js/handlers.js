@@ -217,6 +217,8 @@ on('back', function () {
     state.view = 'tracklist';
   } else if (v === 'tracklist') state.view = 'add';
   else if (v === 'match') state.view = 'add';
+  else if (v === 'set-source-kind') state.view = 'home';
+  else if (v === 'set-track-source') state.view = 'set-source-kind';
   else if (v === 'runt26-source') state.view = state.ui.runt26PrevView || 'set';
   else if (v === 'live-set') state.view = 'set';
   else if (v === 'set') state.view = 'home';
@@ -574,7 +576,9 @@ on('preview-play', function (e, el) {
   if (typeof vertaxPlayPreview === 'function') vertaxPlayPreview(el, url);
 });
 on('dismiss-tg-suggest', function () {
-  try { localStorage.setItem('vertaxTgSuggestDismissed', '1'); } catch (_) {}
+  try {
+    localStorage.setItem('vertaxTgSuggestDismissed', '1');
+  } catch (_) {}
   render();
 });
 on('open-help', function () {
@@ -8357,6 +8361,461 @@ function installVertaxBackupFeature() {
     }
   }
   boot();
+})();
+
+/* Final set source gate: choose records or individual tracks before opening the
+ * set builder. This keeps the existing vinyl-selection screen intact and adds a
+ * track-level source without changing IndexedDB data. */
+(function installVertaxSetSourceKindGate() {
+  if (window.__vertaxSetSourceKindGateInstalled) return;
+  window.__vertaxSetSourceKindGateInstalled = true;
+
+  function safeEsc(value) {
+    if (typeof esc === 'function') return esc(value);
+    if (value == null) return '';
+    return String(value).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function renderApp() {
+    if (typeof render === 'function') render();
+    else if (window.laisoBuck && typeof window.laisoBuck.render === 'function')
+      window.laisoBuck.render();
+  }
+
+  function toast(message) {
+    if (typeof showToast === 'function') showToast(message);
+    else console.log(message);
+  }
+
+  function uniqueVinyls() {
+    var out = [];
+    var seen = {};
+    function add(list) {
+      (list || []).forEach(function (v) {
+        if (!v || !v.id || seen[v.id]) return;
+        seen[v.id] = true;
+        out.push(v);
+      });
+    }
+    add(state.collection || []);
+    add(state.vinyls || []);
+    return out;
+  }
+
+  function displayPos(track, vinyl) {
+    try {
+      if (typeof displayPosition === 'function') return displayPosition(track, vinyl);
+    } catch (_) {}
+    return (track && track.position) || '';
+  }
+
+  function trackKey(track, vinyl, index) {
+    return [vinyl && vinyl.id, track && (track.id || track.position || index), track && track.title]
+      .filter(Boolean)
+      .join('::');
+  }
+
+  function flattenAvailableTracks() {
+    var rows = [];
+    uniqueVinyls().forEach(function (v) {
+      if (!v || v.excludeFromSets || !Array.isArray(v.tracklist)) return;
+      v.tracklist.forEach(function (t, index) {
+        if (!t || t.excludeFromSets || !t.title) return;
+        var key = trackKey(t, v, index);
+        rows.push({
+          key: key,
+          id: t.id || key,
+          position: t.position,
+          displayPosition: displayPos(t, v),
+          side: t.side,
+          title: t.title,
+          duration: t.duration,
+          bpm: t.bpm,
+          keyName: t.key,
+          key: t.key,
+          camelot: t.camelot,
+          originalBpm: t.originalBpm || null,
+          bpmSource: t.bpmSource || null,
+          keySource: t.keySource || null,
+          genre: t.genre || t.style || v.genre || v.style || '',
+          recordId: v.id,
+          vinylTitle: v.title,
+          vinylArtist: v.artist,
+          vinylCatno: v.catno || '',
+          vinylLabel: v.label || '',
+          coverUrl: v.coverUrl || '',
+        });
+      });
+    });
+    rows.sort(function (a, b) {
+      return (
+        String(a.vinylArtist || '').localeCompare(String(b.vinylArtist || '')) ||
+        String(a.vinylTitle || '').localeCompare(String(b.vinylTitle || '')) ||
+        String(a.displayPosition || '').localeCompare(String(b.displayPosition || ''))
+      );
+    });
+    return rows;
+  }
+
+  function selectedTrackMap() {
+    state.ui = state.ui || {};
+    state.ui.setTrackSelected = state.ui.setTrackSelected || {};
+    return state.ui.setTrackSelected;
+  }
+
+  function ensureTrackSelection() {
+    var tracks = flattenAvailableTracks();
+    var selected = selectedTrackMap();
+    var hasAny = Object.keys(selected).some(function (key) {
+      return selected[key];
+    });
+    if (!hasAny && !state.ui.setTrackSelectionCleared) {
+      tracks.forEach(function (track) {
+        selected[track.key] = true;
+      });
+    }
+    return tracks;
+  }
+
+  function getSelectedTracks() {
+    var tracks = ensureTrackSelection();
+    var selected = selectedTrackMap();
+    return tracks.filter(function (track) {
+      return !!selected[track.key];
+    });
+  }
+
+  function setAllTracks(value) {
+    var selected = {};
+    if (value) {
+      flattenAvailableTracks().forEach(function (track) {
+        selected[track.key] = true;
+      });
+    }
+    state.ui.setTrackSelected = selected;
+    state.ui.setTrackSelectionCleared = !value;
+  }
+
+  function getHeader(title) {
+    try {
+      if (typeof renderHeader === 'function') return renderHeader(title);
+    } catch (_) {}
+    return (
+      '<div class="laiso-header"><button class="laiso-back" data-action="back">Назад</button><h1 class="laiso-h1">' +
+      safeEsc(title) +
+      '</h1><div></div></div>'
+    );
+  }
+
+  window.vertaxViewSetSourceKind = function () {
+    var vinylCount = uniqueVinyls().length;
+    var trackCount = flattenAvailableTracks().length;
+    return (
+      '<div class="vertax-set-source-kind" data-testid="set-source-kind">' +
+      getHeader('Собрать сет') +
+      '<div class="laiso-mod-label">источник</div>' +
+      '<div class="vertax-source-kind-grid">' +
+      '<button class="vertax-source-kind-card" data-action="set-source-vinyls" data-testid="set-source-vinyls">' +
+      '<span>из пластинок</span><strong>Выбрать релизы</strong><small>как сейчас: отметь пластинки, а Vertax соберёт сет из их треков</small><b>' +
+      vinylCount +
+      ' шт.</b></button>' +
+      '<button class="vertax-source-kind-card" data-action="set-source-tracks" data-testid="set-source-tracks">' +
+      '<span>из треков</span><strong>Выбрать треки</strong><small>покажем все треки из пластинок в наличии, можно собрать точнее</small><b>' +
+      trackCount +
+      ' трек.</b></button>' +
+      '</div>' +
+      '</div>'
+    );
+  };
+
+  window.vertaxViewSetTrackSource = function () {
+    var tracks = ensureTrackSelection();
+    var selected = selectedTrackMap();
+    var search = String(state.ui.setTrackSearch || '')
+      .toLowerCase()
+      .trim();
+    var shown = search
+      ? tracks.filter(function (track) {
+          return [
+            track.title,
+            track.vinylArtist,
+            track.vinylTitle,
+            track.vinylLabel,
+            track.vinylCatno,
+            track.camelot,
+            track.bpm,
+          ].some(function (value) {
+            return (
+              String(value || '')
+                .toLowerCase()
+                .indexOf(search) >= 0
+            );
+          });
+        })
+      : tracks;
+    var selectedCount = tracks.filter(function (track) {
+      return selected[track.key];
+    }).length;
+    var rows = shown.length
+      ? shown
+          .map(function (track) {
+            var isSelected = !!selected[track.key];
+            return (
+              '<div class="runt26-card vertax-track-source-card ' +
+              (isSelected ? 'is-selected' : '') +
+              '" data-action="set-track-toggle" data-track-key="' +
+              safeEsc(track.key) +
+              '">' +
+              '<div class="runt26-cover vertax-track-source-pos">' +
+              safeEsc(track.displayPosition || track.position || '-') +
+              '</div>' +
+              '<div>' +
+              '<div class="runt26-title">' +
+              safeEsc(track.title || '-') +
+              '</div>' +
+              '<div class="runt26-meta">' +
+              safeEsc(track.vinylArtist || '') +
+              ' - ' +
+              safeEsc(track.vinylTitle || '') +
+              (track.vinylCatno ? ' · ' + safeEsc(track.vinylCatno) : '') +
+              '</div>' +
+              '<div class="runt26-stats">' +
+              '<span class="runt26-pill">' +
+              (track.bpm ? safeEsc(String(track.bpm)) + ' BPM' : 'нет BPM') +
+              '</span><span class="runt26-pill">' +
+              (track.camelot ? safeEsc(track.camelot) : 'нет Camelot') +
+              '</span></div>' +
+              '</div><div class="runt26-check">' +
+              (isSelected ? '✓' : '') +
+              '</div></div>'
+            );
+          })
+          .join('')
+      : '<div class="runt26-empty">Треков пока нет. Загрузи треклисты у пластинок в коллекции.</div>';
+    return (
+      '<div class="runt26-source-page vertax-track-source-page" data-testid="set-track-source">' +
+      getHeader('Выбор треков') +
+      '<div class="runt26-intro"><strong>Выбери треки для сета</strong><p>Здесь все треки из пластинок в наличии. Можно собрать сет точечно, не выбирая релизы целиком.</p></div>' +
+      '<div class="runt26-tools"><button class="laiso-btn laiso-btn-secondary" data-action="set-track-select-all">Выделить все</button><button class="laiso-btn laiso-btn-secondary" data-action="set-track-clear">Снять всё</button></div>' +
+      '<div class="laiso-panel runt26-search-panel"><input class="laiso-input" type="search" data-action="set-track-search" placeholder="Поиск по трекам" value="' +
+      safeEsc(state.ui.setTrackSearch || '') +
+      '"></div>' +
+      '<div class="laiso-meta" style="margin:10px 2px 8px;">выбрано: ' +
+      selectedCount +
+      ' / ' +
+      tracks.length +
+      (search ? ' · показано: ' + shown.length : '') +
+      '</div><div class="runt26-list">' +
+      rows +
+      '</div><div class="runt26-sticky"><button class="laiso-btn laiso-btn-block" data-action="set-track-build">Собрать из выбранных (' +
+      selectedCount +
+      ')</button></div></div>'
+    );
+  };
+
+  function generateFromTrackPool() {
+    var tracks = (state.ui && state.ui.setTrackPool) || [];
+    var mode = (state.ui && state.ui.setMode) || 'best-flow';
+    var opts = (state.ui && state.ui.setOptions) || { tempoRange: 4 };
+    var usable = tracks.filter(function (t) {
+      if (mode === 'tempo-safe' || mode === 'best-flow') return !!t.bpm;
+      if (mode === 'camelot-safe') return !!t.camelot;
+      if (mode === 'camelot-filter') {
+        var s = opts.camelotSet || {};
+        return t.camelot && s[t.camelot];
+      }
+      return true;
+    });
+    if (tracks.length < 2) {
+      toast('Нужно выбрать минимум 2 трека');
+      return;
+    }
+    if (usable.length < 2) {
+      state.ui.setMode = 'custom';
+      state.ui.generatedSet = tracks.slice();
+      state.view = 'set';
+      toast('Собран свой сет: ' + tracks.length + ' трек. BPM / Camelot можно заполнить позже.');
+      renderApp();
+      return;
+    }
+    var targetLen =
+      typeof window.vertaxSetDesiredTrackCount === 'function'
+        ? window.vertaxSetDesiredTrackCount(usable)
+        : Math.min(16, usable.length);
+    var result =
+      typeof generateSetAlgo === 'function'
+        ? generateSetAlgo(usable, mode, opts, targetLen)
+        : usable.slice(0, targetLen);
+    if (!result || result.length < 2) {
+      result = usable.slice(0, targetLen);
+      state.ui.setMode = 'custom';
+    }
+    state.ui.generatedSet = result || [];
+    state.ui.setLastWarning = result && result.length >= 2 ? null : 'no-valid-set';
+    toast(
+      result && result.length >= 2
+        ? 'Сет собран из треков: ' + result.length + ' трек.'
+        : 'Не удалось собрать сет - попробуй другой режим'
+    );
+    state.view = 'set';
+    renderApp();
+  }
+
+  function openKindGate() {
+    if (!uniqueVinyls().length) {
+      state.view = 'add';
+      renderApp();
+      toast('Сначала добавь пластинки');
+      return;
+    }
+    state.ui = state.ui || {};
+    state.view = 'set-source-kind';
+    state.modal = null;
+    renderApp();
+  }
+
+  function openVinylSource() {
+    state.ui = state.ui || {};
+    state.ui.runt26PrevView = 'set-source-kind';
+    state.view = 'runt26-source';
+    state.modal = null;
+    renderApp();
+  }
+
+  function openTrackSource() {
+    state.ui = state.ui || {};
+    ensureTrackSelection();
+    state.view = 'set-track-source';
+    state.modal = null;
+    renderApp();
+  }
+
+  function buildSelectedTracks() {
+    var tracks = getSelectedTracks();
+    if (tracks.length < 2) {
+      toast('Нужно выбрать минимум 2 трека');
+      return;
+    }
+    state.ui.setTrackPool = tracks.slice();
+    state.ui.setScope = 'tracks';
+    state.ui.setOptions = state.ui.setOptions || {};
+    state.ui.setOptions.setScope = 'tracks';
+    state.ui.generatedSet = [];
+    generateFromTrackPool();
+  }
+
+  if (typeof window.runtGetTracksByScope === 'function') {
+    var oldRuntGetTracksByScope = window.runtGetTracksByScope;
+    window.runtGetTracksByScope = function (scope, opts) {
+      if (scope === 'tracks') {
+        var pool = (state.ui && state.ui.setTrackPool) || getSelectedTracks();
+        return opts && opts.includeAll ? pool.slice() : pool.slice();
+      }
+      return oldRuntGetTracksByScope.call(this, scope, opts);
+    };
+  }
+
+  try {
+    if (typeof handlers !== 'undefined' && handlers) {
+      var oldSetGenerate = handlers['set-generate'];
+      handlers['go-set'] = openKindGate;
+      handlers['runt28-open-source'] = openKindGate;
+      handlers['set-generate'] = function (e, el) {
+        if ((state.ui && state.ui.setScope) === 'tracks') {
+          generateFromTrackPool();
+          return;
+        }
+        if (typeof oldSetGenerate === 'function') return oldSetGenerate(e, el);
+      };
+    }
+  } catch (_) {}
+
+  document.addEventListener(
+    'click',
+    function (e) {
+      var app = document.getElementById('laiso-app');
+      if (!app || !e.target.closest || !e.target.closest('#laiso-app')) return;
+      var el = e.target.closest('[data-action], button, .laiso-btn');
+      if (!el) return;
+      var action = el.dataset && el.dataset.action;
+      var text = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      var shouldOpenGate =
+        action === 'go-set' ||
+        action === 'runt28-open-source' ||
+        (text.indexOf('собрать сет') >= 0 &&
+          (state.view === 'home' || state.view === 'collection'));
+      if (shouldOpenGate) {
+        e.preventDefault();
+        e.stopPropagation();
+        openKindGate();
+        return;
+      }
+      if (action === 'set-source-vinyls') {
+        e.preventDefault();
+        e.stopPropagation();
+        openVinylSource();
+        return;
+      }
+      if (action === 'set-source-tracks') {
+        e.preventDefault();
+        e.stopPropagation();
+        openTrackSource();
+        return;
+      }
+      if (action === 'set-track-toggle') {
+        e.preventDefault();
+        e.stopPropagation();
+        var key = el.dataset.trackKey;
+        if (!key) return;
+        var selected = selectedTrackMap();
+        selected[key] = !selected[key];
+        renderApp();
+        return;
+      }
+      if (action === 'set-track-select-all') {
+        e.preventDefault();
+        e.stopPropagation();
+        setAllTracks(true);
+        renderApp();
+        return;
+      }
+      if (action === 'set-track-clear') {
+        e.preventDefault();
+        e.stopPropagation();
+        setAllTracks(false);
+        renderApp();
+        return;
+      }
+      if (action === 'set-track-build') {
+        e.preventDefault();
+        e.stopPropagation();
+        buildSelectedTracks();
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'input',
+    function (e) {
+      if (!e.target.closest || !e.target.closest('#laiso-app')) return;
+      if (!e.target.dataset || e.target.dataset.action !== 'set-track-search') return;
+      state.ui = state.ui || {};
+      state.ui.setTrackSearch = e.target.value || '';
+      renderApp();
+      setTimeout(function () {
+        var input = document.querySelector('#laiso-app input[data-action="set-track-search"]');
+        if (!input) return;
+        input.focus();
+        try {
+          input.setSelectionRange(input.value.length, input.value.length);
+        } catch (_) {}
+      }, 0);
+    },
+    true
+  );
 })();
 
 /* VERTAX set-builder UX: target length, genre filter, one-vinyl guard */

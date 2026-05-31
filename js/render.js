@@ -48,6 +48,18 @@ function render() {
     case 'set':
       viewHtml = viewSet();
       break;
+    case 'set-source-kind':
+      viewHtml =
+        typeof window.vertaxViewSetSourceKind === 'function'
+          ? window.vertaxViewSetSourceKind()
+          : viewSet();
+      break;
+    case 'set-track-source':
+      viewHtml =
+        typeof window.vertaxViewSetTrackSource === 'function'
+          ? window.vertaxViewSetTrackSource()
+          : viewSet();
+      break;
     case 'collection':
       viewHtml = viewCollection();
       break;
@@ -213,18 +225,20 @@ function renderTelegramSuggestBanner() {
     if (tg && tg.initData) return ''; /* inside Telegram — skip */
     if (typeof getHostWebApp === 'function' && getHostWebApp()) return '';
     var dismissed = false;
-    try { dismissed = localStorage.getItem('vertaxTgSuggestDismissed') === '1'; } catch (_) {}
+    try {
+      dismissed = localStorage.getItem('vertaxTgSuggestDismissed') === '1';
+    } catch (_) {}
     if (dismissed) return '';
   } catch (_) {}
   /* Hardcoded RU; app-i18n.js will translate via its DOM walker. */
   return (
     '<div class="vertax-tg-suggest" data-testid="tg-suggest-banner">' +
-      '<button class="vertax-tg-suggest-close" data-action="dismiss-tg-suggest" aria-label="Закрыть">×</button>' +
-      '<div class="vertax-tg-suggest-body">' +
-        '<strong>Откройте VERTAX в Telegram</strong>' +
-        '<p>Mini App стабильнее и быстрее. Хаптики, тёмная тема, оффлайн-режим.</p>' +
-      '</div>' +
-      '<a class="vertax-tg-suggest-cta" href="https://t.me/vertaksbot/app" target="_blank" rel="noopener">Открыть в Telegram →</a>' +
+    '<button class="vertax-tg-suggest-close" data-action="dismiss-tg-suggest" aria-label="Закрыть">×</button>' +
+    '<div class="vertax-tg-suggest-body">' +
+    '<strong>Откройте VERTAX в Telegram</strong>' +
+    '<p>Mini App стабильнее и быстрее. Хаптики, тёмная тема, оффлайн-режим.</p>' +
+    '</div>' +
+    '<a class="vertax-tg-suggest-cta" href="https://t.me/vertaksbot/app" target="_blank" rel="noopener">Открыть в Telegram →</a>' +
     '</div>'
   );
 }

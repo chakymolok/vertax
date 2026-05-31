@@ -163,8 +163,11 @@ function vertaxGetPreviewAudio() {
   }
 }
 function vertaxResetAllPreviewButtons() {
-  document.querySelectorAll('.vertax-preview-btn.is-playing, .vertax-preview-btn.is-loading')
-    .forEach(function (b) { b.classList.remove('is-playing', 'is-loading'); });
+  document
+    .querySelectorAll('.vertax-preview-btn.is-playing, .vertax-preview-btn.is-loading')
+    .forEach(function (b) {
+      b.classList.remove('is-playing', 'is-loading');
+    });
   window.__vertaxPreviewActiveBtn = null;
 }
 function vertaxPlayPreview(button, url) {
@@ -173,19 +176,24 @@ function vertaxPlayPreview(button, url) {
   if (!audio) return;
   var same = window.__vertaxPreviewActiveBtn === button;
   if (same && !audio.paused) {
-    try { audio.pause(); } catch (_) {}
+    try {
+      audio.pause();
+    } catch (_) {}
     return;
   }
   vertaxResetAllPreviewButtons();
   window.__vertaxPreviewActiveBtn = button;
   button.classList.add('is-loading');
-  try { audio.src = url; } catch (_) {}
+  try {
+    audio.src = url;
+  } catch (_) {}
   var p = audio.play();
   if (p && typeof p.catch === 'function') {
     p.catch(function () {
       button.classList.remove('is-loading');
       window.__vertaxPreviewActiveBtn = null;
-      if (typeof showToast === 'function') showToast('Браузер заблокировал автоплей. Нажми ещё раз.');
+      if (typeof showToast === 'function')
+        showToast('Браузер заблокировал автоплей. Нажми ещё раз.');
     });
   }
   /* haptic feedback if available */
@@ -1188,10 +1196,18 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
 
   /* Delegate to shared predicates in state.js; kept as thin wrappers so
    the rest of this patch body doesn't need rewriting. */
-  function metadataEmpty(meta) { return vertaxMetaIsEmpty(meta); }
-  function metadataFull(meta)  { return vertaxMetaIsFull(meta); }
-  function hasKey(meta)        { return vertaxMetaHasKey(meta); }
-  function sourceName(meta)    { return vertaxMetaSource(meta); }
+  function metadataEmpty(meta) {
+    return vertaxMetaIsEmpty(meta);
+  }
+  function metadataFull(meta) {
+    return vertaxMetaIsFull(meta);
+  }
+  function hasKey(meta) {
+    return vertaxMetaHasKey(meta);
+  }
+  function sourceName(meta) {
+    return vertaxMetaSource(meta);
+  }
 
   function normalizeSearchText(value) {
     return String(value || '')
@@ -1418,10 +1434,7 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
       /* Stage 4F: pull through Beatport preview URL if present. Either
        * camelCase from a normalized wrapper or snake_case from raw API. */
       var sample =
-        meta.beatport.sampleUrl ||
-        meta.beatport.sample_url ||
-        meta.beatport.preview_url ||
-        null;
+        meta.beatport.sampleUrl || meta.beatport.sample_url || meta.beatport.preview_url || null;
       if (sample && !track.sample_url) {
         track.sample_url = sample;
         changed = true;
@@ -1724,9 +1737,15 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   window.__vertaxBeatportBpmPatchInstalled = true;
 
   /* Delegate to shared predicates in state.js. */
-  function hasMeta(meta)      { return vertaxMetaHasAny(meta); }
-  function hasFullMeta(meta)  { return vertaxMetaIsFull(meta); }
-  function sourceName(meta)   { return vertaxMetaSource(meta); }
+  function hasMeta(meta) {
+    return vertaxMetaHasAny(meta);
+  }
+  function hasFullMeta(meta) {
+    return vertaxMetaIsFull(meta);
+  }
+  function sourceName(meta) {
+    return vertaxMetaSource(meta);
+  }
 
   function normalizeBeatportKey(keyName, camelot) {
     if (camelot && typeof CAMELOT_TO_KEY !== 'undefined' && CAMELOT_TO_KEY[camelot])
