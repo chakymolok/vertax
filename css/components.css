@@ -804,6 +804,13 @@
 }
 #laiso-app .vertax-track-source-page{
   display:block;
+  padding-bottom:18px;
+}
+#laiso-app .vertax-track-source-page .runt26-sticky{
+  position:static!important;
+  margin-top:14px!important;
+  padding:0!important;
+  background:transparent!important;
 }
 #laiso-app .vertax-track-source-intro{
   margin:0 0 14px;
@@ -830,6 +837,45 @@
   font-weight:700;
   color:#111;
   background:var(--accent-lime,#C4F542);
+}
+#laiso-app .vertax-track-sort{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  margin:10px 0 8px;
+  padding:4px;
+  border:1px solid var(--border,#d5d8d2);
+  border-radius:14px;
+  background:var(--panel,#fbfaf4);
+}
+#laiso-app .vertax-track-sort span{
+  padding:0 8px;
+  font-family:var(--font-mono,monospace);
+  font-size:10px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--text-muted,#686d68);
+}
+#laiso-app .vertax-track-sort button{
+  min-height:34px;
+  padding:7px 10px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--text-secondary,#5D5A54);
+  font-family:var(--font-mono,monospace);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#laiso-app .vertax-track-sort button.active{
+  background:#111;
+  color:var(--accent-lime,#C4F542);
+}
+#laiso-app .vertax-set-side-edit{
+  white-space:nowrap;
 }
 @media(max-width:620px){
   #laiso-app .vertax-source-kind-grid{

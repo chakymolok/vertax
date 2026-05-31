@@ -8363,6 +8363,392 @@ function installVertaxBackupFeature() {
   boot();
 })();
 
+/* Final track-set behavior: individual-track source is a manual set, not the
+ * strict vinyl algorithm. It also keeps generated track copies fresh after BPM,
+ * Camelot, or side edits. */
+(function installVertaxTrackSetLiveSync() {
+  if (window.__vertaxTrackSetLiveSyncInstalled) return;
+  window.__vertaxTrackSetLiveSyncInstalled = true;
+
+  function boot() {
+    if (!window.laisoBuck || !window.laisoBuck.state || typeof handlers === 'undefined') {
+      setTimeout(boot, 150);
+      return;
+    }
+    var state = window.laisoBuck.state;
+
+    function renderApp() {
+      if (window.laisoBuck && typeof window.laisoBuck.render === 'function') window.laisoBuck.render();
+      else if (typeof render === 'function') render();
+    }
+
+    function toast(msg) {
+      if (typeof showToast === 'function') showToast(msg);
+      else console.log(msg);
+    }
+
+    function promptText(message, value) {
+      if (typeof vertaxPrompt === 'function') return vertaxPrompt(message, value || '');
+      return Promise.resolve(window.prompt(message, value || ''));
+    }
+
+    function allVinyls() {
+      var out = [];
+      var seen = {};
+      function add(list) {
+        (list || []).forEach(function (v) {
+          if (!v || !v.id || seen[v.id]) return;
+          seen[v.id] = true;
+          out.push(v);
+        });
+      }
+      add(state.collection || []);
+      add(state.vinyls || []);
+      return out;
+    }
+
+    function makeTrackKey(track, vinyl, index) {
+      return [vinyl && vinyl.id, track && (track.id || track.position || index), track && track.title]
+        .filter(Boolean)
+        .join('::');
+    }
+
+    function findVinylById(id) {
+      id = String(id || '');
+      return allVinyls().filter(function (v) {
+        return String(v.id || '') === id;
+      })[0];
+    }
+
+    function findTrackInVinyl(vinyl, tid, row) {
+      var list = (vinyl && vinyl.tracklist) || [];
+      tid = String(tid || '');
+      for (var i = 0; i < list.length; i++) {
+        var t = list[i];
+        if (!t) continue;
+        if (tid && String(t.id || '') === tid) return { vinyl: vinyl, track: t, index: i };
+        if (tid && makeTrackKey(t, vinyl, i) === tid) return { vinyl: vinyl, track: t, index: i };
+      }
+      if (row) {
+        for (var j = 0; j < list.length; j++) {
+          var candidate = list[j];
+          if (
+            candidate &&
+            String(candidate.title || '') === String(row.title || '') &&
+            String(candidate.position || '') === String(row.position || '')
+          ) {
+            return { vinyl: vinyl, track: candidate, index: j };
+          }
+        }
+      }
+      return null;
+    }
+
+    function sourceForRow(row) {
+      if (!row) return null;
+      var v = findVinylById(row.recordId);
+      return v ? findTrackInVinyl(v, row.id || row.selectKey, row) : null;
+    }
+
+    function sourceForElement(el) {
+      var row = null;
+      var card = el && el.closest && el.closest('[data-set-index], [data-set-idx]');
+      var idx = card
+        ? parseInt(card.dataset.setIndex || card.dataset.setIdx || el.dataset.index || '-1', 10)
+        : parseInt((el && el.dataset && el.dataset.index) || '-1', 10);
+      if (isFinite(idx) && idx >= 0 && state.ui && state.ui.generatedSet) {
+        row = state.ui.generatedSet[idx];
+      }
+      var vid = el && el.dataset ? el.dataset.vid : '';
+      var tid = el && el.dataset ? el.dataset.tid : '';
+      if (!row && vid && tid) row = { recordId: vid, id: tid };
+      if (row) return sourceForRow(row);
+      var v = findVinylById(vid);
+      return v ? findTrackInVinyl(v, tid, null) : null;
+    }
+
+    function updateSnapshot(row, source) {
+      if (!row || !source || !source.track || !source.vinyl) return;
+      var t = source.track;
+      var v = source.vinyl;
+      var key = makeTrackKey(t, v, source.index);
+      row.selectKey = row.selectKey || key;
+      row.id = t.id || row.id || key;
+      row.artist = t.artist || row.artist || v.artist || '';
+      row.position = t.position || '';
+      row.displayPosition =
+        typeof displayPosition === 'function' ? displayPosition(t, v) : t.position || t.side || '';
+      row.side = t.side || '';
+      row.title = t.title || row.title || '';
+      row.duration = t.duration || row.duration || '';
+      row.bpm = t.bpm || null;
+      row.key = t.key || null;
+      row.keyName = t.key || null;
+      row.camelot = t.camelot || null;
+      row.originalBpm = t.originalBpm || null;
+      row.bpmSource = t.bpmSource || null;
+      row.keySource = t.keySource || null;
+      row.confidence = t.confidence || row.confidence || null;
+      row.genre = t.genre || t.style || v.genre || v.style || row.genre || '';
+      row.recordId = v.id;
+      row.vinylTitle = v.title || row.vinylTitle || '';
+      row.vinylArtist = v.artist || row.vinylArtist || '';
+      row.vinylCatno = v.catno || row.vinylCatno || '';
+      row.vinylLabel = v.label || row.vinylLabel || '';
+      row.coverUrl = v.coverUrl || row.coverUrl || '';
+    }
+
+    function syncTrackSetSnapshots() {
+      if (!state.ui) return;
+      ['generatedSet', 'setTrackPool'].forEach(function (name) {
+        (state.ui[name] || []).forEach(function (row) {
+          updateSnapshot(row, sourceForRow(row));
+        });
+      });
+    }
+
+    function parseBpm(raw) {
+      var s = String(raw || '').trim().replace(',', '.');
+      if (!s) return null;
+      var n = Number(s);
+      if (!isFinite(n) || n < 40 || n > 250) return false;
+      return Math.round(n * 10) / 10;
+    }
+
+    function normalizeKey(raw) {
+      var value = String(raw || '').trim();
+      if (!value) return { empty: true, key: null, camelot: null };
+      var cam = value.toUpperCase().match(/^(\d{1,2})([AB])$/);
+      if (cam) {
+        var camelot = parseInt(cam[1], 10) + cam[2];
+        if (parseInt(cam[1], 10) >= 1 && parseInt(cam[1], 10) <= 12) {
+          return {
+            empty: false,
+            key: typeof CAMELOT_TO_KEY !== 'undefined' ? CAMELOT_TO_KEY[camelot] || null : null,
+            camelot: camelot,
+          };
+        }
+      }
+      if (typeof normalizeKeyName === 'function') {
+        var key = normalizeKeyName(value);
+        if (key && typeof KEY_TO_CAMELOT !== 'undefined' && KEY_TO_CAMELOT[key]) {
+          return { empty: false, key: key, camelot: KEY_TO_CAMELOT[key] };
+        }
+      }
+      return { empty: false, key: value, camelot: null };
+    }
+
+    async function editMetaForElement(el) {
+      var source = sourceForElement(el);
+      if (!source || !source.track || !source.vinyl) return false;
+      var t = source.track;
+      var bpmRaw = await promptText('BPM (40-250) или пусто:', t.bpm || '');
+      if (bpmRaw === null) return true;
+      var bpm = parseBpm(bpmRaw);
+      if (bpm === false) {
+        toast('BPM должен быть числом 40-250');
+        return true;
+      }
+      var keyRaw = await promptText('Camelot / Key или пусто:', t.camelot || t.key || '');
+      if (keyRaw === null) return true;
+      var key = normalizeKey(keyRaw);
+      if (bpm !== null) {
+        t.bpm = bpm;
+        t.bpmSource = 'manual';
+      } else {
+        t.bpm = null;
+        t.bpmSource = null;
+      }
+      if (!key.empty) {
+        t.key = key.key;
+        t.camelot = key.camelot;
+        t.keySource = 'manual';
+      } else {
+        t.key = null;
+        t.camelot = null;
+        t.keySource = null;
+      }
+      t.originalBpm = null;
+      t.halftimeCorrected = false;
+      t.conflict = null;
+      t.confidence = t.bpm && t.camelot ? 'medium' : 'manual';
+      if (typeof persistVinyl === 'function') await persistVinyl(source.vinyl);
+      syncTrackSetSnapshots();
+      toast('Сохранено');
+      renderApp();
+      return true;
+    }
+
+    async function editSideForElement(el) {
+      var source = sourceForElement(el);
+      if (!source || !source.track || !source.vinyl) return;
+      var t = source.track;
+      var raw = await promptText('Сторона на пластинке (A / B / C / D / E / F):', t.side || '');
+      if (raw === null) return;
+      var side = String(raw || '').trim().toUpperCase().charAt(0);
+      if (!/^[A-F]$/.test(side)) {
+        toast('Сторона должна быть A-F');
+        return;
+      }
+      t.side = side;
+      if (t.position) t.position = side + String(t.position || '').replace(/^[A-F]+/i, '');
+      else t.position = side;
+      if (typeof persistVinyl === 'function') await persistVinyl(source.vinyl);
+      syncTrackSetSnapshots();
+      toast('Сторона обновлена');
+      renderApp();
+    }
+
+    function trackSortMode() {
+      return (state.ui && state.ui.setTrackSort) || 'manual';
+    }
+
+    function camelotSortValue(value) {
+      var m = String(value || '')
+        .trim()
+        .toUpperCase()
+        .match(/^(\d{1,2})([AB])$/);
+      if (!m) return 999;
+      return (m[2] === 'A' ? 0 : 100) + parseInt(m[1], 10);
+    }
+
+    function sortedManualTracks(tracks) {
+      var list = (tracks || []).slice();
+      if (trackSortMode() === 'bpm') {
+        list.sort(function (a, b) {
+          return (
+            (Number(a.bpm) || 9999) - (Number(b.bpm) || 9999) ||
+            camelotSortValue(a.camelot) - camelotSortValue(b.camelot)
+          );
+        });
+      } else if (trackSortMode() === 'camelot') {
+        list.sort(function (a, b) {
+          return (
+            camelotSortValue(a.camelot) - camelotSortValue(b.camelot) ||
+            (Number(a.bpm) || 9999) - (Number(b.bpm) || 9999)
+          );
+        });
+      }
+      return list;
+    }
+
+    function buildTrackSetFromPool() {
+      var pool =
+        (state.ui && state.ui.setTrackPool && state.ui.setTrackPool.length
+          ? state.ui.setTrackPool
+          : typeof window.runtGetTracksByScope === 'function'
+            ? window.runtGetTracksByScope('tracks')
+            : []) || [];
+      var tracks = sortedManualTracks(pool);
+      if (tracks.length < 2) {
+        toast('Нужно выбрать минимум 2 трека');
+        return;
+      }
+      state.ui.setScope = 'tracks';
+      state.ui.setMode = 'custom';
+      state.ui.generatedSet = tracks;
+      state.ui.setTrackPool = tracks.slice();
+      state.ui.setLastWarning = null;
+      state.view = 'set';
+      toast('Сет собран из треков: ' + tracks.length + ' трек.');
+      renderApp();
+    }
+
+    function injectSideButtons() {
+      var root = document.getElementById('laiso-root');
+      if (!root || state.view !== 'set' || !state.ui || state.ui.setScope !== 'tracks') return;
+      syncTrackSetSnapshots();
+      root.querySelectorAll('.laiso-set-card, .runt-set-card').forEach(function (card, idx) {
+        if (card.querySelector('.vertax-set-side-edit')) return;
+        var box = card.querySelector('.laiso-set-pills, .runt-set-actions') || card;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'laiso-x2-btn vertax-set-side-edit';
+        btn.dataset.action = 'set-track-side-edit';
+        btn.dataset.index = String(idx);
+        btn.textContent = 'сторона';
+        box.appendChild(btn);
+      });
+    }
+
+    function installHandlerOverrides() {
+      if (handlers['track-manual-meta'] && !handlers['track-manual-meta'].__vertaxTrackSetManual) {
+        window.__vertaxTrackSetBaseManualMeta = handlers['track-manual-meta'];
+      }
+      if (handlers['set-generate'] && !handlers['set-generate'].__vertaxTrackSetGenerate) {
+        window.__vertaxTrackSetBaseGenerate = handlers['set-generate'];
+      }
+      var oldManualMeta = window.__vertaxTrackSetBaseManualMeta;
+      var oldSetGenerate = window.__vertaxTrackSetBaseGenerate;
+      var manualWrapper = async function (e, el) {
+        if (state.ui && state.ui.setScope === 'tracks') {
+          var handled = await editMetaForElement(el);
+          if (handled) return;
+        }
+        var result;
+        if (typeof oldManualMeta === 'function') result = await oldManualMeta(e, el);
+        if (state.ui && state.ui.setScope === 'tracks') {
+          syncTrackSetSnapshots();
+          renderApp();
+        }
+        return result;
+      };
+      manualWrapper.__vertaxTrackSetManual = true;
+      handlers['track-manual-meta'] = manualWrapper;
+      var generateWrapper = function (e, el) {
+        if (state.ui && state.ui.setScope === 'tracks') {
+          buildTrackSetFromPool();
+          return;
+        }
+        if (typeof oldSetGenerate === 'function') return oldSetGenerate(e, el);
+      };
+      generateWrapper.__vertaxTrackSetGenerate = true;
+      handlers['set-generate'] = generateWrapper;
+    }
+
+    installHandlerOverrides();
+    setTimeout(installHandlerOverrides, 400);
+    setTimeout(installHandlerOverrides, 1200);
+
+    if (typeof persistVinyl === 'function' && !persistVinyl.__vertaxTrackSetSyncWrapped) {
+      var basePersist = persistVinyl;
+      persistVinyl = window.persistVinyl = async function (v) {
+        var result = await basePersist.apply(this, arguments);
+        if (state.ui && state.ui.setScope === 'tracks') syncTrackSetSnapshots();
+        return result;
+      };
+      persistVinyl.__vertaxTrackSetSyncWrapped = true;
+    }
+
+    document.addEventListener(
+      'click',
+      function (e) {
+        var app = document.getElementById('laiso-app');
+        if (!app || !e.target.closest || !e.target.closest('#laiso-app')) return;
+        var el = e.target.closest('[data-action]');
+        if (!el) return;
+        if (el.dataset.action === 'set-track-side-edit') {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+          editSideForElement(el);
+        }
+      },
+      true
+    );
+
+    function afterRender() {
+      setTimeout(injectSideButtons, 30);
+    }
+    if (typeof window.vertaxRegisterAfterRender === 'function') {
+      window.vertaxRegisterAfterRender(afterRender);
+    }
+    afterRender();
+  }
+
+  boot();
+})();
+
 /* Final set source gate: choose records or individual tracks before opening the
  * set builder. This keeps the existing vinyl-selection screen intact and adds a
  * track-level source without changing IndexedDB data. */
@@ -8503,6 +8889,43 @@ function installVertaxBackupFeature() {
     });
   }
 
+  function trackSortMode() {
+    state.ui = state.ui || {};
+    state.ui.setTrackSort = state.ui.setTrackSort || 'manual';
+    return state.ui.setTrackSort;
+  }
+
+  function camelotSortValue(value) {
+    var m = String(value || '')
+      .trim()
+      .toUpperCase()
+      .match(/^(\d{1,2})([AB])$/);
+    if (!m) return 999;
+    return (m[2] === 'A' ? 0 : 100) + parseInt(m[1], 10);
+  }
+
+  function sortedTrackList(tracks) {
+    var mode = trackSortMode();
+    var list = (tracks || []).slice();
+    if (mode === 'bpm') {
+      list.sort(function (a, b) {
+        var av = Number(a.bpm);
+        var bv = Number(b.bpm);
+        if (!isFinite(av)) av = 9999;
+        if (!isFinite(bv)) bv = 9999;
+        return av - bv || camelotSortValue(a.camelot) - camelotSortValue(b.camelot);
+      });
+    } else if (mode === 'camelot') {
+      list.sort(function (a, b) {
+        return (
+          camelotSortValue(a.camelot) - camelotSortValue(b.camelot) ||
+          (Number(a.bpm) || 9999) - (Number(b.bpm) || 9999)
+        );
+      });
+    }
+    return list;
+  }
+
   function setAllTracks(value) {
     var selected = {};
     if (value) {
@@ -8598,6 +9021,27 @@ function installVertaxBackupFeature() {
           })
           .join('')
       : '<div class="runt26-empty">Треков пока нет. Загрузи треклисты у пластинок в коллекции.</div>';
+    var sortMode = trackSortMode();
+    var sortControls =
+      '<div class="vertax-track-sort"><span>Порядок</span>' +
+      [
+        ['manual', 'как выбрано'],
+        ['bpm', 'по BPM'],
+        ['camelot', 'по Camelot'],
+      ]
+        .map(function (item) {
+          return (
+            '<button class="' +
+            (sortMode === item[0] ? 'active' : '') +
+            '" data-action="set-track-sort" data-sort="' +
+            item[0] +
+            '">' +
+            item[1] +
+            '</button>'
+          );
+        })
+        .join('') +
+      '</div>';
     return (
       '<div class="vertax-track-source-page" data-testid="set-track-source">' +
       getHeader('Выбор треков') +
@@ -8606,6 +9050,7 @@ function installVertaxBackupFeature() {
       '<div class="laiso-panel runt26-search-panel"><input class="laiso-input" type="search" data-action="set-track-search" placeholder="Поиск по трекам" value="' +
       safeEsc(state.ui.setTrackSearch || '') +
       '"></div>' +
+      sortControls +
       '<div class="laiso-meta vertax-track-source-count" style="margin:10px 2px 8px;">выбрано: ' +
       selectedCount +
       ' / ' +
@@ -8655,49 +9100,16 @@ function installVertaxBackupFeature() {
   }
 
   function generateFromTrackPool() {
-    var tracks = (state.ui && state.ui.setTrackPool) || [];
-    var mode = (state.ui && state.ui.setMode) || 'best-flow';
-    var opts = (state.ui && state.ui.setOptions) || { tempoRange: 4 };
-    var usable = tracks.filter(function (t) {
-      if (mode === 'tempo-safe' || mode === 'best-flow') return !!t.bpm;
-      if (mode === 'camelot-safe') return !!t.camelot;
-      if (mode === 'camelot-filter') {
-        var s = opts.camelotSet || {};
-        return t.camelot && s[t.camelot];
-      }
-      return true;
-    });
+    var tracks = sortedTrackList((state.ui && state.ui.setTrackPool) || []);
     if (tracks.length < 2) {
       toast('Нужно выбрать минимум 2 трека');
       return;
     }
-    if (usable.length < 2) {
-      state.ui.setMode = 'custom';
-      state.ui.generatedSet = tracks.slice();
-      state.view = 'set';
-      toast('Собран свой сет: ' + tracks.length + ' трек. BPM / Camelot можно заполнить позже.');
-      renderApp();
-      return;
-    }
-    var targetLen =
-      typeof window.vertaxSetDesiredTrackCount === 'function'
-        ? window.vertaxSetDesiredTrackCount(usable)
-        : Math.min(16, usable.length);
-    var result =
-      typeof generateSetAlgo === 'function'
-        ? generateSetAlgo(usable, mode, opts, targetLen)
-        : usable.slice(0, targetLen);
-    if (!result || result.length < 2) {
-      result = usable.slice(0, targetLen);
-      state.ui.setMode = 'custom';
-    }
-    state.ui.generatedSet = result || [];
-    state.ui.setLastWarning = result && result.length >= 2 ? null : 'no-valid-set';
-    toast(
-      result && result.length >= 2
-        ? 'Сет собран из треков: ' + result.length + ' трек.'
-        : 'Не удалось собрать сет - попробуй другой режим'
-    );
+    state.ui.setMode = 'custom';
+    state.ui.generatedSet = tracks;
+    state.ui.setTrackPool = tracks.slice();
+    state.ui.setLastWarning = null;
+    toast('Сет собран из треков: ' + tracks.length + ' трек.');
     state.view = 'set';
     renderApp();
   }
@@ -8828,6 +9240,15 @@ function installVertaxBackupFeature() {
         if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
         setAllTracks(false);
         syncTrackSourceDom();
+        return;
+      }
+      if (action === 'set-track-sort') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        state.ui = state.ui || {};
+        state.ui.setTrackSort = el.dataset.sort || 'manual';
+        renderApp();
         return;
       }
       if (action === 'set-track-build') {
