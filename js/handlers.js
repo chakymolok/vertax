@@ -8578,7 +8578,8 @@ function installVertaxBackupFeature() {
 
     function promptText(message, value) {
       if (typeof vertaxPrompt === 'function') return vertaxPrompt(message, value || '');
-      return Promise.resolve(window.prompt(message, value || ''));
+      toast('Форма ввода ещё загружается. Попробуй ещё раз.');
+      return Promise.resolve(null);
     }
 
     function allVinyls() {

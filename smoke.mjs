@@ -75,6 +75,19 @@ assert.equal(
   'IndexedDB should initialize'
 );
 
+async function assertSingleFooter() {
+  assert.equal(
+    await page.locator('.vertax-global-footer').count(),
+    1,
+    'Global BPM/KEY footer should render exactly once'
+  );
+  assert.equal(
+    await page.locator('.laiso-footer').count(),
+    0,
+    'Legacy in-view footer should not be rendered'
+  );
+}
+
 async function renderView(view) {
   await page.evaluate((nextView) => {
     window.laisoBuck.state.view = nextView;
@@ -83,6 +96,7 @@ async function renderView(view) {
   await page.locator('#laiso-root').waitFor({ state: 'visible' });
   const html = await page.locator('#laiso-root').innerHTML();
   assert.ok(html.trim().length > 0, `${view} should render non-empty HTML`);
+  await assertSingleFooter();
   return html;
 }
 
@@ -125,6 +139,125 @@ assert.ok(
   backupActions.includes('backup-download'),
   'DOM should include data-action=backup-download'
 );
+
+await page.evaluate(() => {
+  const now = Date.now();
+  window.laisoBuck.state.collection = [
+    {
+      id: 'smoke-vinyl-a',
+      artist: 'Seba',
+      title: 'Smoke Plate A',
+      label: 'Smoke Label',
+      catno: 'SMK001',
+      addedAt: now,
+      tracklist: [
+        {
+          id: 'smoke-a1',
+          position: 'A1',
+          side: 'A',
+          title: 'Solace',
+          bpm: 176,
+          key: 'D# minor',
+          camelot: '2A',
+          duration: '5:30',
+        },
+        {
+          id: 'smoke-b1',
+          position: 'B1',
+          side: 'B',
+          title: 'Bellamee',
+          bpm: 174,
+          key: 'E minor',
+          camelot: '9A',
+          duration: '5:10',
+        },
+      ],
+    },
+    {
+      id: 'smoke-vinyl-b',
+      artist: 'Calibre',
+      title: 'Smoke Plate B',
+      label: 'Smoke Label',
+      catno: 'SMK002',
+      addedAt: now,
+      tracklist: [
+        {
+          id: 'smoke-a2',
+          position: 'A1',
+          side: 'A',
+          title: 'Ready Beek',
+          bpm: 174,
+          key: 'D# minor',
+          camelot: '2A',
+          duration: '5:45',
+        },
+        {
+          id: 'smoke-b2',
+          position: 'B1',
+          side: 'B',
+          title: 'North Flow',
+          bpm: 172,
+          key: 'B minor',
+          camelot: '10A',
+          duration: '5:20',
+        },
+      ],
+    },
+  ];
+  window.laisoBuck.state.vinyls = [];
+});
+
+await renderView('home');
+await page.getByTestId('home-set-builder').click();
+await page.waitForFunction(() => window.laisoBuck.state.view === 'set-source-kind');
+await page.getByTestId('set-source-tracks').click();
+await page.waitForFunction(() => window.laisoBuck.state.view === 'set-track-source');
+await page.locator('[data-testid="set-track-source"]').waitFor({ state: 'visible' });
+assert.equal(await page.locator('.vertax-track-source-card').count(), 4, 'All tracks should show');
+await page.locator('[data-action="set-track-search"]').fill('seba');
+await page.waitForFunction(
+  () => document.querySelectorAll('.vertax-track-source-card:not([hidden])').length === 2
+);
+await page.locator('[data-action="set-track-clear"]').click();
+await page.waitForFunction(() =>
+  document.querySelector('[data-action="set-track-build"]').textContent.includes('(0)')
+);
+await page.locator('[data-action="set-track-search"]').fill('');
+await page.waitForFunction(
+  () => document.querySelectorAll('.vertax-track-source-card:not([hidden])').length === 4
+);
+await page.locator('[data-action="set-track-select-all"]').click();
+await page.waitForFunction(() =>
+  document.querySelector('[data-action="set-track-build"]').textContent.includes('(4)')
+);
+await page.locator('[data-action="set-track-build"]').click();
+await page.waitForFunction(() => window.laisoBuck.state.view === 'set');
+assert.equal(
+  await page.evaluate(() => window.laisoBuck.state.ui.generatedSet.length),
+  4,
+  'Track source build should keep every selected track'
+);
+await page.locator('[data-action="set-mode"][data-mode="tempo-safe"]').first().click();
+assert.equal(
+  await page.evaluate(() => window.laisoBuck.state.ui.generatedSet.length),
+  4,
+  'Tempo mode should reorder track-source set without clearing it'
+);
+await page.locator('[data-action="set-mode"][data-mode="camelot-safe"]').first().click();
+assert.equal(
+  await page.evaluate(() => window.laisoBuck.state.ui.generatedSet.length),
+  4,
+  'Camelot mode should reorder track-source set without clearing it'
+);
+
+await page.evaluate(() => {
+  window.laisoBuck.state.collection = [];
+  window.laisoBuck.state.vinyls = [];
+  window.laisoBuck.state.ui.generatedSet = [];
+  window.laisoBuck.state.ui.setTrackPool = [];
+  window.laisoBuck.state.ui.setTrackSelected = {};
+  window.laisoBuck.state.ui.setTrackSelectionCleared = false;
+});
 
 await renderView('home');
 await page.getByTestId('open-dig').click();
