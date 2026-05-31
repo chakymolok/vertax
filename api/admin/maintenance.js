@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { getAccessToken } = require('../../lib/beatport-auth');
 const {
   markAdminManualFields,
@@ -24,6 +26,7 @@ const {
 } = require('../beatport-lookup');
 
 const TRACK_KEY_PATTERN = 'vertax:beatport:track:*';
+const CANDIDATE_LABELS_PATH = path.resolve(__dirname, '../../config/candidate-labels.json');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -391,6 +394,54 @@ function compactReleaseForAdmin(release) {
   };
 }
 
+function loadCandidateLabelConfig() {
+  try {
+    const raw = fs.readFileSync(CANDIDATE_LABELS_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed.labels) ? parsed.labels : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function adminSeedConfig(candidateStatsResult) {
+  const byGenre = (candidateStatsResult && candidateStatsResult.by_genre_family) || {};
+  const labels = loadCandidateLabelConfig().map((label) => {
+    const family = String(label.genre_family || 'other');
+    return {
+      name: label.name || '',
+      discogs_label_id: label.discogs_label_id || null,
+      enabled: label.enabled !== false,
+      priority: label.priority || 'medium',
+      genre_family: family,
+      max_batches_per_run: Number(label.max_batches_per_run) || 1,
+      current_family_count: Number(byGenre[family]) || 0,
+    };
+  });
+  const families = {};
+  labels.forEach((label) => {
+    const family = label.genre_family || 'other';
+    families[family] = families[family] || {
+      genre_family: family,
+      configured_labels: 0,
+      enabled_labels: 0,
+      current_count: Number(byGenre[family]) || 0,
+      missing_enabled_source: true,
+    };
+    families[family].configured_labels += 1;
+    if (label.enabled && label.discogs_label_id) {
+      families[family].enabled_labels += 1;
+      families[family].missing_enabled_source = false;
+    }
+  });
+  return {
+    labels,
+    families: Object.values(families).sort((a, b) =>
+      String(a.genre_family).localeCompare(String(b.genre_family))
+    ),
+  };
+}
+
 async function adminOverview() {
   const [candidateStatsResult, seedStateResult, cacheStats] = await Promise.all([
     candidateStats(),
@@ -423,6 +474,7 @@ async function adminOverview() {
     },
     redis: cacheStats,
     candidates: candidateStatsResult,
+    seed_config: adminSeedConfig(candidateStatsResult),
     seed: seedStateResult,
     temporary_cache: {
       ai_verdict_count: aiVerdictKeys.length,

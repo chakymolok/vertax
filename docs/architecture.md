@@ -98,6 +98,8 @@ The dashboard shows:
 - Redis BPM/Key cache stats;
 - temporary collection-index counts and visible server-side user count;
 - seed state from automated candidate seeding;
+- configured seed labels and coverage gaps;
+- manual `Seed 5` calls through the existing `seed_candidates` maintenance action;
 - pending metadata proposals;
 - recent candidate releases.
 

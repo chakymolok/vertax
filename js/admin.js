@@ -159,6 +159,31 @@
       '</tbody>';
   }
 
+  function renderHtmlTable(target, headers, rows) {
+    target.innerHTML =
+      '<thead><tr>' +
+      headers
+        .map(function (head) {
+          return '<th>' + esc(head) + '</th>';
+        })
+        .join('') +
+      '</tr></thead><tbody>' +
+      rows
+        .map(function (row) {
+          return (
+            '<tr>' +
+            row
+              .map(function (cell) {
+                return '<td>' + cell + '</td>';
+              })
+              .join('') +
+            '</tr>'
+          );
+        })
+        .join('') +
+      '</tbody>';
+  }
+
   function renderCandidates(items) {
     $('recentTotal').textContent = (items || []).length + ' shown';
     $('recentCandidates').innerHTML = (items || []).length
@@ -224,7 +249,83 @@
         ];
       })
     );
+    var coverageFamilies = (data.seed_config && data.seed_config.families) || [];
+    renderTable(
+      $('coverageTable'),
+      ['Family', 'Candidates', 'Enabled labels', 'Status'],
+      coverageFamilies.map(function (item) {
+        return [
+          item.genre_family,
+          item.current_count || 0,
+          item.enabled_labels + ' / ' + item.configured_labels,
+          item.missing_enabled_source ? 'needs source' : item.current_count ? 'ok' : 'empty',
+        ];
+      })
+    );
+    var seedLabels = ((data.seed_config && data.seed_config.labels) || [])
+      .filter(function (label) {
+        return label.discogs_label_id;
+      })
+      .sort(function (a, b) {
+        return (
+          Number(a.enabled === false) - Number(b.enabled === false) ||
+          (a.current_family_count || 0) - (b.current_family_count || 0) ||
+          String(a.name).localeCompare(String(b.name))
+        );
+      })
+      .slice(0, 24);
+    renderHtmlTable(
+      $('seedConfigTable'),
+      ['Label', 'Family', 'Count', 'Action'],
+      seedLabels.map(function (label) {
+        return [
+          esc(label.name) + (label.enabled ? '' : ' <span class="admin-muted">off</span>'),
+          esc(label.genre_family),
+          esc(label.current_family_count || 0),
+          '<button class="admin-mini-button" type="button" data-action="seed-label" data-label-id="' +
+            esc(label.discogs_label_id) +
+            '" data-label-name="' +
+            esc(label.name) +
+            '" data-genre-family="' +
+            esc(label.genre_family) +
+            '">Seed 5</button>',
+        ];
+      })
+    );
     renderCandidates(data.recent_candidates || []);
+  }
+
+  async function seedLabel(button) {
+    var labelId = button.getAttribute('data-label-id');
+    if (!labelId) return;
+    var name = button.getAttribute('data-label-name') || labelId;
+    button.disabled = true;
+    button.textContent = 'Seeding...';
+    showError('');
+    try {
+      var result = await adminPost('seed_candidates', {
+        label_id: Number(labelId),
+        label_name: name,
+        genre_family: button.getAttribute('data-genre-family') || null,
+        limit: 5,
+      });
+      showError(
+        'Seed ' +
+          name +
+          ': saved ' +
+          (result.saved || 0) +
+          ', updated ' +
+          (result.updated || 0) +
+          ', skipped non-vinyl ' +
+          (result.skipped_non_vinyl || 0)
+      );
+      await load();
+    } catch (error) {
+      showError(error.message || 'seed failed');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Seed 5';
+    }
   }
 
   async function load() {
@@ -250,6 +351,13 @@
       state.token = $('tokenInput').value.trim();
       if (state.token) sessionStorage.setItem(tokenKey, state.token);
       load();
+    });
+    document.addEventListener('click', function (event) {
+      var button =
+        event.target && event.target.closest && event.target.closest('[data-action="seed-label"]');
+      if (!button) return;
+      event.preventDefault();
+      seedLabel(button);
     });
     if (state.token) $('tokenInput').value = state.token;
     setTimeout(load, 250);
