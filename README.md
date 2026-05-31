@@ -63,6 +63,7 @@ Used by Telegram auth, webhook, and admin notifications:
 - `TELEGRAM_ADMIN_CHAT_ID`
 - `TELEGRAM_ADMIN_USER_ID`
 - `TELEGRAM_WEBHOOK_SECRET`
+- `TELEGRAM_AUTH_MAX_AGE_SECONDS` (optional, defaults to 86400)
 
 Used by protected admin/export endpoints:
 
@@ -71,6 +72,11 @@ Used by protected admin/export endpoints:
 
 `/admin` accepts either `ADMIN_TOKEN` or Telegram Mini App admin auth via
 `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ADMIN_USER_ID`.
+
+Local development does not send `/api/discogs-ingest` writes to production by
+default. If you intentionally need to test production ingest from localhost, set
+`localStorage.vertaxAllowProdIngest = "1"` in the browser console for that
+session.
 
 Not currently used by the codebase:
 

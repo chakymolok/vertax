@@ -1,9 +1,45 @@
 import { chromium } from 'playwright';
-import { pathToFileURL } from 'node:url';
-import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { extname, join, normalize, resolve } from 'node:path';
 
-const url = pathToFileURL(resolve('index.html')).href;
+const publicDir = resolve('public');
+const mime = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
+};
+
+function staticFilePath(requestUrl) {
+  const url = new URL(requestUrl, 'http://127.0.0.1');
+  let pathname = decodeURIComponent(url.pathname);
+  if (pathname.endsWith('/')) pathname += 'index.html';
+  const file = normalize(join(publicDir, pathname));
+  if (!file.startsWith(publicDir)) return null;
+  return file;
+}
+
+const server = createServer((req, res) => {
+  const file = staticFilePath(req.url || '/');
+  if (!file || !existsSync(file) || !statSync(file).isFile()) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('not found');
+    return;
+  }
+  res.writeHead(200, {
+    'Content-Type': mime[extname(file)] || 'application/octet-stream',
+    'Cache-Control': 'no-store',
+  });
+  createReadStream(file).pipe(res);
+});
+
+await new Promise((resolveServer) => server.listen(0, '127.0.0.1', resolveServer));
+const { port } = server.address();
+const url = `http://127.0.0.1:${port}/`;
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 const errors = [];
@@ -22,7 +58,7 @@ await page.addInitScript(() => {
 
 await page.route('**/*', async (route) => {
   const requestUrl = route.request().url();
-  if (requestUrl.startsWith('file:')) return route.continue();
+  if (requestUrl.startsWith(url)) return route.continue();
   return route.fulfill({ status: 204, body: '' });
 });
 
@@ -166,5 +202,24 @@ assert.deepEqual(
   `No uncaught console/runtime errors expected: ${uncaught.join('\n')}`
 );
 
-await browser.close();
+try {
+  for (const route of ['/about/', '/vk/', '/admin/']) {
+    const checkPage = await browser.newPage();
+    await checkPage.route('**/*', async (routeRequest) => {
+      const requestUrl = routeRequest.request().url();
+      if (requestUrl.startsWith(url)) return routeRequest.continue();
+      return routeRequest.fulfill({ status: 204, body: '' });
+    });
+    await checkPage.goto(url.replace(/\/$/, route), { waitUntil: 'domcontentloaded' });
+    assert.ok(
+      (await checkPage.locator('body').innerText()).trim().length > 0,
+      `${route} should render body text`
+    );
+    await checkPage.close();
+  }
+} finally {
+  await browser.close();
+  await new Promise((resolveClose) => server.close(resolveClose));
+}
+
 console.log('smoke ok');

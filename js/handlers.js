@@ -95,6 +95,15 @@
     return '';
   }
 
+  function canSendLocalIngestToProduction() {
+    try {
+      if (window.__VERTAX_ALLOW_PROD_INGEST__ === true) return true;
+      return localStorage.getItem('vertaxAllowProdIngest') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
   function sendDiscogsIngest(v) {
     var payload = compactVinylForIngest(v);
     if (!payload || !payload.tracklist.length) {
@@ -124,6 +133,16 @@
       if (vkLaunchParams) headers['X-VK-Launch-Params'] = vkLaunchParams;
       if (clientId) headers['X-Vertax-Client-Id'] = clientId;
       var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname || '');
+      if (isLocal && !canSendLocalIngestToProduction()) {
+        window.__vertaxLastIngest = {
+          ok: false,
+          skipped: true,
+          reason: 'local_prod_ingest_disabled',
+          tracks: payload.tracklist.length,
+          at: new Date().toISOString(),
+        };
+        return;
+      }
       var apiUrl = (isLocal ? 'https://vertax.live' : '') + '/api/discogs-ingest';
       window.__vertaxLastIngest = {
         ok: null,
@@ -8361,6 +8380,176 @@ function installVertaxBackupFeature() {
     }
   }
   boot();
+})();
+
+/* Track-set mode controls should reorder the selected track set, not run the
+ * strict vinyl generator. This final guard catches older delegated handlers that
+ * clear generatedSet when mode tabs are clicked. */
+(function installVertaxTrackSetModeGuard() {
+  if (window.__vertaxTrackSetModeGuardInstalled) return;
+  window.__vertaxTrackSetModeGuardInstalled = true;
+
+  function getState() {
+    return window.laisoBuck && window.laisoBuck.state ? window.laisoBuck.state : null;
+  }
+
+  function renderApp() {
+    if (window.laisoBuck && typeof window.laisoBuck.render === 'function') window.laisoBuck.render();
+    else if (typeof render === 'function') render();
+  }
+
+  function toast(msg) {
+    if (typeof showToast === 'function') showToast(msg);
+  }
+
+  function isTrackScope() {
+    var s = getState();
+    return !!(s && s.view === 'set' && s.ui && s.ui.setScope === 'tracks');
+  }
+
+  function camelotValue(value) {
+    var m = String(value || '')
+      .trim()
+      .toUpperCase()
+      .match(/^(\d{1,2})([AB])$/);
+    if (!m) return 999;
+    return (m[2] === 'A' ? 0 : 100) + parseInt(m[1], 10);
+  }
+
+  function sortTracks(list, sort) {
+    var rows = (list || []).slice();
+    if (sort === 'bpm') {
+      rows.sort(function (a, b) {
+        return (
+          (Number(a.bpm) || 9999) - (Number(b.bpm) || 9999) ||
+          camelotValue(a.camelot) - camelotValue(b.camelot) ||
+          String(a.title || '').localeCompare(String(b.title || ''))
+        );
+      });
+    } else if (sort === 'camelot') {
+      rows.sort(function (a, b) {
+        return (
+          camelotValue(a.camelot) - camelotValue(b.camelot) ||
+          (Number(a.bpm) || 9999) - (Number(b.bpm) || 9999) ||
+          String(a.title || '').localeCompare(String(b.title || ''))
+        );
+      });
+    }
+    return rows;
+  }
+
+  function sortFromMode(mode) {
+    if (mode === 'tempo-safe') return 'bpm';
+    if (mode === 'camelot-safe' || mode === 'camelot-filter') return 'camelot';
+    return 'manual';
+  }
+
+  function applyTrackSort(sort) {
+    var s = getState();
+    if (!s || !s.ui) return;
+    s.ui.setTrackSort = sort || s.ui.setTrackSort || 'manual';
+    s.ui.setMode = 'custom';
+    s.ui.setLastWarning = null;
+    if (Array.isArray(s.ui.generatedSet) && s.ui.generatedSet.length) {
+      s.ui.generatedSet = sortTracks(s.ui.generatedSet, s.ui.setTrackSort);
+    }
+    if (Array.isArray(s.ui.setTrackPool) && s.ui.setTrackPool.length) {
+      s.ui.setTrackPool = sortTracks(s.ui.setTrackPool, s.ui.setTrackSort);
+    }
+    renderApp();
+  }
+
+  function installHandlerOverrides() {
+    if (typeof handlers === 'undefined' || !handlers) return;
+    if (!handlers['set-mode'] || !handlers['set-mode'].__vertaxTrackModeGuard) {
+      var oldSetMode = handlers['set-mode'];
+      var setMode = function (e, el) {
+        if (isTrackScope()) {
+          applyTrackSort(sortFromMode(el && el.dataset ? el.dataset.mode : 'custom'));
+          toast('Порядок треков обновлён');
+          return;
+        }
+        if (typeof oldSetMode === 'function') return oldSetMode(e, el);
+      };
+      setMode.__vertaxTrackModeGuard = true;
+      handlers['set-mode'] = setMode;
+    }
+    if (!handlers['set-tempo'] || !handlers['set-tempo'].__vertaxTrackModeGuard) {
+      var oldSetTempo = handlers['set-tempo'];
+      var setTempo = function (e, el) {
+        if (isTrackScope()) {
+          applyTrackSort('bpm');
+          toast('Отсортировано по BPM');
+          return;
+        }
+        if (typeof oldSetTempo === 'function') return oldSetTempo(e, el);
+      };
+      setTempo.__vertaxTrackModeGuard = true;
+      handlers['set-tempo'] = setTempo;
+    }
+    if (!handlers['wheel-pick'] || !handlers['wheel-pick'].__vertaxTrackModeGuard) {
+      var oldWheelPick = handlers['wheel-pick'];
+      var wheelPick = function (e, el) {
+        if (isTrackScope()) {
+          applyTrackSort('camelot');
+          toast('Отсортировано по Camelot');
+          return;
+        }
+        if (typeof oldWheelPick === 'function') return oldWheelPick(e, el);
+      };
+      wheelPick.__vertaxTrackModeGuard = true;
+      handlers['wheel-pick'] = wheelPick;
+    }
+    if (!handlers['camelot-filter-clear'] || !handlers['camelot-filter-clear'].__vertaxTrackModeGuard) {
+      var oldCamelotClear = handlers['camelot-filter-clear'];
+      var camelotClear = function (e, el) {
+        if (isTrackScope()) {
+          applyTrackSort('manual');
+          return;
+        }
+        if (typeof oldCamelotClear === 'function') return oldCamelotClear(e, el);
+      };
+      camelotClear.__vertaxTrackModeGuard = true;
+      handlers['camelot-filter-clear'] = camelotClear;
+    }
+    if (!handlers['camelot-filter-apply'] || !handlers['camelot-filter-apply'].__vertaxTrackModeGuard) {
+      var oldCamelotApply = handlers['camelot-filter-apply'];
+      var camelotApply = function (e, el) {
+        if (isTrackScope()) {
+          applyTrackSort('camelot');
+          return;
+        }
+        if (typeof oldCamelotApply === 'function') return oldCamelotApply(e, el);
+      };
+      camelotApply.__vertaxTrackModeGuard = true;
+      handlers['camelot-filter-apply'] = camelotApply;
+    }
+  }
+
+  document.addEventListener(
+    'click',
+    function (e) {
+      if (!isTrackScope() || !e.target.closest || !e.target.closest('#laiso-app')) return;
+      var el = e.target.closest('[data-action]');
+      if (!el) return;
+      var action = el.dataset.action;
+      var sort = null;
+      if (action === 'set-mode') sort = sortFromMode(el.dataset.mode || 'custom');
+      else if (action === 'set-tempo') sort = 'bpm';
+      else if (action === 'wheel-pick' || action === 'camelot-filter-apply') sort = 'camelot';
+      else if (action === 'camelot-filter-clear') sort = 'manual';
+      if (!sort) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+      applyTrackSort(sort);
+    },
+    true
+  );
+
+  installHandlerOverrides();
+  setTimeout(installHandlerOverrides, 500);
+  setTimeout(installHandlerOverrides, 1500);
 })();
 
 /* Final track-set behavior: individual-track source is a manual set, not the

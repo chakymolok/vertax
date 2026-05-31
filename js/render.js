@@ -100,18 +100,7 @@ function render() {
   }
 }
 function renderAttribution() {
-  return (
-    '<div style="margin-top:24px;padding:12px 0;border-top:1px solid var(--border);text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:0.04em;">' +
-    'BPM/KEY · POWERED BY ' +
-    '<a href="https://www.beatport.com" target="_blank" rel="noopener" style="color:#A6FF4D;text-decoration:underline;">Beatport</a>' +
-    ' AND ' +
-    '<a href="https://www.getsongbpm.com" target="_blank" rel="noopener" style="color:var(--accent-lime-dark);text-decoration:underline;">GetSongBPM</a>' +
-    ' AND ' +
-    '<a href="https://acousticbrainz.org" target="_blank" rel="noopener" style="color:#3a8fd8;text-decoration:underline;">AcousticBrainz</a>' +
-    ' AND ' +
-    '<a href="https://www.deezer.com" target="_blank" rel="noopener" style="color:#A238FF;text-decoration:underline;">Deezer</a>' +
-    '</div>'
-  );
+  return '';
 }
 /* ---------- DEVICE CHASSIS (top brand strip) ---------- */ function renderChassis(rightSlot) {
   return (
@@ -206,14 +195,7 @@ function renderVertaxDisplay() {
   );
 }
 function renderFooter() {
-  return (
-    '' +
-    '<div class="laiso-footer">' +
-    '<div>VERTAX-01 · by Laiso Buck / Михаил Проскурин</div>' +
-    '<div class="laiso-footer-tg"><a href="https://t.me/michael1994lab" target="_blank" rel="noopener">Telegram Автора</a></div>' +
-    '<div class="laiso-footer-donate"><a href="https://www.tbank.ru/cf/1ZddEeAvzU1" target="_blank" rel="noopener">Поддержать проект</a></div>' +
-    '</div>'
-  );
+  return '';
 }
 
 /* Telegram-suggest banner: shown only when the app is NOT running inside
