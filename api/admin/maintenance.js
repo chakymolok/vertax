@@ -442,6 +442,155 @@ function adminSeedConfig(candidateStatsResult) {
   };
 }
 
+/* List candidates with paging + sort + filter. Returns lean rows
+ * (without full tracklists) so the admin grid stays snappy. */
+async function listCandidatesPaged(body) {
+  const releases = await exportCandidates(10000);
+  const labelFilter = body && body.label ? String(body.label).toLowerCase() : '';
+  const genreFilter = body && body.genre_family ? String(body.genre_family) : '';
+  const search = body && body.q ? String(body.q).toLowerCase() : '';
+  const sortBy = (body && body.sort_by) || 'updated_at';
+  const sortDir = body && body.sort_dir === 'asc' ? 1 : -1;
+  const limit = Math.max(1, Math.min(500, Number(body && body.limit) || 50));
+  const offset = Math.max(0, Number(body && body.offset) || 0);
+
+  const filtered = releases.filter((release) => {
+    if (labelFilter && String(release.label || '').toLowerCase() !== labelFilter) return false;
+    if (genreFilter && String(release.genre_family || '') !== genreFilter) return false;
+    if (search) {
+      const hay = (
+        String(release.artist || '') +
+        ' ' +
+        String(release.title || '') +
+        ' ' +
+        String(release.catalog_number || '')
+      ).toLowerCase();
+      if (hay.indexOf(search) < 0) return false;
+    }
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (sortBy === 'updated_at' || sortBy === 'ingested_at' || sortBy === 'marketplace_refreshed_at') {
+      av = Date.parse((sortBy === 'marketplace_refreshed_at'
+        ? (a.marketplace && a.marketplace.refreshed_at)
+        : a[sortBy]) || '') || 0;
+      bv = Date.parse((sortBy === 'marketplace_refreshed_at'
+        ? (b.marketplace && b.marketplace.refreshed_at)
+        : b[sortBy]) || '') || 0;
+    } else if (sortBy === 'year') {
+      av = Number(a.year) || 0;
+      bv = Number(b.year) || 0;
+    } else if (sortBy === 'track_count' || sortBy === 'enriched_track_count') {
+      av = Number(a[sortBy]) || 0;
+      bv = Number(b[sortBy]) || 0;
+    } else if (sortBy === 'metadata_coverage') {
+      av = Number(a.metadata_coverage) || 0;
+      bv = Number(b.metadata_coverage) || 0;
+    } else if (sortBy === 'lowest_price') {
+      av = Number(a.marketplace && a.marketplace.lowest_price) || 0;
+      bv = Number(b.marketplace && b.marketplace.lowest_price) || 0;
+    } else {
+      av = String(a[sortBy] || '').toLowerCase();
+      bv = String(b[sortBy] || '').toLowerCase();
+      return av < bv ? -1 * sortDir : av > bv ? 1 * sortDir : 0;
+    }
+    return (av - bv) * sortDir;
+  });
+
+  return {
+    ok: true,
+    total: filtered.length,
+    offset,
+    limit,
+    has_more: offset + limit < filtered.length,
+    rows: filtered.slice(offset, offset + limit).map(compactReleaseForAdmin),
+  };
+}
+
+/* For a single release: refetch Discogs marketplace + Beatport samples
+ * for any tracks lacking sample_url. Returns the updated compact view. */
+async function enrichSingleCandidate(body) {
+  const id = String((body && body.discogs_id) || '').trim();
+  if (!id) return { ok: false, error: 'discogs_id_required' };
+
+  const all = await exportCandidates(10000);
+  const release = all.find((r) => String(r.discogs_id) === id);
+  if (!release) return { ok: false, error: 'not_found', discogs_id: id };
+
+  /* 1) Marketplace refresh (always fresh for single-shot enrichment) */
+  const marketplace = await refreshMarketplaceBatch({ limit: 1, only_id: id, older_than_hours: 0 });
+
+  /* 2) Beatport sample backfill for THIS release's tracks */
+  const tracks = Array.isArray(release.tracks) ? release.tracks : [];
+  let samplesUpdated = 0;
+  for (const track of tracks) {
+    if (track.sample_url) continue;
+    const tid = track.beatport_track_id;
+    if (!tid) continue;
+    try {
+      const fresh = await fetchBeatportTrack(tid);
+      if (!fresh) continue;
+      const mapped = mapTrack(fresh, 1, { artist: track.artist, title: track.title });
+      if (mapped && mapped.sample_url) {
+        track.sample_url = mapped.sample_url;
+        track.sample_duration_ms = mapped.sample_duration_ms || track.sample_duration_ms || null;
+        samplesUpdated++;
+      }
+      await sleep(300);
+    } catch (_) {}
+  }
+  if (samplesUpdated > 0) {
+    /* Persist back to candidate cache */
+    const { saveReleaseCandidate } = require('../../lib/release-candidates');
+    await saveReleaseCandidate(release);
+  }
+  return {
+    ok: true,
+    discogs_id: id,
+    marketplace_updated: marketplace && marketplace.updated ? marketplace.updated : 0,
+    samples_updated: samplesUpdated,
+    release: compactReleaseForAdmin(release),
+  };
+}
+
+/* Read label config + return counts of how many releases each label
+ * has actually ingested (via candidate index keys). */
+async function listCandidateLabels() {
+  const config = loadCandidateLabelConfig();
+  const releases = await exportCandidates(10000);
+  const counts = {};
+  releases.forEach((r) => {
+    const label = String(r.label || '').toLowerCase();
+    if (label) counts[label] = (counts[label] || 0) + 1;
+  });
+  const out = config.map((label) => {
+    return {
+      name: label.name,
+      discogs_label_id: label.discogs_label_id || null,
+      priority: label.priority || 'medium',
+      enabled: label.enabled !== false,
+      genre_family: label.genre_family || 'other',
+      max_batches_per_run: label.max_batches_per_run || 1,
+      candidate_count: counts[String(label.name).toLowerCase()] || 0,
+    };
+  });
+  /* Also include any labels we have releases for but not in config */
+  const knownNames = new Set(config.map((l) => String(l.name).toLowerCase()));
+  Object.keys(counts).forEach((name) => {
+    if (!knownNames.has(name)) {
+      out.push({
+        name: name,
+        unmanaged: true,
+        candidate_count: counts[name],
+      });
+    }
+  });
+  out.sort((a, b) => (b.candidate_count || 0) - (a.candidate_count || 0));
+  return { ok: true, labels: out };
+}
+
 async function adminOverview() {
   const [candidateStatsResult, seedStateResult, cacheStats] = await Promise.all([
     candidateStats(),
@@ -546,6 +695,21 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'backfill_beatport_samples') {
       const result = await backfillBeatportSamples(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'list_candidates_paged') {
+      const result = await listCandidatesPaged(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'enrich_candidate') {
+      const result = await enrichSingleCandidate(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'list_candidate_labels') {
+      const result = await listCandidateLabels();
       send(res, result.ok ? 200 : 400, result);
       return;
     }
