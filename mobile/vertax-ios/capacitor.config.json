@@ -1,0 +1,11 @@
+{
+  "appId": "com.nineteenninetyfourlab.vertax",
+  "appName": "Vertax",
+  "webDir": "../../public",
+  "server": {
+    "iosScheme": "vertax"
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

@@ -133,7 +133,8 @@
       if (vkLaunchParams) headers['X-VK-Launch-Params'] = vkLaunchParams;
       if (clientId) headers['X-Vertax-Client-Id'] = clientId;
       var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname || '');
-      if (isLocal && !canSendLocalIngestToProduction()) {
+      var isNativeShell = typeof vertaxIsNativeShellOrigin === 'function' && vertaxIsNativeShellOrigin();
+      if (isLocal && !isNativeShell && !canSendLocalIngestToProduction()) {
         window.__vertaxLastIngest = {
           ok: false,
           skipped: true,
@@ -143,7 +144,10 @@
         };
         return;
       }
-      var apiUrl = (isLocal ? 'https://vertax.live' : '') + '/api/discogs-ingest';
+      var apiUrl =
+        typeof vertaxApiUrl === 'function'
+          ? vertaxApiUrl('/api/discogs-ingest').toString()
+          : (isLocal ? 'https://vertax.live' : '') + '/api/discogs-ingest';
       window.__vertaxLastIngest = {
         ok: null,
         status: 'sending',

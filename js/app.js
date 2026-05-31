@@ -1762,11 +1762,12 @@ window.vertaxApplyCamelotOnlyUi = vertaxApplyCamelotOnlyUi;
   async function fetchFromBeatport(artist, title, label) {
     try {
       if (!artist || !title) return null;
-      var url =
+      var url = vertaxApiUrl(
         '/api/beatport-lookup?artist=' +
-        encodeURIComponent(artist) +
-        '&title=' +
-        encodeURIComponent(title);
+          encodeURIComponent(artist) +
+          '&title=' +
+          encodeURIComponent(title)
+      ).toString();
       if (label) url += '&label=' + encodeURIComponent(label);
       window.__vertaxBeatportLastLookup = {
         artist: artist || '',

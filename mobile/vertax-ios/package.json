@@ -1,0 +1,26 @@
+{
+  "name": "vertax-ios",
+  "version": "1.0.0",
+  "description": "iOS Capacitor wrapper for Vertax.",
+  "scripts": {
+    "build:web": "cd ../.. && npm run build",
+    "sync": "npm run build:web && npx cap sync ios",
+    "open": "npx cap open ios",
+    "doctor": "npx cap doctor ios"
+  },
+  "keywords": [
+    "vertax",
+    "ios",
+    "capacitor",
+    "vinyl",
+    "dj"
+  ],
+  "author": "Michael Proskurin / 1994lab",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4"
+  }
+}

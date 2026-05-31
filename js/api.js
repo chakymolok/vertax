@@ -18,8 +18,18 @@ function isDiscogsVinylCollectionItem(item) {
     .toLowerCase();
   return text.indexOf('vinyl') >= 0 && text.indexOf('cd') < 0;
 }
+var VERTAX_PRODUCTION_ORIGIN = 'https://vertax.live';
+function vertaxIsNativeShellOrigin() {
+  var protocol = String((window.location && window.location.protocol) || '').toLowerCase();
+  return protocol === 'capacitor:' || protocol === 'vertax:';
+}
+function vertaxApiOrigin() {
+  if (window.VERTAX_API_ORIGIN) return String(window.VERTAX_API_ORIGIN).replace(/\/+$/, '');
+  if (vertaxIsNativeShellOrigin()) return VERTAX_PRODUCTION_ORIGIN;
+  return window.location.origin;
+}
 function vertaxApiUrl(path) {
-  return new URL(path, window.location.origin);
+  return new URL(path, vertaxApiOrigin());
 }
 function vertaxNormalizeHashPart(value) {
   return String(value || '')
