@@ -4,6 +4,7 @@
     token: sessionStorage.getItem(tokenKey) || '',
     data: null,
     candidates: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'updated_at', sortDir: 'desc' },
+    tracks: { rows: [], offset: 0, limit: 50, total: 0, sortBy: 'savedAt', sortDir: 'desc' },
   };
 
   /* ============================================================
@@ -115,6 +116,7 @@
     }[name] || 'Дашборд';
     if (name === 'candidates') loadCandidates();
     if (name === 'users') loadUsersTab();
+    if (name === 'collection') loadTracks();
   }
 
   /* ============================================================
@@ -275,6 +277,7 @@
       Object.keys(seenGenres).sort().map(function (g) {
         return '<option value="' + esc(g) + '">' + esc(g) + '</option>';
       }).join('');
+    populateSeedGenreSelect();
   }
 
   function renderLabelsConfig(labels) {
@@ -382,6 +385,257 @@
   }
 
   /* ============================================================
+     Collection tab — full beatport:track:* browser
+     ============================================================ */
+  async function loadTracks() {
+    showError('');
+    try {
+      var filter = $('trackFilter').value;
+      var result = await adminPost('list_tracks_paged', {
+        offset: state.tracks.offset,
+        limit: state.tracks.limit,
+        sort_by: state.tracks.sortBy,
+        sort_dir: state.tracks.sortDir,
+        q: $('trackSearch').value || '',
+        only_missing_sample: filter === 'missing_sample',
+        only_missing_bpm: filter === 'missing_bpm',
+        only_manual: filter === 'manual',
+      });
+      state.tracks.rows = result.rows || [];
+      state.tracks.total = result.total || 0;
+      renderTracksTable(result.keys_scanned || 0);
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError('Не удалось загрузить треки: ' + (error.message || 'unknown'));
+    }
+  }
+
+  function renderTracksTable(scanned) {
+    var rows = state.tracks.rows;
+    $('tracksTotal').textContent = state.tracks.total + ' / ' + scanned + ' в кэше';
+    $('tracksTbody').innerHTML = rows.length ? rows.map(function (r) {
+      var manual = String(r.meta_status || '').toLowerCase() === 'admin' ||
+                   String(r.bpm_source || '').toLowerCase() === 'admin';
+      var manualTag = manual ? ' <span class="admin-muted" style="font-size:9px">[admin]</span>' : '';
+      var sampleBtn = r.sample_url
+        ? '<button class="admin-mini-button" type="button" data-action="track-play" data-url="' + esc(r.sample_url) + '">▶</button>'
+        : '<span class="admin-muted">—</span>';
+      return '<tr data-key="' + esc(r.key) + '">' +
+        '<td>' + esc(r.artist || '—') + '</td>' +
+        '<td>' + esc(r.title || '—') + manualTag + '</td>' +
+        '<td>' + esc(r.label || '—') + '</td>' +
+        '<td><input class="admin-cell-input" type="number" min="0" max="300" value="' + esc(r.bpm || '') +
+          '" data-field="bpm" data-key="' + esc(r.key) + '" /></td>' +
+        '<td><input class="admin-cell-input admin-cell-narrow" type="text" maxlength="3" value="' + esc(r.camelot || '') +
+          '" data-field="camelot" data-key="' + esc(r.key) + '" /></td>' +
+        '<td><input class="admin-cell-input admin-cell-key" type="text" maxlength="12" value="' + esc(r.key_name || '') +
+          '" data-field="key_name" data-key="' + esc(r.key) + '" /></td>' +
+        '<td>' + esc(r.genre || '—') + (r.sub_genre ? ' <span class="admin-muted">' + esc(r.sub_genre) + '</span>' : '') + '</td>' +
+        '<td>' + sampleBtn + '</td>' +
+        '<td>' + esc(dateShort(r.savedAt)) + '</td>' +
+        '<td>' +
+          (r.beatport_url ? '<a class="admin-mini-link" href="' + esc(r.beatport_url) + '" target="_blank" rel="noopener">BP</a>' : '') +
+          ' <button class="admin-mini-button" type="button" data-action="enrich-track" data-key="' + esc(r.key) + '">Обогатить</button>' +
+        '</td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="10" class="admin-muted">Ничего не найдено.</td></tr>';
+
+    var hasNext = (state.tracks.offset + state.tracks.limit) < state.tracks.total;
+    var hasPrev = state.tracks.offset > 0;
+    $('tracksNext').disabled = !hasNext;
+    $('tracksPrev').disabled = !hasPrev;
+    var shown = Math.min(state.tracks.total, state.tracks.offset + rows.length);
+    $('tracksPagerInfo').textContent = (state.tracks.total ? (state.tracks.offset + 1) : 0) + '–' + shown + ' из ' + state.tracks.total;
+
+    document.querySelectorAll('#tracksTable thead th[data-sort-track]').forEach(function (th) {
+      th.classList.toggle('is-sorted', th.getAttribute('data-sort-track') === state.tracks.sortBy);
+      th.classList.toggle('asc', state.tracks.sortDir === 'asc');
+      th.classList.toggle('desc', state.tracks.sortDir === 'desc');
+    });
+  }
+
+  async function updateTrackField(input) {
+    var key = input.getAttribute('data-key');
+    var field = input.getAttribute('data-field');
+    var value = input.value.trim();
+    if (!key || !field) return;
+    input.disabled = true;
+    showError('');
+    try {
+      var body = { key: key };
+      body[field] = value;
+      var result = await adminPost('update_track', body);
+      if (result.ok) {
+        input.style.borderColor = '#C8FF2E';
+        setTimeout(function () { input.style.borderColor = ''; }, 800);
+        /* Update local row */
+        var idx = state.tracks.rows.findIndex(function (r) { return r.key === key; });
+        if (idx >= 0 && result.track) {
+          Object.assign(state.tracks.rows[idx], result.patch);
+        }
+      }
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      input.style.borderColor = '#E66A2C';
+      showError('Update failed: ' + (error.message || 'unknown'));
+    } finally {
+      input.disabled = false;
+    }
+  }
+
+  async function enrichTrack(key, button) {
+    if (!key) return;
+    button.disabled = true;
+    var orig = button.textContent;
+    button.textContent = '...';
+    try {
+      var result = await adminPost('enrich_track', { key: key });
+      if (result.ok && result.track) {
+        showError('Трек обогащён');
+        var idx = state.tracks.rows.findIndex(function (r) { return r.key === key; });
+        if (idx >= 0) {
+          var t = result.track;
+          state.tracks.rows[idx] = Object.assign({}, state.tracks.rows[idx], {
+            sample_url: t.sample_url || null,
+            genre: t.genre || state.tracks.rows[idx].genre,
+            sub_genre: t.sub_genre || state.tracks.rows[idx].sub_genre,
+            label: t.label || state.tracks.rows[idx].label,
+            beatport_url: t.beatport_url || state.tracks.rows[idx].beatport_url,
+            savedAt: t.savedAt,
+          });
+          renderTracksTable(state.tracks.total);
+        }
+      }
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError('Обогащение упало: ' + (error.message || 'unknown'));
+    } finally {
+      button.disabled = false;
+      button.textContent = orig;
+    }
+  }
+
+  /* ============================================================
+     Seed by genre
+     ============================================================ */
+  function populateSeedGenreSelect() {
+    var sel = $('seedGenreSelect');
+    if (!sel) return;
+    var seen = {};
+    (state.labels || []).forEach(function (l) {
+      if (l.genre_family && l.enabled !== false && l.discogs_label_id) seen[l.genre_family] = true;
+    });
+    sel.innerHTML = '<option value="">— жанровая семья —</option>' +
+      Object.keys(seen).sort().map(function (g) {
+        return '<option value="' + esc(g) + '">' + esc(g) + '</option>';
+      }).join('');
+  }
+
+  async function seedByGenreClick() {
+    var family = $('seedGenreSelect').value;
+    var limit = Math.max(1, Math.min(25, parseInt($('seedGenreLimit').value, 10) || 10));
+    var btn = $('seedGenreBtn');
+    var status = $('seedGenreStatus');
+    if (!family) { status.textContent = 'Выбери жанр'; return; }
+    btn.disabled = true;
+    status.textContent = 'Загрузка…';
+    try {
+      var result = await adminPost('seed_by_genre', { genre_family: family, limit: limit });
+      var picked = result.picked_label ? result.picked_label.name : '—';
+      status.textContent = 'Лейбл: ' + picked +
+        ' · saved ' + (result.saved || 0) +
+        ' · updated ' + (result.updated || 0) +
+        ' · skipped non-vinyl ' + (result.skipped_non_vinyl || 0);
+      await load();
+      if (state.candidates) state.candidates.offset = 0;
+      await loadCandidates();
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      status.textContent = 'Ошибка: ' + (error.message || 'unknown');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ============================================================
+     CSV / JSON export of current candidates filter
+     ============================================================ */
+  async function exportCandidatesAs(format) {
+    /* Pull a generous slice for current filter without paging */
+    showError('');
+    try {
+      var result = await adminPost('list_candidates_paged', {
+        offset: 0,
+        limit: 2000,
+        sort_by: state.candidates.sortBy,
+        sort_dir: state.candidates.sortDir,
+        label: $('candidateLabelFilter').value || '',
+        genre_family: $('candidateGenreFilter').value || '',
+        q: $('candidateSearch').value || '',
+      });
+      var rows = result.rows || [];
+      var ts = new Date().toISOString().slice(0, 10);
+      var blob;
+      var filename;
+      if (format === 'csv') {
+        var headers = ['discogs_id','artist','title','label','catno','year','genre_family','tracks','enriched','coverage','lowest_price','currency','updated_at','discogs_url'];
+        var lines = [headers.join(',')];
+        rows.forEach(function (r) {
+          var market = r.marketplace || {};
+          var line = [
+            r.discogs_id,
+            csvEsc(r.artist), csvEsc(r.title), csvEsc(r.label), csvEsc(r.catalog_number),
+            r.year || '', csvEsc(r.genre_family),
+            r.track_count || 0, r.enriched_track_count || 0,
+            (r.metadata_coverage || 0).toFixed(2),
+            market.lowest_price || '', csvEsc(market.currency),
+            r.updated_at || '', csvEsc(r.discogs_url)
+          ].join(',');
+          lines.push(line);
+        });
+        blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+        filename = 'vertax-candidates-' + ts + '.csv';
+      } else {
+        blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json;charset=utf-8' });
+        filename = 'vertax-candidates-' + ts + '.json';
+      }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 200);
+      showError('Скачано: ' + filename + ' (' + rows.length + ' релизов)');
+    } catch (error) {
+      if (error.status === 401) { showAuthScreen(); return; }
+      showError('Export failed: ' + (error.message || 'unknown'));
+    }
+  }
+
+  function csvEsc(value) {
+    var s = String(value == null ? '' : value);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  /* ============================================================
+     Sample preview engine for Collection tab
+     ============================================================ */
+  function playTrackPreview(button) {
+    var url = button.getAttribute('data-url');
+    if (!url) return;
+    if (!window.__adminAudio) window.__adminAudio = new Audio();
+    var audio = window.__adminAudio;
+    if (audio.src === url && !audio.paused) { audio.pause(); button.textContent = '▶'; return; }
+    /* Reset all play buttons */
+    document.querySelectorAll('[data-action="track-play"]').forEach(function (b) { b.textContent = '▶'; });
+    audio.src = url;
+    audio.play().then(function () { button.textContent = '⏸'; })
+      .catch(function () { button.textContent = '!'; });
+    audio.onended = function () { button.textContent = '▶'; };
+  }
+
+  /* ============================================================
      Dashboard load
      ============================================================ */
   async function load() {
@@ -464,7 +718,28 @@
       state.candidates.offset += state.candidates.limit;
       loadCandidates();
     });
-    /* Sortable headers */
+    $('candidatesExportCsv').addEventListener('click', function () { exportCandidatesAs('csv'); });
+    $('candidatesExportJson').addEventListener('click', function () { exportCandidatesAs('json'); });
+    $('seedGenreBtn').addEventListener('click', seedByGenreClick);
+    /* Tracks toolbar */
+    $('tracksApplyBtn').addEventListener('click', function () { state.tracks.offset = 0; loadTracks(); });
+    $('trackSearch').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { state.tracks.offset = 0; loadTracks(); }
+    });
+    $('tracksPrev').addEventListener('click', function () {
+      state.tracks.offset = Math.max(0, state.tracks.offset - state.tracks.limit);
+      loadTracks();
+    });
+    $('tracksNext').addEventListener('click', function () {
+      state.tracks.offset += state.tracks.limit;
+      loadTracks();
+    });
+    /* Inline track edit on blur */
+    document.addEventListener('blur', function (event) {
+      var input = event.target && event.target.closest && event.target.closest('.admin-cell-input');
+      if (input) updateTrackField(input);
+    }, true);
+    /* Sortable headers + row actions */
     document.addEventListener('click', function (event) {
       var th = event.target && event.target.closest && event.target.closest('th[data-sort]');
       if (th) {
@@ -479,10 +754,27 @@
         loadCandidates();
         return;
       }
+      var thT = event.target && event.target.closest && event.target.closest('th[data-sort-track]');
+      if (thT) {
+        var k = thT.getAttribute('data-sort-track');
+        if (state.tracks.sortBy === k) {
+          state.tracks.sortDir = state.tracks.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.tracks.sortBy = k;
+          state.tracks.sortDir = 'desc';
+        }
+        state.tracks.offset = 0;
+        loadTracks();
+        return;
+      }
       var seedBtn = event.target && event.target.closest && event.target.closest('[data-action="seed-label"]');
       if (seedBtn) { event.preventDefault(); seedLabel(seedBtn); return; }
       var enrichBtn = event.target && event.target.closest && event.target.closest('[data-action="enrich-candidate"]');
       if (enrichBtn) { event.preventDefault(); enrichCandidate(enrichBtn.getAttribute('data-id'), enrichBtn); return; }
+      var enrichTr = event.target && event.target.closest && event.target.closest('[data-action="enrich-track"]');
+      if (enrichTr) { event.preventDefault(); enrichTrack(enrichTr.getAttribute('data-key'), enrichTr); return; }
+      var playBtn = event.target && event.target.closest && event.target.closest('[data-action="track-play"]');
+      if (playBtn) { event.preventDefault(); playTrackPreview(playBtn); return; }
     });
     if (state.token) {
       $('tokenInput').value = state.token;

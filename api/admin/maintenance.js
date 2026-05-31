@@ -17,6 +17,7 @@ const {
   exportCandidates,
   refreshMarketplaceBatch,
   seedCandidates,
+  seedLabelKey,
 } = require('../../lib/release-candidates');
 const {
   enrichTrackFromBeatport,
@@ -591,6 +592,194 @@ async function listCandidateLabels() {
   return { ok: true, labels: out };
 }
 
+/* ============================================================
+   COLLECTION TAB — full vertax:beatport:track:* browser
+   ============================================================ */
+
+/* Paginated list of cached Beatport tracks with filter + sort.
+ * Backed by scanKeys; bounded fan-out so it stays responsive. */
+async function listTracksPaged(body) {
+  const offset = Math.max(0, Number(body && body.offset) || 0);
+  const limit = Math.max(1, Math.min(200, Number(body && body.limit) || 50));
+  const q = body && body.q ? String(body.q).toLowerCase() : '';
+  const onlyMissingSample = !!(body && body.only_missing_sample);
+  const onlyMissingBpm = !!(body && body.only_missing_bpm);
+  const onlyManual = !!(body && body.only_manual);
+  const sortBy = (body && body.sort_by) || 'savedAt';
+  const sortDir = body && body.sort_dir === 'asc' ? 1 : -1;
+
+  const keys = (await scanKeys(TRACK_KEY_PATTERN)).sort();
+  const rows = [];
+  /* Bounded: if the cache grows past ~5k, this still finishes < 5s on the
+   * Hobby plan because each record is a single Redis GET. */
+  for (const key of keys) {
+    const raw = await safeRedis('GET', [key], null);
+    if (!raw) continue;
+    let record;
+    try { record = JSON.parse(raw); } catch (_) { continue; }
+    const flat = readTrack(record) || {};
+    if (q) {
+      const hay = (
+        String(flat.artist_original || flat.artist || '') + ' ' +
+        String(flat.title_original || flat.title || '') + ' ' +
+        String(flat.label || '')
+      ).toLowerCase();
+      if (hay.indexOf(q) < 0) continue;
+    }
+    if (onlyMissingSample && flat.sample_url) continue;
+    if (onlyMissingBpm && flat.bpm) continue;
+    if (onlyManual && !(String(flat.meta_status || '').toLowerCase() === 'admin' || String(flat.bpm_source || '').toLowerCase() === 'admin')) continue;
+    rows.push({
+      key,
+      artist: flat.artist_original || flat.artist || '',
+      title: flat.title_original || flat.title || '',
+      label: flat.label || '',
+      bpm: flat.bpm || null,
+      camelot: flat.camelot || null,
+      key_name: flat.key_name || null,
+      genre: flat.genre || null,
+      sub_genre: flat.sub_genre || null,
+      sample_url: flat.sample_url || null,
+      beatport_url: flat.beatport_url || null,
+      beatport_track_id: flat.beatport_track_id || null,
+      bpm_source: flat.bpm_source || null,
+      key_source: flat.key_source || null,
+      meta_status: flat.meta_status || null,
+      savedAt: flat.savedAt || null,
+    });
+  }
+
+  rows.sort((a, b) => {
+    let av, bv;
+    if (sortBy === 'savedAt') {
+      av = Date.parse(a.savedAt || '') || 0;
+      bv = Date.parse(b.savedAt || '') || 0;
+    } else if (sortBy === 'bpm') {
+      av = Number(a.bpm) || 0;
+      bv = Number(b.bpm) || 0;
+    } else {
+      av = String(a[sortBy] || '').toLowerCase();
+      bv = String(b[sortBy] || '').toLowerCase();
+      return av < bv ? -1 * sortDir : av > bv ? 1 * sortDir : 0;
+    }
+    return (av - bv) * sortDir;
+  });
+
+  return {
+    ok: true,
+    total: rows.length,
+    keys_scanned: keys.length,
+    offset,
+    limit,
+    has_more: offset + limit < rows.length,
+    rows: rows.slice(offset, offset + limit),
+  };
+}
+
+/* Inline-edit a single track. Used by admin to set BPM / camelot manually.
+ * Marks meta_status='admin' so future enrichments don't overwrite. */
+async function updateTrack(body) {
+  const key = String((body && body.key) || '').trim();
+  if (!key) return { ok: false, error: 'key_required' };
+  const raw = await safeRedis('GET', [key], null);
+  if (!raw) return { ok: false, error: 'not_found' };
+  let record;
+  try { record = JSON.parse(raw); } catch (_) { return { ok: false, error: 'parse_error' }; }
+  const flat = readTrack(record) || {};
+  const patch = {};
+  if (body && body.bpm != null) {
+    const n = Number(body.bpm);
+    if (Number.isFinite(n) && n > 0) {
+      patch.bpm = Math.round(n);
+      patch.bpm_source = 'admin';
+    }
+  }
+  if (body && body.camelot != null) {
+    const text = String(body.camelot).trim().toUpperCase();
+    if (/^(1[0-2]|[1-9])[AB]$/.test(text)) {
+      patch.camelot = text;
+      patch.key_source = 'admin';
+    }
+  }
+  if (body && body.key_name != null) {
+    patch.key_name = String(body.key_name).trim() || null;
+    if (patch.key_name) patch.key_source = 'admin';
+  }
+  if (!Object.keys(patch).length) return { ok: false, error: 'no_fields_to_update' };
+  patch.meta_status = 'admin';
+  const merged = Object.assign({}, flat, patch, { savedAt: new Date().toISOString() });
+  await safeRedis('SET', [key, JSON.stringify(merged)], null);
+  return { ok: true, key, patch, track: merged };
+}
+
+/* Per-track enrich: refetch from Beatport by beatport_track_id and merge
+ * the missing fields (sample_url, genre, etc) without touching admin values. */
+async function enrichSingleTrack(body) {
+  const key = String((body && body.key) || '').trim();
+  if (!key) return { ok: false, error: 'key_required' };
+  const raw = await safeRedis('GET', [key], null);
+  if (!raw) return { ok: false, error: 'not_found' };
+  let record;
+  try { record = JSON.parse(raw); } catch (_) { return { ok: false, error: 'parse_error' }; }
+  const flat = readTrack(record) || {};
+  const tid = flat.beatport_track_id || flat.id;
+  if (!tid) return { ok: false, error: 'no_beatport_id' };
+  const fresh = await fetchBeatportTrack(tid);
+  if (!fresh) return { ok: false, error: 'beatport_fetch_failed' };
+  const mapped = mapTrack(fresh, 1, { artist: flat.artist_original, title: flat.title_original });
+  if (!mapped) return { ok: false, error: 'beatport_map_failed' };
+  /* Merge: keep admin-set BPM/Camelot, fill in anything missing. */
+  const merged = Object.assign({}, mapped, flat);
+  if (!flat.sample_url && mapped.sample_url) merged.sample_url = mapped.sample_url;
+  if (!flat.sample_duration_ms && mapped.sample_duration_ms) merged.sample_duration_ms = mapped.sample_duration_ms;
+  if (!flat.genre && mapped.genre) merged.genre = mapped.genre;
+  if (!flat.sub_genre && mapped.sub_genre) merged.sub_genre = mapped.sub_genre;
+  if (!flat.label && mapped.label) merged.label = mapped.label;
+  if (!flat.beatport_url && mapped.beatport_url) merged.beatport_url = mapped.beatport_url;
+  merged.savedAt = new Date().toISOString();
+  await safeRedis('SET', [key, JSON.stringify(merged)], null);
+  return { ok: true, key, track: merged };
+}
+
+/* ============================================================
+   SEED BY GENRE — picks the best under-covered label from that family
+   ============================================================ */
+async function seedByGenre(body) {
+  const family = String((body && body.genre_family) || '').trim();
+  const limit = Math.max(1, Math.min(25, Number(body && body.limit) || 10));
+  if (!family) return { ok: false, error: 'genre_family_required' };
+
+  const config = loadCandidateLabelConfig().filter((l) =>
+    l.enabled !== false && String(l.genre_family || '') === family && l.discogs_label_id
+  );
+  if (!config.length) return { ok: false, error: 'no_labels_for_family', genre_family: family };
+
+  /* Pick label with the OLDEST last_run_at (or never run) so we round-robin. */
+  let pick = null;
+  let oldest = Infinity;
+  for (const label of config) {
+    const stateKey = seedLabelKey(label.discogs_label_id);
+    const raw = await safeRedis('GET', [stateKey], null);
+    let lastRun = 0;
+    if (raw) {
+      try { lastRun = Date.parse(JSON.parse(raw).last_run_at || '') || 0; } catch (_) {}
+    }
+    if (lastRun < oldest) { oldest = lastRun; pick = label; }
+  }
+  if (!pick) return { ok: false, error: 'no_label_pickable' };
+
+  const result = await seedCandidates({
+    label_id: pick.discogs_label_id,
+    label_name: pick.name,
+    genre_family: family,
+    limit,
+  });
+  return Object.assign({}, result, {
+    picked_label: { id: pick.discogs_label_id, name: pick.name, last_run_at_ms: oldest },
+    genre_family: family,
+  });
+}
+
 async function adminOverview() {
   const [candidateStatsResult, seedStateResult, cacheStats] = await Promise.all([
     candidateStats(),
@@ -710,6 +899,26 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'list_candidate_labels') {
       const result = await listCandidateLabels();
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'list_tracks_paged') {
+      const result = await listTracksPaged(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'update_track') {
+      const result = await updateTrack(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'enrich_track') {
+      const result = await enrichSingleTrack(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'seed_by_genre') {
+      const result = await seedByGenre(body);
       send(res, result.ok ? 200 : 400, result);
       return;
     }

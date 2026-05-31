@@ -492,3 +492,34 @@ h2 {
 .admin-ok { color: #C8FF2E; }
 
 .admin-view[hidden] { display: none; }
+
+/* ============================================================
+   INLINE TABLE EDIT + COLLECTION TOOLS
+   ============================================================ */
+.admin-toolbar-tight {
+  margin-top: 6px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: rgba(200,255,46,.04);
+  border: 1px solid rgba(200,255,46,.14);
+  border-radius: 10px;
+}
+.admin-cell-input {
+  width: 100%;
+  padding: 4px 6px;
+  background: rgba(15,17,15,.6);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 4px;
+  color: #EEE7DA;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 12px;
+  outline: none;
+  transition: border-color .15s ease;
+}
+.admin-cell-input:focus {
+  border-color: rgba(200,255,46,.55);
+  background: rgba(15,17,15,.85);
+}
+.admin-cell-input:disabled { opacity: .5; }
+.admin-cell-narrow { max-width: 50px; }
+.admin-cell-key { max-width: 90px; }

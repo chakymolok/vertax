@@ -162,6 +162,24 @@
             <button class="admin-button admin-button-secondary" id="candidatesApplyBtn" type="button">
               Применить
             </button>
+            <button class="admin-button admin-button-ghost" id="candidatesExportCsv" type="button" title="Скачать текущую выборку в CSV">
+              CSV
+            </button>
+            <button class="admin-button admin-button-ghost" id="candidatesExportJson" type="button" title="Скачать в JSON">
+              JSON
+            </button>
+          </div>
+
+          <div class="admin-toolbar admin-toolbar-tight">
+            <label class="admin-muted" style="align-self:center;font-size:12px;">Догрузить из жанра:</label>
+            <select class="admin-input" id="seedGenreSelect" style="max-width:220px;">
+              <option value="">— жанровая семья —</option>
+            </select>
+            <input class="admin-input" id="seedGenreLimit" type="number" min="1" max="25" value="10" style="max-width:80px;" />
+            <button class="admin-button admin-button-secondary" id="seedGenreBtn" type="button">
+              Загрузить
+            </button>
+            <span class="admin-muted" id="seedGenreStatus" style="align-self:center;font-size:12px;"></span>
           </div>
 
           <div class="admin-table-wrap">
@@ -244,23 +262,64 @@
         </article>
       </section>
 
-      <!-- ===== КОЛЛЕКЦИЯ (полная база) ===== -->
+      <!-- ===== КОЛЛЕКЦИЯ (полная база треков) ===== -->
       <section class="admin-view" data-view="collection" hidden>
         <article class="admin-card">
           <div class="admin-card-head">
             <h2>Полная база треков</h2>
-            <span class="admin-muted">Beatport-кэш</span>
+            <span id="tracksTotal" class="admin-muted">—</span>
           </div>
-          <p class="admin-muted">
-            Здесь будет браузер всего <code>vertax:beatport:track:*</code> кэша: поиск по
-            артисту/названию, редактирование BPM / Camelot inline, кнопка «обогатить» для пустых
-            семплов и недостающих жанров.
-          </p>
+
+          <div class="admin-toolbar">
+            <input
+              class="admin-input"
+              id="trackSearch"
+              type="search"
+              placeholder="Поиск по артисту / названию / лейблу…"
+            />
+            <select class="admin-input" id="trackFilter">
+              <option value="">Все треки</option>
+              <option value="missing_sample">Без sample_url</option>
+              <option value="missing_bpm">Без BPM</option>
+              <option value="manual">Ручные правки (admin)</option>
+            </select>
+            <button class="admin-button admin-button-secondary" id="tracksApplyBtn" type="button">
+              Применить
+            </button>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-table admin-table-sortable" id="tracksTable">
+              <thead>
+                <tr>
+                  <th data-sort-track="artist">Артист</th>
+                  <th data-sort-track="title">Название</th>
+                  <th data-sort-track="label">Лейбл</th>
+                  <th data-sort-track="bpm">BPM</th>
+                  <th>Camelot</th>
+                  <th>Key</th>
+                  <th data-sort-track="genre">Жанр</th>
+                  <th>▶</th>
+                  <th data-sort-track="savedAt" class="is-sorted desc">Saved</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody id="tracksTbody">
+                <tr><td colspan="10" class="admin-muted">Перейди на вкладку и нажми «Применить»…</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="admin-pager">
+            <button class="admin-button admin-button-secondary" id="tracksPrev" type="button" disabled>← Назад</button>
+            <span id="tracksPagerInfo" class="admin-muted">—</span>
+            <button class="admin-button admin-button-secondary" id="tracksNext" type="button" disabled>Вперёд →</button>
+          </div>
+
           <p class="admin-card-foot admin-muted">
-            🚧 Реализация — следующая итерация. Backend-endpoint
-            <code>list_tracks</code> + <code>update_track</code> ещё не написан.
-            Пока для bulk-обогащения используй на дашборде action
-            <code>backfill_beatport_samples</code> через curl или Vercel logs.
+            Клик по BPM/Camelot/Key в строке — inline-редактирование. Сохранится с пометкой
+            <code>meta_status=admin</code> и больше не будет перезаписан автоматическими источниками.
+            «Обогатить» — refetch из Beatport (заполнит пустые поля, не трогая ручные).
           </p>
         </article>
       </section>
