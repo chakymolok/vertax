@@ -15,6 +15,7 @@
 
 - `/` - main application.
 - `/about` - SEO landing page.
+- `/admin` - private static admin dashboard.
 - `/vk` - future VK Mini App placeholder.
 
 The main app must remain on `/`.
@@ -65,14 +66,44 @@ Outputs:
 - `index.html`
 - `sw.js`
 - `about/`
+- `admin/`
 - `vk/`
 - `assets/`
 - `dist/`
 - `fonts/`
 - `js/about.js`
+- `js/admin.js`
 - `css/about.css` as `/about.css`
+- `css/admin.css` as `/admin.css`
 
 Raw `css/` is intentionally not copied to `public/`.
+
+## Admin Dashboard
+
+`/admin` is a static private dashboard. It does not add a new Vercel Function.
+The page calls the existing protected endpoint:
+
+```text
+POST /api/admin/maintenance { "action": "admin_overview" }
+```
+
+Authorization accepts either:
+
+- `Authorization: Bearer {ADMIN_TOKEN}`;
+- Telegram Mini App `initData` in `X-Telegram-Init-Data`, validated against `TELEGRAM_BOT_TOKEN` and restricted to `TELEGRAM_ADMIN_USER_ID` or `TELEGRAM_ADMIN_CHAT_ID`.
+
+The dashboard shows:
+
+- persistent candidate release counts and breakdowns;
+- Redis BPM/Key cache stats;
+- temporary collection-index counts and visible server-side user count;
+- seed state from automated candidate seeding;
+- pending metadata proposals;
+- recent candidate releases.
+
+Because Vertax is local-first, `/admin` cannot know every anonymous app visitor.
+It can only count users who touched server-side flows such as collection index,
+candidate recommendations, fit checks, or metadata proposal/ingest paths.
 
 ## Frontend Entry
 

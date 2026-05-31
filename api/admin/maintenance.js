@@ -6,7 +6,9 @@ const {
   safeRedis,
   setBeatportCache,
   upsertDiscogsTrackCache,
+  getCacheStats,
 } = require('../../lib/redis-cache');
+const { getTelegramUserFromRequest, isAdminTelegramUser } = require('../../lib/telegram-auth');
 const {
   candidateStats,
   candidateSeedStates,
@@ -26,7 +28,7 @@ const TRACK_KEY_PATTERN = 'vertax:beatport:track:*';
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Telegram-Init-Data');
 }
 
 function send(res, status, body) {
@@ -37,10 +39,12 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function isAuthorized(req) {
+function isAuthorized(req, body) {
   const token = process.env.ADMIN_TOKEN || '';
   const header = String(req.headers.authorization || '');
-  return Boolean(token && header === 'Bearer ' + token);
+  if (token && header === 'Bearer ' + token) return true;
+  const telegramAuth = getTelegramUserFromRequest(req, body);
+  return isAdminTelegramUser(telegramAuth);
 }
 
 function readJsonBody(req) {
@@ -358,6 +362,78 @@ async function runRebuild(body, query) {
   };
 }
 
+function userIdsFromCollectionIndexKeys(keys) {
+  const users = new Set();
+  (keys || []).forEach((key) => {
+    const match = String(key || '').match(/^collection_index:([^:]+):/);
+    if (match && match[1]) users.add(match[1]);
+  });
+  return users;
+}
+
+function compactReleaseForAdmin(release) {
+  return {
+    discogs_id: release.discogs_id,
+    artist: release.artist || '',
+    title: release.title || '',
+    label: release.label || '',
+    genre_family: release.genre_family || '',
+    year: release.year || null,
+    catalog_number: release.catalog_number || '',
+    metadata_coverage: release.metadata_coverage || 0,
+    track_count: release.track_count || 0,
+    enriched_track_count: release.enriched_track_count || 0,
+    updated_at: release.updated_at || release.ingested_at || null,
+    ingested_at: release.ingested_at || null,
+    marketplace: release.marketplace || null,
+    cover_url: release.cover_url || '',
+    discogs_url: release.discogs_url || '',
+  };
+}
+
+async function adminOverview() {
+  const [candidateStatsResult, seedStateResult, cacheStats] = await Promise.all([
+    candidateStats(),
+    candidateSeedStates(),
+    getCacheStats(),
+  ]);
+  const [collectionIndexKeys, aiVerdictKeys, proposalKeys] = await Promise.all([
+    scanKeys('collection_index:*'),
+    scanKeys('ai_verdict:*'),
+    scanKeys('vertax:proposal:*'),
+  ]);
+  const candidateSample = await exportCandidates(60);
+  const recentCandidates = candidateSample
+    .slice()
+    .sort((a, b) => {
+      const at = Date.parse(a.updated_at || a.ingested_at || '') || 0;
+      const bt = Date.parse(b.updated_at || b.ingested_at || '') || 0;
+      return bt - at;
+    })
+    .slice(0, 24)
+    .map(compactReleaseForAdmin);
+  const indexUsers = userIdsFromCollectionIndexKeys(collectionIndexKeys);
+  return {
+    ok: true,
+    generated_at: new Date().toISOString(),
+    users: {
+      collection_index_count: collectionIndexKeys.length,
+      collection_index_users: indexUsers.size,
+      note: 'Local-first app: only users who touched server-side analysis are visible here.',
+    },
+    redis: cacheStats,
+    candidates: candidateStatsResult,
+    seed: seedStateResult,
+    temporary_cache: {
+      ai_verdict_count: aiVerdictKeys.length,
+    },
+    proposals: {
+      pending_count: proposalKeys.length,
+    },
+    recent_candidates: recentCandidates,
+  };
+}
+
 module.exports = async function adminMaintenance(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') {
@@ -369,18 +445,21 @@ module.exports = async function adminMaintenance(req, res) {
     send(res, 405, { message: 'Method not allowed' });
     return;
   }
-  if (!isAuthorized(req)) {
-    send(res, 401, { error: 'unauthorized' });
-    return;
-  }
-
   const body = await readJsonBody(req);
   if (!body || typeof body !== 'object') {
     send(res, 400, { message: 'invalid JSON body' });
     return;
   }
+  if (!isAuthorized(req, body)) {
+    send(res, 401, { error: 'unauthorized' });
+    return;
+  }
 
   try {
+    if (body.action === 'admin_overview') {
+      send(res, 200, await adminOverview());
+      return;
+    }
     if (body.action === 'import_backup') {
       const result = await runImportBackup(body);
       send(res, result.status || (result.ok ? 200 : 400), result);

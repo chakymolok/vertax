@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Vertax Admin</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/admin.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <p class="admin-kicker">VERTAX ADMIN</p>
+          <h1>Панель состояния</h1>
+        </div>
+        <button class="admin-button admin-button-secondary" id="refreshBtn" type="button">
+          Обновить
+        </button>
+      </header>
+
+      <section class="admin-auth" id="authPanel">
+        <div>
+          <h2>Авторизация</h2>
+          <p>
+            Если открыть страницу из Telegram Mini App админом, вход пройдет по Telegram.
+            Запасной вариант - ADMIN_TOKEN.
+          </p>
+        </div>
+        <form class="admin-token-form" id="tokenForm">
+          <input
+            id="tokenInput"
+            type="password"
+            autocomplete="current-password"
+            placeholder="ADMIN_TOKEN"
+          />
+          <button class="admin-button" type="submit">Войти</button>
+        </form>
+      </section>
+
+      <section class="admin-error" id="errorBox" hidden></section>
+
+      <section class="admin-grid admin-grid-stats" id="statsGrid" aria-live="polite"></section>
+
+      <section class="admin-layout">
+        <article class="admin-card">
+          <div class="admin-card-head">
+            <h2>Жанровые семьи</h2>
+            <span id="genreTotal"></span>
+          </div>
+          <div class="admin-bars" id="genreBars"></div>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-card-head">
+            <h2>BPM buckets</h2>
+            <span>top</span>
+          </div>
+          <div class="admin-bars" id="bpmBars"></div>
+        </article>
+      </section>
+
+      <section class="admin-layout">
+        <article class="admin-card">
+          <div class="admin-card-head">
+            <h2>Топ лейблов</h2>
+            <span id="labelTotal"></span>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="labelTable"></table>
+          </div>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-card-head">
+            <h2>Seed state</h2>
+            <span>GitHub Actions</span>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" id="seedTable"></table>
+          </div>
+        </article>
+      </section>
+
+      <section class="admin-card">
+        <div class="admin-card-head">
+          <h2>Последние candidate releases</h2>
+          <span id="recentTotal"></span>
+        </div>
+        <div class="admin-release-grid" id="recentCandidates"></div>
+      </section>
+    </main>
+
+    <script src="/js/admin.js" defer></script>
+  </body>
+</html>

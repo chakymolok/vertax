@@ -802,6 +802,25 @@
 #laiso-app .vertax-track-source-card{
   grid-template-columns:54px minmax(0,1fr) auto;
 }
+#laiso-app .vertax-track-source-page{
+  display:block;
+}
+#laiso-app .vertax-track-source-intro{
+  margin:0 0 14px;
+  padding:14px;
+  border:1px solid var(--border,#d5d8d2);
+  border-radius:14px;
+  background:var(--panel,#fbfaf4);
+}
+#laiso-app .vertax-track-source-intro strong{
+  display:block;
+  margin-bottom:4px;
+}
+#laiso-app .vertax-track-source-intro p{
+  margin:0;
+  color:var(--text-muted,#686d68);
+  line-height:1.4;
+}
 #laiso-app .vertax-track-source-pos{
   display:grid;
   place-items:center;

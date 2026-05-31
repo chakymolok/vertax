@@ -4,9 +4,23 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const outDir = path.join(root, 'public');
 
-const entries = ['index.html', 'sw.js', 'about', 'vk', 'assets', 'dist', 'fonts', 'js/about.js'];
+const entries = [
+  'index.html',
+  'sw.js',
+  'about',
+  'admin',
+  'vk',
+  'assets',
+  'dist',
+  'fonts',
+  'js/about.js',
+  'js/admin.js',
+];
 
-const fileCopies = [['css/about.css', 'about.css']];
+const fileCopies = [
+  ['css/about.css', 'about.css'],
+  ['css/admin.css', 'admin.css'],
+];
 
 function copyRecursive(src, dest) {
   const stat = fs.statSync(src);

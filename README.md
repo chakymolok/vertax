@@ -32,6 +32,7 @@ The project is deployed as a static site plus Vercel Serverless Functions.
 - Build command: `npm run build`
 - Main app route: `/`
 - SEO landing page: `/about`
+- Private admin dashboard: `/admin`
 - VK placeholder route: `/vk`
 
 The build creates minified assets in `dist/` and copies deployable static files into `public/`.
@@ -67,6 +68,9 @@ Used by protected admin/export endpoints:
 
 - `ADMIN_TOKEN`
 - `EXPORT_TOKEN`
+
+`/admin` accepts either `ADMIN_TOKEN` or Telegram Mini App admin auth via
+`TELEGRAM_BOT_TOKEN` + `TELEGRAM_ADMIN_USER_ID`.
 
 Not currently used by the codebase:
 

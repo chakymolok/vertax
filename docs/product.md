@@ -5,6 +5,7 @@
 Vertax is a web tool for vinyl DJs, diggers, and record collectors. It helps users find and organize vinyl releases, manage a local record collection, enrich tracks with BPM and Key metadata, and build DJ sets by BPM, Camelot compatibility, genre, and flow.
 
 The main app lives at `/`. The SEO landing page lives at `/about`. The `/vk` route is reserved for a future VK Mini App version.
+The private admin dashboard lives at `/admin`.
 
 ## Positioning
 
@@ -87,6 +88,22 @@ Current intent:
 - Keep a stable URL for future VK work.
 - Avoid breaking the current `/` app.
 - Provide a simple placeholder with links to `/` and `/about`.
+
+### `/admin`
+
+Private dashboard for the project owner.
+
+Current intent:
+
+- See candidate database size and quality.
+- See genre-family, BPM bucket, and label coverage.
+- Check automated seed state.
+- Inspect recent candidate releases with update dates.
+- See Redis BPM/Key cache size and temporary server-side collection index usage.
+
+Authentication is private: Telegram admin identity or `ADMIN_TOKEN` fallback.
+The dashboard is not a public analytics product. Because Vertax is local-first,
+user counts only include users who touched server-side flows.
 
 ## Main User Flows
 

@@ -8425,8 +8425,9 @@ function installVertaxBackupFeature() {
         if (!t || t.excludeFromSets || !t.title) return;
         var key = trackKey(t, v, index);
         rows.push({
-          key: key,
+          selectKey: key,
           id: t.id || key,
+          artist: t.artist || t.vinylArtist || v.artist || '',
           position: t.position,
           displayPosition: displayPos(t, v),
           side: t.side,
@@ -8459,6 +8460,21 @@ function installVertaxBackupFeature() {
     return rows;
   }
 
+  function trackSearchText(track) {
+    return [
+      track && track.title,
+      track && track.artist,
+      track && track.vinylArtist,
+      track && track.vinylTitle,
+      track && track.vinylLabel,
+      track && track.vinylCatno,
+      track && track.camelot,
+      track && track.bpm,
+    ]
+      .join(' ')
+      .toLowerCase();
+  }
+
   function selectedTrackMap() {
     state.ui = state.ui || {};
     state.ui.setTrackSelected = state.ui.setTrackSelected || {};
@@ -8473,7 +8489,7 @@ function installVertaxBackupFeature() {
     });
     if (!hasAny && !state.ui.setTrackSelectionCleared) {
       tracks.forEach(function (track) {
-        selected[track.key] = true;
+        selected[track.selectKey] = true;
       });
     }
     return tracks;
@@ -8483,7 +8499,7 @@ function installVertaxBackupFeature() {
     var tracks = ensureTrackSelection();
     var selected = selectedTrackMap();
     return tracks.filter(function (track) {
-      return !!selected[track.key];
+      return !!selected[track.selectKey];
     });
   }
 
@@ -8491,7 +8507,7 @@ function installVertaxBackupFeature() {
     var selected = {};
     if (value) {
       flattenAvailableTracks().forEach(function (track) {
-        selected[track.key] = true;
+        selected[track.selectKey] = true;
       });
     }
     state.ui.setTrackSelected = selected;
@@ -8538,35 +8554,23 @@ function installVertaxBackupFeature() {
       .trim();
     var shown = search
       ? tracks.filter(function (track) {
-          return [
-            track.title,
-            track.vinylArtist,
-            track.vinylTitle,
-            track.vinylLabel,
-            track.vinylCatno,
-            track.camelot,
-            track.bpm,
-          ].some(function (value) {
-            return (
-              String(value || '')
-                .toLowerCase()
-                .indexOf(search) >= 0
-            );
-          });
+          return trackSearchText(track).indexOf(search) >= 0;
         })
       : tracks;
     var selectedCount = tracks.filter(function (track) {
-      return selected[track.key];
+      return selected[track.selectKey];
     }).length;
     var rows = shown.length
       ? shown
           .map(function (track) {
-            var isSelected = !!selected[track.key];
+            var isSelected = !!selected[track.selectKey];
             return (
               '<div class="runt26-card vertax-track-source-card ' +
               (isSelected ? 'is-selected' : '') +
               '" data-action="set-track-toggle" data-track-key="' +
-              safeEsc(track.key) +
+              safeEsc(track.selectKey) +
+              '" data-track-search="' +
+              safeEsc(trackSearchText(track)) +
               '">' +
               '<div class="runt26-cover vertax-track-source-pos">' +
               safeEsc(track.displayPosition || track.position || '-') +
@@ -8576,7 +8580,7 @@ function installVertaxBackupFeature() {
               safeEsc(track.title || '-') +
               '</div>' +
               '<div class="runt26-meta">' +
-              safeEsc(track.vinylArtist || '') +
+              safeEsc(track.artist || track.vinylArtist || '') +
               ' - ' +
               safeEsc(track.vinylTitle || '') +
               (track.vinylCatno ? ' · ' + safeEsc(track.vinylCatno) : '') +
@@ -8595,25 +8599,60 @@ function installVertaxBackupFeature() {
           .join('')
       : '<div class="runt26-empty">Треков пока нет. Загрузи треклисты у пластинок в коллекции.</div>';
     return (
-      '<div class="runt26-source-page vertax-track-source-page" data-testid="set-track-source">' +
+      '<div class="vertax-track-source-page" data-testid="set-track-source">' +
       getHeader('Выбор треков') +
-      '<div class="runt26-intro"><strong>Выбери треки для сета</strong><p>Здесь все треки из пластинок в наличии. Можно собрать сет точечно, не выбирая релизы целиком.</p></div>' +
-      '<div class="runt26-tools"><button class="laiso-btn laiso-btn-secondary" data-action="set-track-select-all">Выделить все</button><button class="laiso-btn laiso-btn-secondary" data-action="set-track-clear">Снять всё</button></div>' +
+      '<div class="vertax-track-source-intro"><strong>Выбери треки для сета</strong><p>Здесь все треки из пластинок в наличии. Можно собрать сет точечно, не выбирая релизы целиком.</p></div>' +
+      '<div class="runt26-tools"><button class="laiso-btn laiso-btn-secondary" data-action="set-track-select-all">Все треки</button><button class="laiso-btn laiso-btn-secondary" data-action="set-track-clear">Очистить выбор</button></div>' +
       '<div class="laiso-panel runt26-search-panel"><input class="laiso-input" type="search" data-action="set-track-search" placeholder="Поиск по трекам" value="' +
       safeEsc(state.ui.setTrackSearch || '') +
       '"></div>' +
-      '<div class="laiso-meta" style="margin:10px 2px 8px;">выбрано: ' +
+      '<div class="laiso-meta vertax-track-source-count" style="margin:10px 2px 8px;">выбрано: ' +
       selectedCount +
       ' / ' +
       tracks.length +
       (search ? ' · показано: ' + shown.length : '') +
       '</div><div class="runt26-list">' +
       rows +
-      '</div><div class="runt26-sticky"><button class="laiso-btn laiso-btn-block" data-action="set-track-build">Собрать из выбранных (' +
+      '</div><div class="runt26-sticky"><button class="laiso-btn laiso-btn-block" data-action="set-track-build">Собрать сет из треков (' +
       selectedCount +
       ')</button></div></div>'
     );
   };
+
+  function syncTrackSourceDom() {
+    var root = document.getElementById('laiso-root');
+    if (!root || state.view !== 'set-track-source') return;
+    var selected = selectedTrackMap();
+    var search = String(state.ui.setTrackSearch || '')
+      .toLowerCase()
+      .trim();
+    var total = 0;
+    var shown = 0;
+    var selectedCount = 0;
+    root.querySelectorAll('.vertax-track-source-card[data-track-key]').forEach(function (card) {
+      var key = card.dataset.trackKey;
+      total += 1;
+      var isSelected = !!selected[key];
+      var isVisible = !search || String(card.dataset.trackSearch || '').indexOf(search) >= 0;
+      if (isVisible) shown += 1;
+      if (isSelected) selectedCount += 1;
+      card.hidden = !isVisible;
+      card.style.display = isVisible ? '' : 'none';
+      card.classList.toggle('is-selected', isSelected);
+      var check = card.querySelector('.runt26-check');
+      if (check) check.textContent = isSelected ? '✓' : '';
+    });
+    var meta = root.querySelector('.vertax-track-source-count');
+    if (meta) {
+      meta.textContent =
+        'выбрано: ' + selectedCount + ' / ' + total + (search ? ' · показано: ' + shown : '');
+    }
+    var build = root.querySelector('[data-action="set-track-build"]');
+    if (build) {
+      build.textContent = 'Собрать сет из треков (' + selectedCount + ')';
+      build.disabled = selectedCount < 2;
+    }
+  }
 
   function generateFromTrackPool() {
     var tracks = (state.ui && state.ui.setTrackPool) || [];
@@ -8767,25 +8806,28 @@ function installVertaxBackupFeature() {
       if (action === 'set-track-toggle') {
         e.preventDefault();
         e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
         var key = el.dataset.trackKey;
         if (!key) return;
         var selected = selectedTrackMap();
         selected[key] = !selected[key];
-        renderApp();
+        syncTrackSourceDom();
         return;
       }
       if (action === 'set-track-select-all') {
         e.preventDefault();
         e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
         setAllTracks(true);
-        renderApp();
+        syncTrackSourceDom();
         return;
       }
       if (action === 'set-track-clear') {
         e.preventDefault();
         e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
         setAllTracks(false);
-        renderApp();
+        syncTrackSourceDom();
         return;
       }
       if (action === 'set-track-build') {
@@ -8804,15 +8846,7 @@ function installVertaxBackupFeature() {
       if (!e.target.dataset || e.target.dataset.action !== 'set-track-search') return;
       state.ui = state.ui || {};
       state.ui.setTrackSearch = e.target.value || '';
-      renderApp();
-      setTimeout(function () {
-        var input = document.querySelector('#laiso-app input[data-action="set-track-search"]');
-        if (!input) return;
-        input.focus();
-        try {
-          input.setSelectionRange(input.value.length, input.value.length);
-        } catch (_) {}
-      }, 0);
+      syncTrackSourceDom();
     },
     true
   );
