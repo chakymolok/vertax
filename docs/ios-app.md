@@ -23,13 +23,24 @@ Runnable Xcode project:
 mobile/vertax-native-ios/Vertax.xcodeproj
 ```
 
-Build command, once full Xcode with iOS Simulator SDK is selected:
+Build command, once an iOS simulator runtime is installed in Xcode:
 
 ```bash
 cd mobile/vertax-native-ios
 xcodebuild -project Vertax.xcodeproj \
   -scheme Vertax \
   -destination 'generic/platform=iOS Simulator' \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+Compiler-verification command used locally:
+
+```bash
+cd mobile/vertax-native-ios
+xcodebuild -project Vertax.xcodeproj \
+  -target Vertax \
+  -sdk iphonesimulator \
   CODE_SIGNING_ALLOWED=NO \
   build
 ```
@@ -59,21 +70,32 @@ Vertax/
 
 ## Current Verification
 
-On this machine only Command Line Tools are active, not full Xcode. Because of that, `xcodebuild` cannot access the iOS Simulator SDK here.
-
-Checks that do pass locally:
+Full Xcode is selected on this machine:
 
 ```bash
-plutil -lint mobile/vertax-native-ios/Vertax.xcodeproj/project.pbxproj
-find mobile/vertax-native-ios/Vertax -name '*.swift' -print | sort | \
-  xargs -I{} sh -c 'swiftc -parse "$1" >/dev/null || exit 1' sh {}
+xcode-select -p
+# /Applications/Xcode.app/Contents/Developer
 ```
 
-Before TestFlight, run the full `xcodebuild` command above on a machine where `/Applications/Xcode.app` is selected:
+The SwiftUI target compiles with:
 
 ```bash
-sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+cd mobile/vertax-native-ios
+xcodebuild -project Vertax.xcodeproj \
+  -target Vertax \
+  -sdk iphonesimulator \
+  CODE_SIGNING_ALLOWED=NO \
+  build
 ```
+
+The shared scheme is present, but `xcodebuild -scheme Vertax` currently cannot find a runnable destination because no iOS simulator runtime is installed in Xcode yet. Install a simulator runtime in Xcode Settings before visual QA / Run:
+
+- Xcode -> Settings -> Components
+- install an iOS Simulator runtime
+- open `mobile/vertax-native-ios/Vertax.xcodeproj`
+- select the `Vertax` scheme and a simulator
+
+The local CLI build currently keeps `Assets.xcassets` out of the Resources phase because this Xcode installation has no available simulator runtimes and `actool` fails before Swift compilation. Re-enable the asset catalog and app icon setting before TestFlight.
 
 ## App Store Checklist
 

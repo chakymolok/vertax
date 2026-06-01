@@ -14,7 +14,7 @@ public struct VxCover: View {
         (0x3F3A44,0xCFC6D6),(0x2D3F4F,0x9CC6E6),(0x4A3340,0xE6A0C4),(0x43472D,0xD9DE8A),(0x33414A,0xA8CDD9)
     ]
     var pair: (UInt, UInt) {
-        var h: UInt = 0; for u in seed.unicodeScalars { h = (h &* 31 &+ u.value) }
+        var h: UInt = 0; for u in seed.unicodeScalars { h = (h &* 31 &+ UInt(u.value)) }
         return Self.tints[Int(h % UInt(Self.tints.count))]
     }
     public var body: some View {

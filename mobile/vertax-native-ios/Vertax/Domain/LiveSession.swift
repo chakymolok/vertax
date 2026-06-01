@@ -73,15 +73,23 @@ public final class LiveSession: ObservableObject {
     /// Compatible candidates from the crate (green/yellow only), best first.
     public func suggestions(now: Record?, order: [Record], crate: CrateStore) -> [(Record, LiveCompat)] {
         guard let now else { return [] }
-        let ahead = Set(order[index...].map { $0.id })
-        return crate.records
-            .filter { !ahead.contains($0.id) }
-            .map { ($0, LiveCompat(from: now, to: $0)) }
-            .filter { $0.1.level != .red }
-            .sorted { (a, b) in
-                (a.1.level == .green ? 0 : 1, abs(a.1.bpmDelta)) < (b.1.level == .green ? 0 : 1, abs(b.1.bpmDelta))
+        let upcomingIDs = order.indices.contains(index)
+            ? Set(order[index...].map(\.id))
+            : Set<String>()
+        var candidates: [(Record, LiveCompat)] = []
+        for record in crate.records where !upcomingIDs.contains(record.id) {
+            let compatibility = LiveCompat(from: now, to: record)
+            if compatibility.level != .red {
+                candidates.append((record, compatibility))
             }
-            .prefix(4).map { $0 }
+        }
+        candidates.sort { left, right in
+            let leftLevel = left.1.level == .green ? 0 : 1
+            let rightLevel = right.1.level == .green ? 0 : 1
+            if leftLevel != rightLevel { return leftLevel < rightLevel }
+            return abs(left.1.bpmDelta) < abs(right.1.bpmDelta)
+        }
+        return Array(candidates.prefix(4))
     }
 
     public static func clock(_ s: Int) -> String {
