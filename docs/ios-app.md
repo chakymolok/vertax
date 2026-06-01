@@ -1,67 +1,85 @@
 # Vertax iOS App
 
-Vertax iOS is a Capacitor wrapper around the existing Vertax web application.
-
-The root web app remains the main product surface for web, Telegram, VK, MAX, and Vercel. The iOS folder is intentionally separate:
+Vertax iOS now has two separate mobile experiments:
 
 ```text
-mobile/vertax-ios/
+mobile/vertax-native-ios/   native SwiftUI app target
+mobile/vertax-ios/          older Capacitor wrapper experiment
 ```
 
-This keeps App Store packaging, Xcode settings, signing, icons, and native shell concerns away from the working web app.
+The native SwiftUI app is the current direction for App Store work. The existing Vertax web app remains a separate web product and should not be moved, rewritten, or used as the mobile app source.
 
-## Build Flow
+## Native SwiftUI Target
 
-```bash
-cd mobile/vertax-ios
-npm run sync
-npm run open
-```
-
-`npm run sync` runs the root build first:
-
-```bash
-cd ../.. && npm run build
-```
-
-Then Capacitor syncs the generated `public/` bundle into the native iOS project.
-
-## API Origin
-
-Inside the iOS shell the app does not run from `https://vertax.live`; it runs from a native WebView origin. Because of that, relative `/api/*` URLs would otherwise point at the native shell and fail.
-
-The shared `vertaxApiUrl()` helper detects the Capacitor/iOS origin and sends API requests to:
+Source:
 
 ```text
-https://vertax.live
+ios-handoff/
 ```
 
-For special builds this can be overridden before the app boots:
+Runnable Xcode project:
 
-```js
-window.VERTAX_API_ORIGIN = 'https://example.com';
+```text
+mobile/vertax-native-ios/Vertax.xcodeproj
 ```
 
-## Current App Identity
+Build command, once full Xcode with iOS Simulator SDK is selected:
+
+```bash
+cd mobile/vertax-native-ios
+xcodebuild -project Vertax.xcodeproj \
+  -scheme Vertax \
+  -destination 'generic/platform=iOS Simulator' \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+Current app identity:
 
 - App name: `Vertax`
 - Bundle ID: `com.nineteenninetyfourlab.vertax`
-- Capacitor config: `mobile/vertax-ios/capacitor.config.json`
-- Native iOS project: `mobile/vertax-ios/ios`
+- Minimum target: iOS 16
+- Runtime data: `Record.sample`, offline-first
+- Design source: `ios-handoff/prototype/Vertax iOS Prototype.html`
 
-## Product Rules
+## Source Layout
 
-- Do not move the current web app from `/`.
-- Do not fork product logic into the iOS wrapper.
-- Keep collection storage backward compatible.
-- Keep server APIs shared with the web app.
-- Add native permissions only when a feature needs them.
+```text
+Vertax/
+  VertaxApp.swift
+  DesignSystem/
+  Domain/
+  Components/
+  Navigation/
+  Screens/
+  Assets.xcassets/
+```
+
+`ios-handoff/AGENTS.md` is the build instruction source of truth. Keep visual values on the design tokens and keep scoring/math separate from verdict copy.
+
+## Current Verification
+
+On this machine only Command Line Tools are active, not full Xcode. Because of that, `xcodebuild` cannot access the iOS Simulator SDK here.
+
+Checks that do pass locally:
+
+```bash
+plutil -lint mobile/vertax-native-ios/Vertax.xcodeproj/project.pbxproj
+find mobile/vertax-native-ios/Vertax -name '*.swift' -print | sort | \
+  xargs -I{} sh -c 'swiftc -parse "$1" >/dev/null || exit 1' sh {}
+```
+
+Before TestFlight, run the full `xcodebuild` command above on a machine where `/Applications/Xcode.app` is selected:
+
+```bash
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+```
 
 ## App Store Checklist
 
 - Apple Developer account and signing team configured in Xcode.
-- Production icons and launch screen.
-- Privacy policy page.
+- Production icon and launch screen.
+- Privacy policy URL.
 - App Store screenshots for required devices.
-- Review external account/API wording if Discogs, Telegram, or external services are referenced.
-- Test poor-network and offline startup behavior on a real device.
+- Real device testing for offline launch, Live Set Mode readability, and import flows.
+- Replace demo `Record.sample` seams with real persistence/API wiring only after the UI foundation is stable.
