@@ -19,7 +19,7 @@ public struct SettingsSheet: View {
     public init() {}
 
     static let accents: [(UInt, String)] = [(0xC8FF2E,"Lime"),(0x67D4E6,"Cyan"),(0xE8B15F,"Amber"),(0xE58FB0,"Rose"),(0x9CA8FF,"Indigo")]
-    static let langs = [("en","English"),("ru","Русский"),("de","Deutsch"),("es","Español")]
+    static let langs = [("en","English"),("ru","Русский"),("zh","中文"),("ja","日本語")]
 
     public var body: some View {
         NavigationStack {
@@ -33,7 +33,7 @@ public struct SettingsSheet: View {
                 }.padding(.horizontal, 18).padding(.vertical, 12)
             }
             .background(VxColor.surface)
-            .navigationTitle("Settings")
+            .navigationTitle(L.t("settings.title", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark") } } }
         }
@@ -58,15 +58,15 @@ public struct SettingsSheet: View {
                 }
             }.rowPad(divider: true)
             row(divider: true) {
-                Text("Theme").font(VxFont.body).foregroundStyle(VxColor.text)
+                Text(L.t("settings.theme", lang)).font(VxFont.body).foregroundStyle(VxColor.text)
             } trailing: {
                 Picker("", selection: Binding(get: { theme.preferredScheme == .light ? "light" : "dark" },
                                               set: { theme.preferredScheme = $0 == "light" ? .light : .dark })) {
-                    Text("Dark").tag("dark"); Text("Light").tag("light")
+                    Text(L.t("settings.dark", lang)).tag("dark"); Text(L.t("settings.light", lang)).tag("light")
                 }.pickerStyle(.segmented).frame(width: 150)
             }
             row(divider: false) {
-                Text("Density").font(VxFont.body).foregroundStyle(VxColor.text)
+                Text(L.t("settings.density", lang)).font(VxFont.body).foregroundStyle(VxColor.text)
             } trailing: {
                 Picker("", selection: $theme.density) { ForEach(VxDensity.allCases) { Text($0.rawValue.capitalized).tag($0) } }
                     .pickerStyle(.menu).tint(VxColor.textSecondary)
@@ -79,7 +79,7 @@ public struct SettingsSheet: View {
         group("GENERAL") {
             NavigationLink {
                 langPicker
-            } label: { rowLabel("globe", "Language", Self.langs.first { $0.0 == lang }?.1 ?? "English", chevron: true) }
+            } label: { rowLabel("globe", L.t("settings.language", lang), Self.langs.first { $0.0 == lang }?.1 ?? "English", chevron: true) }
             .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
             rowLabel("metronome", "Default BPM range", "168–176 · DnB", chevron: true)
@@ -90,10 +90,10 @@ public struct SettingsSheet: View {
     private var data: some View {
         group("COLLECTION & DATA") {
             Button { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.sheet = .discogsImport } } label: {
-                rowLabel("square.and.arrow.down", "Import from Discogs", "Re-sync or add a collection", chevron: true)
+                rowLabel("square.and.arrow.down", L.t("settings.import", lang), "Re-sync or add a collection", chevron: true)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            ShareLink(item: "vertax-crate.json") { rowLabel("square.and.arrow.up", "Export collection", "Save crate.json to Files", chevron: true) }
+            ShareLink(item: "vertax-crate.json") { rowLabel("square.and.arrow.up", L.t("settings.export", lang), "Save crate.json to Files", chevron: true) }
                 .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
             rowLabel("externaldrive", "Backup sets & history", "On-device · last: today", chevron: true)
@@ -116,7 +116,7 @@ public struct SettingsSheet: View {
                 rowLabel("heart.fill", "Support the author", "Tip to keep Vertax independent", chevron: true, tint: VxColor.amber)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            NavigationLink { aboutView } label: { rowLabel("opticaldisc", "About Vertax", "Version 1.0", chevron: true) }.buttonStyle(.plain)
+            NavigationLink { aboutView } label: { rowLabel("opticaldisc", L.t("settings.about", lang), "Version 1.0", chevron: true) }.buttonStyle(.plain)
         }
     }
 
@@ -127,7 +127,7 @@ public struct SettingsSheet: View {
                 HStack { Text(name).foregroundStyle(VxColor.text); Spacer()
                     if lang == code { Image(systemName: "checkmark").foregroundStyle(theme.accentText(scheme)) } }
             }
-        }.navigationTitle("Language")
+        }.navigationTitle(L.t("settings.language", lang))
     }
     private var aboutView: some View {
         VStack(spacing: 6) {
@@ -180,6 +180,13 @@ public struct SettingsSheet: View {
             HStack { label(); Spacer(); trailing() }.padding(.vertical, 11)
             if divider { Divider().overlay(VxColor.hairline) }
         }
+    }
+}
+
+public struct SettingsScreen: View {
+    public init() {}
+    public var body: some View {
+        SettingsSheet()
     }
 }
 

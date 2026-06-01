@@ -50,9 +50,15 @@ public struct RootView: View {
                     NavigationStack(path: $router.digPath) {
                         DigView().navigationDestination(for: Record.self) { ReleaseView(record: $0) }
                     }
+                case .wishlist:
+                    NavigationStack {
+                        WishlistView().navigationDestination(for: Record.self) { ReleaseView(record: $0) }
+                    }
+                case .settings:
+                    SettingsScreen()
                 }
             }
-            .padding(.bottom, VxSize.tabBar)   // keep content above the bar
+            .padding(.bottom, VxSize.tabBar + 14)   // keep content above the bar
 
             VxTabBar(selection: $router.tab)
         }
@@ -60,6 +66,7 @@ public struct RootView: View {
         .sheet(item: $router.sheet) { sheet in
             switch sheet {
             case .recordActions(let r): RecordActionsSheet(record: r).presentationDetents([.medium])
+            case .editRecord(let r):    EditRecordSheet(record: r).presentationDetents([.medium])
             case .discogsImport:        ImportSheet()
             case .settings:             SettingsSheet().presentationDetents([.medium, .large])
             }

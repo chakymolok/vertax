@@ -5,6 +5,7 @@ struct VertaxApp: App {
     @StateObject private var theme = VertaxTheme()
     @StateObject private var crate = CrateStore()
     @StateObject private var setS = SetStore()
+    @StateObject private var wishlist = WishlistStore()
     @StateObject private var router = AppRouter()
 
     var body: some Scene {
@@ -13,6 +14,7 @@ struct VertaxApp: App {
                 .environmentObject(theme)
                 .environmentObject(crate)
                 .environmentObject(setS)
+                .environmentObject(wishlist)
                 .environmentObject(router)
                 .preferredColorScheme(theme.preferredScheme)
                 .tint(theme.accent)

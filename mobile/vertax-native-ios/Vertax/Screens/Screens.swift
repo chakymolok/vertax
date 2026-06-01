@@ -12,6 +12,7 @@ import SwiftUI
 public struct CrateView: View {
     @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     @State private var query = ""
     @State private var chips: Set<CrateFilter> = []
 
@@ -25,7 +26,7 @@ public struct CrateView: View {
                         .font(VxFont.labelMono)
                         .tracking(VxTracking.labelMono)
                         .foregroundStyle(VxColor.textTertiary)
-                    Text("Crate")
+                    Text(L.t("crate.title", lang))
                         .font(VxFont.largeTitle)
                         .tracking(VxTracking.largeTitle)
                         .foregroundStyle(VxColor.text)
@@ -54,11 +55,11 @@ public struct CrateView: View {
             }.padding(.horizontal, VxSpace.xl)
 
             if records.isEmpty {
-                VxEmptyState(system: "magnifyingglass", title: "No records match",
-                             message: "Try clearing filters or searching a different label.")
+                VxEmptyState(system: "magnifyingglass", title: L.t("crate.empty_title", lang),
+                             message: L.t("crate.empty_body", lang))
             } else {
                 ScrollView {
-                    SectionHead(title: "Sorted by tempo", count: "\(records.count) shown")
+                    SectionHead(title: L.t("crate.sorted", lang), count: "\(records.count) shown")
                     LazyVStack(spacing: 0) {
                         ForEach(records) { r in
                             VxRecordRow(r) { router.openRelease(r) }
@@ -87,17 +88,18 @@ public struct BpmKeyLookup: Equatable, Hashable {
 public struct FindView: View {
     @State private var query = ""
     @State private var state: FindState = .idle
+    @AppStorage("vx_lang") private var lang = "en"
     public init() {}
     public var body: some View {
         VStack(spacing: 0) {
-            VxScreenHeader(kicker: "FIND · BPM / KEY", title: "Find")
+            VxScreenHeader(kicker: "FIND · BPM / KEY", title: L.t("find.title", lang))
             VxSearchField(text: $query, placeholder: "Artist, title or catalog #", onSubmit: run)
                 .padding(.horizontal, VxSpace.xl)
             ScrollView {
                 switch state {
                 case .idle:        FindIdle(onPick: { query = $0; run() })
                 case .loading:     FindLoading()
-                case .notFound(let q): VxEmptyState(system: "magnifyingglass", title: "No reliable match",
+                case .notFound(let q): VxEmptyState(system: "magnifyingglass", title: L.t("find.not_found", lang),
                                                     message: "Couldn't confirm BPM & key for “\(q)”. Try the catalog number or add it manually.")
                 case .result(let r): FindResult(lookup: r) { state = .idle; query = "" }
                 }
@@ -130,17 +132,30 @@ public struct BuildView: View {
     @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var set: SetStore
     @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
+    @State private var source: BuildSource = .auto
     public init() {}
     public var body: some View {
         let records = set.records(in: crate)
         VStack(spacing: 0) {
-            HStack {
-                VxScreenHeader(kicker: "SET · \(records.count) RECORDS · ~\(records.count*4) MIN", title: "Warehouse")
-                Spacer()
-                // PRIMARY ENTRY into Live Set Mode
-                VxButton("Start Live", icon: "play.fill") { router.showLiveSet = true }
-                    .frame(width: 130).padding(.trailing, VxSpace.xl)
+            VStack(alignment: .leading, spacing: VxSpace.m) {
+                HStack {
+                    VxScreenHeader(kicker: "SET · \(records.count) RECORDS · ~\(records.count*4) MIN", title: L.t("build.title", lang))
+                    Spacer()
+                    VxButton(L.t("build.start_live", lang), icon: "play.fill") { router.showLiveSet = true }
+                        .frame(width: 130)
+                }
+                VxSegmented(selection: $source, options: [(.auto, L.t("build.auto", lang)), (.manual, L.t("build.manual", lang))])
+                HStack(spacing: VxSpace.s) {
+                    VxButton(L.t("build.from_crate", lang), icon: "sparkles") {
+                        set.autoBuild(from: crate.records)
+                        source = .auto
+                    }
+                    VxButton(L.t("build.clear", lang), icon: "trash", style: .dark) { set.clear() }
+                }
             }
+            .padding(.horizontal, VxSpace.xl)
+            .padding(.bottom, VxSpace.m)
             List {
                 ForEach(Array(records.enumerated()), id: \.element.id) { i, r in
                     BuildRow(index: i, record: r, transition: i > 0 ? SetTransition(from: records[i-1], to: r) : nil)
@@ -149,12 +164,20 @@ public struct BuildView: View {
                         .onTapGesture { router.openRelease(r) }
                 }
                 .onMove { set.move(from: $0, to: $1) }   // native drag-to-reorder
+                .onDelete { offsets in
+                    for offset in offsets {
+                        guard records.indices.contains(offset) else { continue }
+                        set.remove(records[offset].id)
+                    }
+                }
             }
             .listStyle(.plain).environment(\.editMode, .constant(.active))
             .scrollContentBackground(.hidden)
         }
     }
 }
+
+public enum BuildSource: Hashable { case auto, manual }
 
 // =====================================================================
 // DIG — Analyze (state machine) + Gaps
@@ -169,14 +192,15 @@ public enum AnalyzeState: Equatable {
 }
 public struct DigView: View {
     @EnvironmentObject var crate: CrateStore
+    @AppStorage("vx_lang") private var lang = "en"
     @State private var mode: DigMode = .analyze
     @State private var state: AnalyzeState = .idle
     static let steps = ["Fetching Discogs release","Reading tracklist & key","Matching against your crate","Scoring harmonic fit"]
     public init() {}
     public var body: some View {
         VStack(spacing: 0) {
-            VxScreenHeader(kicker: mode == .analyze ? "DIG · WORTH IT?" : "DIG · WHAT TO DIG", title: "Dig")
-            VxSegmented(selection: $mode, options: [(.analyze,"Analyze"),(.gaps,"Gaps")]).padding(.horizontal, VxSpace.xl)
+            VxScreenHeader(kicker: mode == .analyze ? "DIG · WORTH IT?" : "DIG · WHAT TO DIG", title: L.t("dig.title", lang))
+            VxSegmented(selection: $mode, options: [(.analyze,L.t("dig.analyze", lang)),(.gaps,L.t("dig.gaps", lang))]).padding(.horizontal, VxSpace.xl)
             ScrollView {
                 if mode == .analyze { AnalyzeBody(state: $state, run: runAnalyze) }
                 else { GapsBody() }
@@ -203,9 +227,11 @@ public struct ReleaseView: View {
     @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var set: SetStore
     @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     let record: Record
     public init(record: Record) { self.record = record }
     public var body: some View {
+        let record = crate.records.first { $0.id == self.record.id } ?? self.record
         let fitCount = crate.records.filter { $0.id != record.id && record.camelot.relation(to: $0.camelot) != nil }.count
         ScrollView {
             VStack(alignment: .leading, spacing: VxSpace.l) {
@@ -229,9 +255,10 @@ public struct ReleaseView: View {
                         Divider().frame(height: 40).overlay(VxColor.hairline)
                         techCell(label: record.camelot.musicalKey) { Text(record.keyCode).font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
                         Divider().frame(height: 40).overlay(VxColor.hairline)
-                        techCell(label: "Fit crate") { Text("\(fitCount)").font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
+                        techCell(label: record.side) { Text("\(fitCount)").font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
                     }
                 }
+                .onTapGesture { router.sheet = .editRecord(record) }
                 // cue preview
                 VxCard { VxWaveform(bars: 54, seed: 11, height: 30, lime: true, playhead: 19) }
                 SectionHead(title: "Tracklist", count: "4 tracks")
@@ -260,13 +287,14 @@ public struct ReleaseView: View {
         .background(VxColor.bg)
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 10) {
-                VxButton(set.orderedIDs.contains(record.id) ? "In your set" : "Add to set",
+                VxButton(set.orderedIDs.contains(record.id) ? L.t("record.in_set", lang) : L.t("record.add_to_set", lang),
                          icon: set.orderedIDs.contains(record.id) ? "checkmark" : "plus",
                          style: set.orderedIDs.contains(record.id) ? .dark : .primary) { set.add(record.id) }
             }.padding(.horizontal, VxSpace.xl).padding(.vertical, 12).background(.ultraThinMaterial)
         }
         .navigationTitle("").navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
+            Button { router.sheet = .editRecord(record) } label: { Image(systemName: "slider.horizontal.3") }
             Button { router.sheet = .recordActions(record) } label: { Image(systemName: "ellipsis") }
         } }
     }
@@ -816,6 +844,9 @@ struct GapsBody: View {
 // — Sheets & onboarding (skeletons) —
 struct RecordActionsSheet: View {
     @EnvironmentObject var set: SetStore
+    @EnvironmentObject var wishlist: WishlistStore
+    @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     @Environment(\.dismiss) var dismiss
     let record: Record
     var body: some View {
@@ -831,16 +862,103 @@ struct RecordActionsSheet: View {
                         .foregroundStyle(VxColor.textSecondary)
                 }
             }
-            VxButton(set.orderedIDs.contains(record.id) ? "Already in set" : "Add to set", icon: "slider.horizontal.3", style: .dark) {
+            VxButton(set.orderedIDs.contains(record.id) ? L.t("record.in_set", lang) : L.t("record.add_to_set", lang), icon: "slider.horizontal.3", style: .dark) {
                 set.add(record.id)
                 dismiss()
             }
-            VxButton("Find similar to dig", icon: "flame", style: .dark) { dismiss() }
-            VxButton("Edit notes & tags", icon: "tag", style: .dark) { dismiss() }
-            VxButton("Save to wishlist", icon: "heart", style: .dark) { dismiss() }
-            VxButton("Cancel", style: .ghost) { dismiss() }
+            VxButton(L.t("record.find_similar", lang), icon: "flame", style: .dark) { dismiss() }
+            VxButton(L.t("record.edit_meta", lang), icon: "slider.horizontal.3", style: .dark) {
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.sheet = .editRecord(record) }
+            }
+            VxButton(wishlist.contains(record.id) ? L.t("record.remove_wishlist", lang) : L.t("record.save_wishlist", lang), icon: "heart", style: .dark) {
+                wishlist.toggle(record.id)
+                dismiss()
+            }
+            VxButton(L.t("action.cancel", lang), style: .ghost) { dismiss() }
         }
         .padding(VxSpace.l)
+    }
+}
+
+struct EditRecordSheet: View {
+    @EnvironmentObject var crate: CrateStore
+    @Environment(\.dismiss) var dismiss
+    let record: Record
+    @State private var bpm: String
+    @State private var keyCode: String
+    @State private var side: String
+    @AppStorage("vx_lang") private var lang = "en"
+
+    init(record: Record) {
+        self.record = record
+        _bpm = State(initialValue: "\(record.bpm)")
+        _keyCode = State(initialValue: record.keyCode)
+        _side = State(initialValue: record.side)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(L.t("edit.section", lang)) {
+                    TextField("BPM", text: $bpm)
+                        .keyboardType(.numberPad)
+                    TextField("Camelot", text: $keyCode)
+                        .textInputAutocapitalization(.characters)
+                    TextField("Side / position", text: $side)
+                        .textInputAutocapitalization(.characters)
+                }
+                Section {
+                    Text(L.t("edit.note", lang))
+                        .font(VxFont.footnote)
+                        .foregroundStyle(VxColor.textSecondary)
+                }
+            }
+            .navigationTitle(L.t("edit.title", lang))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(L.t("action.cancel", lang)) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(L.t("action.save", lang)) { save() } }
+            }
+        }
+    }
+
+    private func save() {
+        var next = record
+        if let parsed = Int(bpm.trimmingCharacters(in: .whitespaces)), (40...250).contains(parsed) {
+            next.bpm = parsed
+        }
+        let normalizedKey = keyCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if Camelot(normalizedKey) != nil { next.keyCode = normalizedKey }
+        let normalizedSide = side.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if !normalizedSide.isEmpty { next.side = normalizedSide }
+        crate.update(next)
+        dismiss()
+    }
+}
+
+public struct WishlistView: View {
+    @EnvironmentObject var crate: CrateStore
+    @EnvironmentObject var wishlist: WishlistStore
+    @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
+    public init() {}
+    public var body: some View {
+        let records = wishlist.recordIDs.compactMap { id in crate.records.first { $0.id == id } }
+        VStack(spacing: 0) {
+            VxScreenHeader(kicker: L.t("wishlist.kicker", lang), title: L.t("wishlist.title", lang))
+            if records.isEmpty {
+                VxEmptyState(system: "heart", title: L.t("wishlist.empty_title", lang), message: L.t("wishlist.empty_body", lang))
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(records) { record in
+                            VxRecordRow(record) { router.openRelease(record) }
+                            Divider().overlay(VxColor.hairline)
+                        }
+                    }.padding(.horizontal, VxSpace.xl)
+                }
+            }
+        }
     }
 }
 // SettingsSheet lives in Screens/SettingsView.swift
@@ -848,7 +966,9 @@ struct RecordActionsSheet: View {
 struct OnboardingView: View {
     @EnvironmentObject var theme: VertaxTheme
     @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     @State private var step = 0
+    private let languages = [("en", "English"), ("ru", "Русский"), ("zh", "中文"), ("ja", "日本語")]
     var body: some View {
         ZStack {
             VxColor.bg.ignoresSafeArea()
@@ -866,7 +986,13 @@ struct OnboardingView: View {
                         .foregroundStyle(VxColor.textTertiary)
                 }
                 Spacer()
-                onboardingContent
+                TabView(selection: $step) {
+                    onboardingContent(for: 0).tag(0)
+                    onboardingContent(for: 1).tag(1)
+                    onboardingContent(for: 2).tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(minHeight: 500)
                 Spacer()
                 HStack(spacing: VxSpace.s) {
                     ForEach(0..<3, id: \.self) { i in
@@ -876,27 +1002,33 @@ struct OnboardingView: View {
                     }
                 }
                 if step < 2 {
-                    VxButton("Continue") { step += 1 }
+                    VxButton(L.t("action.continue", lang)) { step += 1 }
                 } else {
                     VStack(spacing: VxSpace.m) {
-                        VxButton("Import from Discogs", icon: "square.and.arrow.down") { router.sheet = .discogsImport }
-                        VxButton("Add a record manually", icon: "plus", style: .dark) { router.showOnboarding = false }
+                        VxButton(L.t("action.demo_crate", lang)) { router.showOnboarding = false }
+                        VxButton(L.t("action.import_discogs", lang), icon: "square.and.arrow.down", style: .dark) {
+                            router.showOnboarding = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                router.sheet = .discogsImport
+                            }
+                        }
                     }
                 }
-                VxButton("Skip — just look around", style: .ghost) { router.showOnboarding = false }
+                VxButton(L.t("action.skip", lang), style: .ghost) { router.showOnboarding = false }
             }.padding(.horizontal, VxSpace.xxl).padding(.bottom, VxSpace.xxl).padding(.top, VxSpace.m)
         }
     }
-    @ViewBuilder private var onboardingContent: some View {
+    @ViewBuilder private func onboardingContent(for step: Int) -> some View {
         if step == 0 {
             VStack(spacing: VxSpace.l) {
+                languagePicker
                 HeroRecord()
-                Text("A smart crate for\nvinyl DJs.")
+                Text(L.t("onboarding.hero_title", lang))
                     .font(VxFont.largeTitle)
                     .tracking(VxTracking.largeTitle)
                     .foregroundStyle(VxColor.text)
                     .multilineTextAlignment(.center)
-                Text("Vertax knows your collection — what you own, what fits the record in your hand, and what to dig next.")
+                Text(L.t("onboarding.hero_body", lang))
                     .font(VxFont.subhead)
                     .foregroundStyle(VxColor.textSecondary)
                     .multilineTextAlignment(.center)
@@ -904,11 +1036,11 @@ struct OnboardingView: View {
             }
         } else if step == 1 {
             VStack(spacing: VxSpace.l) {
-                Text("THE SMART PART")
+                Text(L.t("onboarding.smart_kicker", lang))
                     .font(VxFont.labelMono)
                     .tracking(VxTracking.labelMono)
                     .foregroundStyle(theme.accent)
-                Text("Math decides the fit.\nVertax explains it.")
+                Text(L.t("onboarding.smart_title", lang))
                     .font(VxFont.title)
                     .foregroundStyle(VxColor.text)
                     .multilineTextAlignment(.center)
@@ -917,7 +1049,7 @@ struct OnboardingView: View {
                         VxScoreRing(value: 86, color: theme.accent)
                         VStack(alignment: .leading, spacing: VxSpace.s) {
                             VxVerdictPill(.strong)
-                            Text("Fills your 170–174 / 8A bridge.")
+                            Text(L.t("onboarding.smart_hint", lang))
                                 .font(VxFont.bodyStrong)
                                 .foregroundStyle(VxColor.text)
                         }
@@ -926,18 +1058,41 @@ struct OnboardingView: View {
             }
         } else {
             VStack(spacing: VxSpace.l) {
-                Text("Start your crate")
+                Text(L.t("onboarding.start_title", lang))
                     .font(VxFont.largeTitle)
                     .tracking(VxTracking.largeTitle)
                     .foregroundStyle(VxColor.text)
-                Text("Bring your records in — or look around first with a demo.")
+                Text(L.t("onboarding.start_body", lang))
                     .font(VxFont.subhead)
                     .foregroundStyle(VxColor.textSecondary)
                     .multilineTextAlignment(.center)
                 VxCard {
-                    Text("Import from Discogs, add manually, or continue with the sample crate.")
+                    Text(L.t("onboarding.start_card", lang))
                         .font(VxFont.subhead)
                         .foregroundStyle(VxColor.textSecondary)
+                }
+            }
+        }
+    }
+
+    private var languagePicker: some View {
+        VStack(spacing: VxSpace.s) {
+            Text(L.t("onboarding.choose_language", lang))
+                .font(VxFont.labelMono)
+                .tracking(VxTracking.labelMono)
+                .foregroundStyle(VxColor.textTertiary)
+            HStack(spacing: VxSpace.s) {
+                ForEach(languages, id: \.0) { code, label in
+                    Button { lang = code } label: {
+                        Text(label)
+                            .font(VxFont.mono(12, .semibold))
+                            .foregroundStyle(lang == code ? VxColor.limeInk : VxColor.textSecondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(lang == code ? theme.accent : VxColor.cardElevated)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

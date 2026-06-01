@@ -879,8 +879,13 @@ struct OnboardingView: View {
                     VxButton("Continue") { step += 1 }
                 } else {
                     VStack(spacing: VxSpace.m) {
-                        VxButton("Import from Discogs", icon: "square.and.arrow.down") { router.sheet = .discogsImport }
-                        VxButton("Add a record manually", icon: "plus", style: .dark) { router.showOnboarding = false }
+                        VxButton("Continue with demo crate") { router.showOnboarding = false }
+                        VxButton("Import from Discogs", icon: "square.and.arrow.down", style: .dark) {
+                            router.showOnboarding = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                router.sheet = .discogsImport
+                            }
+                        }
                     }
                 }
                 VxButton("Skip — just look around", style: .ghost) { router.showOnboarding = false }

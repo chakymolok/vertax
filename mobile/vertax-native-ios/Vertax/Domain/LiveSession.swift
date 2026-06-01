@@ -47,6 +47,7 @@ public final class LiveSession: ObservableObject {
     @Published public var index: Int = 0          // NOW within order
     @Published public var playedIDs: [String] = []
     @Published public var elapsed: Int = 0         // seconds
+    @Published public var finished: Bool = false
 
     public init(mode: LiveMode = .set) { self.mode = mode }
 
@@ -57,16 +58,23 @@ public final class LiveSession: ObservableObject {
     public func tick() { elapsed += 1 }
 
     public func advance(in order: [Record]) {
-        guard index < order.count - 1 else { return }
+        guard !order.isEmpty else { return }
+        guard index < order.count - 1 else {
+            if !playedIDs.contains(order[index].id) { playedIDs.append(order[index].id) }
+            finished = true
+            return
+        }
         playedIDs.append(order[index].id)
         index += 1
     }
     public func previous() {
         guard index > 0 else { return }
+        finished = false
         index -= 1; if !playedIDs.isEmpty { playedIDs.removeLast() }
     }
     public func undo() {
         guard !playedIDs.isEmpty else { return }
+        finished = false
         index = max(0, index - 1); playedIDs.removeLast()
     }
 

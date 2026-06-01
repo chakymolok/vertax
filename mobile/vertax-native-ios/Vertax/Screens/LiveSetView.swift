@@ -10,6 +10,7 @@ public struct LiveSetView: View {
     @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var set: SetStore
     @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     @StateObject private var session: LiveSession
     @State private var dragX: CGFloat = 0
 
@@ -41,6 +42,9 @@ public struct LiveSetView: View {
                 }
                 controls(order: order)
             }
+            if session.finished {
+                finishOverlay(now: now, order: order)
+            }
         }
         .preferredColorScheme(.dark)
         .onReceive(timer) { _ in session.tick() }
@@ -50,7 +54,7 @@ public struct LiveSetView: View {
     private var affordance: some View {
         HStack(spacing: 9) {
             Image(systemName: "chevron.left").font(.system(size: 13)).foregroundStyle(dragX > 12 ? VxColor.textSecondary : VxColor.textTertiary).opacity(dragX > 12 ? 1 : 0.4)
-            Text("SWIPE OR PRESS NEXT WHEN MIXED IN").font(.system(size: 9.5, weight: .regular, design: .monospaced)).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+            Text(L.t("live.affordance", lang)).font(.system(size: 9.5, weight: .regular, design: .monospaced)).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             Image(systemName: "chevron.right").font(.system(size: 13)).foregroundStyle(dragX < -12 ? theme.accent : VxColor.textTertiary).opacity(dragX < -12 ? 1 : 0.4)
         }.frame(maxWidth: .infinity).padding(.top, 18)
     }
@@ -59,12 +63,12 @@ public struct LiveSetView: View {
     private var header: some View {
         HStack {
             Button { router.showLiveSet = false } label: {
-                Label("End", systemImage: "stop.fill").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color(rgb: 0xE8736A))
+                Label(L.t("live.end", lang), systemImage: "stop.fill").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color(rgb: 0xE8736A))
             }
             Spacer()
             VStack(spacing: 1) {
                 Text(LiveSession.clock(session.elapsed)).font(VxFont.bpm(17)).foregroundStyle(.white)
-                Text("TIME IN SET").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text(L.t("live.time", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             }
             Spacer()
             // mode toggle
@@ -87,7 +91,7 @@ public struct LiveSetView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Circle().fill(theme.accent).frame(width: 8, height: 8).shadow(color: theme.accent, radius: 5)
-                Text("NOW PLAYING").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(theme.accent)
+                Text(L.t("live.now", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(theme.accent)
                 Spacer()
                 Text("\(session.index + 1) / \(count)").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             }.padding(.bottom, 10)
@@ -102,7 +106,7 @@ public struct LiveSetView: View {
                 HStack(alignment: .bottom, spacing: 0) {
                     bigStat("\(now.bpm)", "BPM", .white, align: .leading)
                     bigStat(now.keyCode, now.camelot.musicalKey.uppercased(), theme.accent, align: .center)
-                    bigStat(Sleeve.position(now.id), "SLEEVE", .white, align: .trailing)
+                    bigStat(now.side, "SLEEVE", .white, align: .trailing)
                 }.padding(.top, 20)
             }
         }
@@ -120,7 +124,7 @@ public struct LiveSetView: View {
             HStack {
                 Text(session.mode == .set ? "SETLIST" : "CRATE QUEUE").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
                 Spacer()
-                Text("\(session.playedIDs.count) PLAYED").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text("\(session.playedIDs.count) \(L.t("live.played", lang))").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             }.padding(.vertical, 10)
             ForEach(Array(order.enumerated()), id: \.offset) { i, r in
                 let state = i < session.index ? 2 : (i == session.index ? 1 : 0) // 2 played,1 now,0 up
@@ -138,10 +142,10 @@ public struct LiveSetView: View {
                         HStack(spacing: 7) {
                             Text("\(r.artist) — \(r.title)").font(.system(size: 14, weight: state == 1 ? .semibold : .medium))
                                 .foregroundStyle(state == 1 ? theme.accent : .white).lineLimit(1)
-                            if isNext { Text("NEXT").font(.system(size: 8.5, weight: .regular, design: .monospaced)).tracking(VxTracking.labelMono).foregroundStyle(theme.accent) }
+                            if isNext { Text(L.t("live.next", lang)).font(.system(size: 8.5, weight: .regular, design: .monospaced)).tracking(VxTracking.labelMono).foregroundStyle(theme.accent) }
                         }
                         HStack(spacing: 0) {
-                            Text(Sleeve.position(r.id)).font(VxFont.mono(10.5)).foregroundStyle(state == 2 ? VxColor.textTertiary : .white)
+                            Text(r.side).font(VxFont.mono(10.5)).foregroundStyle(state == 2 ? VxColor.textTertiary : .white)
                             Text(" · \(rc?.label ?? r.label)").font(VxFont.mono(10.5)).foregroundStyle(rcColor ?? VxColor.textTertiary)
                         }
                     }
@@ -163,9 +167,9 @@ public struct LiveSetView: View {
         let items = session.suggestions(now: now, order: order, crate: crate)
         return VStack(spacing: 8) {
             HStack {
-                Text("SUGGESTED FROM CRATE").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text(L.t("live.suggested", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
                 Spacer()
-                Text("FROM NOW · \(now?.keyCode ?? "")").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text("\(L.t("live.from_now", lang)) · \(now?.keyCode ?? "")").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             }.padding(.vertical, 10)
             ForEach(items, id: \.0.id) { r, c in
                 let col = Color.liveLevel(c.level, accent: theme.accent)
@@ -190,12 +194,37 @@ public struct LiveSetView: View {
         }.padding(.top, 14).padding(.bottom, 8)
     }
 
+    private func finishOverlay(now: Record?, order: [Record]) -> some View {
+        VStack(spacing: VxSpace.l) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(theme.accent)
+            Text(L.t("live.complete_title", lang))
+                .font(VxFont.largeTitle)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Text(L.t("live.complete_body", lang))
+                .font(VxFont.subhead)
+                .foregroundStyle(VxColor.textSecondary)
+                .multilineTextAlignment(.center)
+            HStack(spacing: VxSpace.s) {
+                VxButton(L.t("live.add_more", lang), icon: "plus", style: .dark) { session.finished = false }
+                VxButton(L.t("live.end", lang), icon: "stop.fill") { router.showLiveSet = false }
+            }
+        }
+        .padding(VxSpace.xl)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(VxColor.hairlineStrong, lineWidth: 1))
+        .padding(.horizontal, VxSpace.xl)
+    }
+
     // MARK: controls
     private func controls(order: [Record]) -> some View {
         HStack(spacing: 12) {
             ctlButton(system: "backward.fill", enabled: session.index > 0) { session.previous() }
             Button { session.advance(in: order) } label: {
-                HStack(spacing: 9) { Image(systemName: "checkmark").font(.system(size: 21, weight: .bold)); Text("Mark played · Next").font(.system(size: 17, weight: .bold)) }
+                HStack(spacing: 9) { Image(systemName: "checkmark").font(.system(size: 21, weight: .bold)); Text(L.t("live.mark_next", lang)).font(.system(size: 17, weight: .bold)) }
                     .frame(maxWidth: .infinity).frame(height: 56)
                     .foregroundStyle(VxColor.limeInk).background(theme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
