@@ -58,7 +58,7 @@ public struct RootView: View {
                     SettingsScreen()
                 }
             }
-            .padding(.bottom, VxSize.tabBar + 14)   // keep content above the bar
+            .padding(.bottom, VxSize.tabBar)   // keep content above the bar
 
             VxTabBar(selection: $router.tab)
         }

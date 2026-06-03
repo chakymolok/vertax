@@ -24,7 +24,18 @@ public struct VxCover: View {
             Circle().fill(Color(rgb: disc)).frame(width: size*0.36, height: size*0.36)
             Circle().fill(Color(rgb: 0x0C0F0E)).frame(width: size*0.10, height: size*0.10)
             if let catalog, size >= 44 {
-                VStack { Spacer(); HStack { Text(catalog).font(.system(size: 8, weight: .regular, design: .monospaced)).foregroundStyle(.white.opacity(0.62)); Spacer() } }.padding(6)
+                VStack {
+                    Spacer()
+                    HStack {
+                        Text(catalog)
+                            .font(.system(size: 7.5, weight: .regular, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.62))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.55)
+                        Spacer(minLength: 0)
+                    }
+                }
+                .padding(6)
             }
         }
         .frame(width: size, height: size)

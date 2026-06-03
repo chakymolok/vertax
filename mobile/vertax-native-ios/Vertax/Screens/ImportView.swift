@@ -9,6 +9,7 @@ public struct ImportSheet: View {
     @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var router: AppRouter
     @Environment(\.colorScheme) var scheme
+    @AppStorage("vx_lang") private var lang = "en"
     @StateObject private var importer = DiscogsImporter()
     var onFinished: (() -> Void)? = nil
     public init(onFinished: (() -> Void)? = nil) { self.onFinished = onFinished }
@@ -22,6 +23,7 @@ public struct ImportSheet: View {
             case .idle:           idle
             case .loading(let s): loading(step: s)
             case .done(let sum):  done(sum)
+            case .failed(let message): failed(message)
             }
         }
         .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 26)
@@ -36,8 +38,8 @@ public struct ImportSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(theme.accentLine, lineWidth: 1))
             VStack(alignment: .leading, spacing: 1) {
-                Text("Import from Discogs").font(.system(size: 17, weight: .semibold)).foregroundStyle(VxColor.text)
-                Text("Yours or anyone's public collection").font(VxFont.caption).foregroundStyle(VxColor.textSecondary)
+                Text(L.t("import.title", lang)).font(.system(size: 17, weight: .semibold)).foregroundStyle(VxColor.text)
+                Text(L.t("import.subtitle", lang)).font(VxFont.caption).foregroundStyle(VxColor.textSecondary)
             }
             Spacer()
         }.padding(.bottom, 16)
@@ -47,7 +49,7 @@ public struct ImportSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text("@").font(VxFont.mono(13)).foregroundStyle(VxColor.textTertiary)
-                TextField("Profile link or username", text: $importer.url).font(.system(size: 16))
+                TextField(L.t("import.placeholder", lang), text: $importer.url).font(.system(size: 16))
             }
             .padding(.horizontal, 14).frame(height: 46)
             .background(VxColor.card).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -63,10 +65,10 @@ public struct ImportSheet: View {
                 }.padding(.top, 11)
             }
 
-            Text("Vertax pulls every release — artist, label, catalog # and year — then matches BPM & Camelot key automatically. Your collection stays on device.")
+            Text(L.t("import.body", lang))
                 .font(VxFont.caption).foregroundStyle(VxColor.textTertiary).lineSpacing(3).padding(.top, 16)
 
-            VxButton("Import collection", icon: "square.and.arrow.down",
+            VxButton(L.t("import.button", lang), icon: "square.and.arrow.down",
                      style: importer.handle.isEmpty ? .dark : .primary) { importer.run(into: crate) }
                 .opacity(importer.handle.isEmpty ? 0.55 : 1).padding(.top, 18)
         }
@@ -108,18 +110,41 @@ public struct ImportSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(theme.accentLine, lineWidth: 1))
                 .padding(.bottom, 16)
-            Text("Collection imported").font(.system(size: 19, weight: .bold)).foregroundStyle(VxColor.text)
+            Text(L.t("import.done", lang)).font(.system(size: 19, weight: .bold)).foregroundStyle(VxColor.text)
             HStack(spacing: 0) {
-                stat("\(sum.records)", "RECORDS", VxColor.text)
+                stat("\(sum.records)", L.t("common.records", lang), VxColor.text)
                 Divider().frame(height: 36).overlay(VxColor.hairline)
-                stat("\(sum.labels)", "LABELS", VxColor.text)
+                stat("\(sum.labels)", L.t("common.labels", lang), VxColor.text)
                 Divider().frame(height: 36).overlay(VxColor.hairline)
-                stat("\(sum.records)", "ANALYZED", theme.accentText(scheme))
+                stat("\(sum.records)", L.t("common.analyzed", lang), theme.accentText(scheme))
             }.padding(.vertical, 18)
-            VxButton("Go to crate") {
+            VxButton(L.t("import.go_crate", lang)) {
                 router.tab = .crate; router.showOnboarding = false; router.sheet = nil; onFinished?()
             }
         }.frame(maxWidth: .infinity)
+    }
+    private func failed(_ message: String) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(VxColor.amber)
+                .frame(width: 64, height: 64)
+                .background(VxColor.cardElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            Text(L.t("import.failed", lang))
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(VxColor.text)
+            Text(message)
+                .font(VxFont.caption)
+                .foregroundStyle(VxColor.textTertiary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+            VxButton(L.t("import.retry", lang), icon: "arrow.clockwise") {
+                importer.run(into: crate)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
     }
     private func stat(_ v: String, _ l: String, _ c: Color) -> some View {
         VStack(spacing: 5) { Text(v).font(VxFont.bpm(26)).foregroundStyle(c); Text(l).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary) }.frame(maxWidth: .infinity)

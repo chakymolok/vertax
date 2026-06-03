@@ -22,7 +22,7 @@ public struct CrateView: View {
         VStack(spacing: 0) {
             HStack(alignment: .bottom, spacing: VxSpace.m) {
                 VStack(alignment: .leading, spacing: VxSpace.xs) {
-                    Text("\(crate.records.count) RECORDS · 7 LABELS")
+                    Text("\(crate.records.count) \(L.t("common.records", lang)) · 7 \(L.t("common.labels", lang))")
                         .font(VxFont.labelMono)
                         .tracking(VxTracking.labelMono)
                         .foregroundStyle(VxColor.textTertiary)
@@ -43,10 +43,10 @@ public struct CrateView: View {
             .padding(.bottom, VxSpace.m)
 
             VStack(spacing: 11) {
-                VxSearchField(text: $query, placeholder: "Search artist, label, cat #")
+                VxSearchField(text: $query, placeholder: L.t("search.crate", lang))
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 7) {
-                        Button { chips.removeAll() } label: { VxChip("All", active: chips.isEmpty) }.buttonStyle(.plain)
+                        Button { chips.removeAll() } label: { VxChip(L.t("filter.all", lang), active: chips.isEmpty) }.buttonStyle(.plain)
                         ForEach(CrateFilter.all) { f in
                             Button { toggle(f) } label: { VxChip(f.label, active: chips.contains(f), mono: true) }.buttonStyle(.plain)
                         }
@@ -59,7 +59,7 @@ public struct CrateView: View {
                              message: L.t("crate.empty_body", lang))
             } else {
                 ScrollView {
-                    SectionHead(title: L.t("crate.sorted", lang), count: "\(records.count) shown")
+                    SectionHead(title: L.t("crate.sorted", lang), count: "\(records.count) \(L.t("common.shown", lang))")
                     LazyVStack(spacing: 0) {
                         ForEach(records) { r in
                             VxRecordRow(r) { router.openRelease(r) }
@@ -84,23 +84,53 @@ public enum FindState: Equatable {
 public struct BpmKeyLookup: Equatable, Hashable {
     public let artist, title, label, catalog, key, musicalKey, genre, source: String
     public let bpm, confidence: Int
+
+    public var crateID: String {
+        let raw = "\(artist)-\(title)-\(catalog)"
+            .lowercased()
+            .map { $0.isLetter || $0.isNumber ? String($0) : "-" }
+            .joined()
+            .replacingOccurrences(of: "--+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return "lookup-\(raw.isEmpty ? UUID().uuidString : raw)"
+    }
+
+    public func asRecord() -> Record {
+        Record(
+            id: crateID,
+            artist: artist,
+            title: title,
+            label: label.isEmpty ? source : label,
+            catalog: catalog.isEmpty ? source.uppercased() : catalog,
+            year: "",
+            bpm: bpm,
+            keyCode: key.isEmpty ? "1A" : key,
+            side: "A1",
+            genre: genre.isEmpty ? "Unknown" : genre,
+            rating: max(0, min(5, Double(confidence) / 20)),
+            played: false,
+            coverSeed: "\(artist)-\(title)",
+            notes: "Imported from Vertax \(source) lookup."
+        )
+    }
 }
 public struct FindView: View {
     @State private var query = ""
     @State private var state: FindState = .idle
     @AppStorage("vx_lang") private var lang = "en"
+    private let api = VertaxAPI()
     public init() {}
     public var body: some View {
         VStack(spacing: 0) {
             VxScreenHeader(kicker: "FIND · BPM / KEY", title: L.t("find.title", lang))
-            VxSearchField(text: $query, placeholder: "Artist, title or catalog #", onSubmit: run)
+            VxSearchField(text: $query, placeholder: L.t("search.find", lang), onSubmit: run)
                 .padding(.horizontal, VxSpace.xl)
             ScrollView {
                 switch state {
                 case .idle:        FindIdle(onPick: { query = $0; run() })
                 case .loading:     FindLoading()
-                case .notFound(let q): VxEmptyState(system: "magnifyingglass", title: L.t("find.not_found", lang),
-                                                    message: "Couldn't confirm BPM & key for “\(q)”. Try the catalog number or add it manually.")
+                case .notFound: VxEmptyState(system: "magnifyingglass", title: L.t("find.not_found", lang),
+                                             message: L.t("find.not_found_body", lang))
                 case .result(let r): FindResult(lookup: r) { state = .idle; query = "" }
                 }
             }.padding(.top, VxSpace.l)
@@ -110,8 +140,38 @@ public struct FindView: View {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         state = .loading
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            if let hit = Self.lookup(query) { state = .result(hit) } else { state = .notFound(query) }
+            let parsed = Self.parseLookup(query)
+            Task {
+                do {
+                    let hit = try await api.lookupBeatport(artist: parsed.artist, title: parsed.title)
+                    await MainActor.run { state = .result(hit) }
+                } catch {
+                    let fallback = Self.lookup(query)
+                    await MainActor.run {
+                        if let fallback {
+                            state = .result(fallback)
+                        } else {
+                            state = .notFound(query)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    static func parseLookup(_ q: String) -> (artist: String, title: String) {
+        let trimmed = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        let separators = [" — ", " - ", " – ", " / "]
+        for separator in separators {
+            if let range = trimmed.range(of: separator) {
+                let artist = String(trimmed[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                let title = String(trimmed[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !artist.isEmpty && !title.isEmpty { return (artist, title) }
+            }
+        }
+        let parts = trimmed.split(separator: " ", maxSplits: 1).map(String.init)
+        if parts.count == 2 { return (parts[0], parts[1]) }
+        return (trimmed, trimmed)
     }
     // Demo database — swap for the real Vertax API.
     static func lookup(_ q: String) -> BpmKeyLookup? {
@@ -140,7 +200,7 @@ public struct BuildView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: VxSpace.m) {
                 HStack {
-                    VxScreenHeader(kicker: "SET · \(records.count) RECORDS · ~\(records.count*4) MIN", title: L.t("build.title", lang))
+                    VxScreenHeader(kicker: "SET · \(records.count) \(L.t("common.records", lang)) · ~\(records.count*4) MIN", title: L.t("build.title", lang))
                     Spacer()
                     VxButton(L.t("build.start_live", lang), icon: "play.fill") { router.showLiveSet = true }
                         .frame(width: 130)
@@ -202,7 +262,7 @@ public struct DigView: View {
             VxScreenHeader(kicker: mode == .analyze ? "DIG · WORTH IT?" : "DIG · WHAT TO DIG", title: L.t("dig.title", lang))
             VxSegmented(selection: $mode, options: [(.analyze,L.t("dig.analyze", lang)),(.gaps,L.t("dig.gaps", lang))]).padding(.horizontal, VxSpace.xl)
             ScrollView {
-                if mode == .analyze { AnalyzeBody(state: $state, run: runAnalyze) }
+                if mode == .analyze { AnalyzeBody(targets: Array(crate.records.prefix(6)), state: $state, run: runAnalyze) }
                 else { GapsBody() }
             }.padding(.top, VxSpace.l)
         }
@@ -532,7 +592,10 @@ struct VxEmptyState: View {
                 .padding(.bottom, 16)
             Text(title).font(VxFont.title).foregroundStyle(VxColor.text)
             Text(message).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary).multilineTextAlignment(.center).padding(.top, 7)
-        }.padding(26).frame(maxWidth: .infinity).padding(.top, 24)
+        }
+        .padding(26)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.bottom, 40)
     }
 }
 
@@ -604,10 +667,18 @@ struct FindIdle: View {
     }
 }
 struct FindLoading: View {
-    var body: some View { VxCard { HStack(spacing: 10) { ProgressView(); Text("Checking Beatport, GetSongBPM…").font(VxFont.subhead).foregroundStyle(VxColor.textSecondary) } }.padding(.horizontal, VxSpace.xl) } }
+    @AppStorage("vx_lang") private var lang = "en"
+    var body: some View { VxCard { HStack(spacing: 10) { ProgressView(); Text(L.t("find.loading", lang)).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary) } }.padding(.horizontal, VxSpace.xl) } }
 struct FindResult: View { let lookup: BpmKeyLookup; var onReset: () -> Void
     @EnvironmentObject var theme: VertaxTheme
+    @EnvironmentObject var crate: CrateStore
+    @EnvironmentObject var set: SetStore
+    @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     var body: some View {
+        let record = lookup.asRecord()
+        let isSaved = crate.records.contains { $0.id == record.id }
+        let isInSet = set.orderedIDs.contains(record.id)
         VStack(spacing: 12) {
             VxCard {
                 VStack(alignment: .leading, spacing: VxSpace.l) {
@@ -633,7 +704,7 @@ struct FindResult: View { let lookup: BpmKeyLookup; var onReset: () -> Void
             VxCard {
                 VStack(alignment: .leading, spacing: VxSpace.m) {
                     HStack {
-                        Text("Confidence")
+                        Text(L.t("find.confidence", lang))
                             .font(VxFont.bodyStrong)
                             .foregroundStyle(VxColor.text)
                         Spacer()
@@ -643,14 +714,14 @@ struct FindResult: View { let lookup: BpmKeyLookup; var onReset: () -> Void
                     }
                     VxBar(value: lookup.confidence, accent: lookup.confidence >= 90 ? .lime : .amber)
                     HStack {
-                        Text("Source")
+                        Text(L.t("find.source", lang))
                             .font(VxFont.caption)
                             .foregroundStyle(VxColor.textTertiary)
                         Spacer()
                         VxChip(lookup.source, mono: true)
                     }
                     HStack {
-                        Text("Label · Cat")
+                        Text(L.t("find.label_cat", lang))
                             .font(VxFont.caption)
                             .foregroundStyle(VxColor.textTertiary)
                         Spacer()
@@ -661,10 +732,19 @@ struct FindResult: View { let lookup: BpmKeyLookup; var onReset: () -> Void
                 }
             }
             HStack(spacing: VxSpace.m) {
-                VxButton("Save to crate", icon: "plus", style: .dark) {}
-                VxButton("Use in set", icon: "slider.horizontal.3") {}
+                VxButton(isSaved ? L.t("find.saved_crate", lang) : L.t("find.save_crate", lang),
+                         icon: isSaved ? "checkmark" : "plus",
+                         style: .dark) {
+                    crate.add(record)
+                }
+                VxButton(isInSet ? L.t("record.in_set", lang) : L.t("find.use_set", lang),
+                         icon: isInSet ? "checkmark" : "slider.horizontal.3") {
+                    crate.add(record)
+                    set.add(record.id)
+                    router.tab = .build
+                }
             }
-            Button("New search", action: onReset)
+            Button(L.t("find.new_search", lang), action: onReset)
                 .font(VxFont.caption)
                 .foregroundStyle(VxColor.textTertiary)
                 .buttonStyle(.plain)
@@ -702,15 +782,20 @@ struct BuildRow: View {
 // — Analyze sub-body —
 struct AnalyzeBody: View {
     @EnvironmentObject var theme: VertaxTheme
+    let targets: [Record]
     @Binding var state: AnalyzeState
     var run: (Record) -> Void
-    let targets = Record.sample.prefix(2)
     var body: some View {
         VStack(spacing: 12) {
             switch state {
             case .idle:
-                ForEach(Array(targets)) { t in
-                    Button { run(t) } label: { VxRecordRow(t) }.buttonStyle(.plain)
+                if targets.isEmpty {
+                    VxEmptyState(system: "square.stack.3d.down.right", title: "No records yet",
+                                 message: "Import a Discogs collection or save a lookup to start analyzing.")
+                } else {
+                    ForEach(targets) { t in
+                        Button { run(t) } label: { VxRecordRow(t) }.buttonStyle(.plain)
+                    }
                 }
             case .loading(let step):
                 VxCard { VStack(alignment: .leading, spacing: 16) {

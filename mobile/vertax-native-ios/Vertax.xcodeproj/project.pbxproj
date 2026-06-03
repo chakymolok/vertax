@@ -24,6 +24,7 @@
 		000000000000000000000046 /* Vertax/Domain/Record.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000045 /* Vertax/Domain/Record.swift */; };
 		000000000000000000000048 /* Vertax/Domain/SetTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000047 /* Vertax/Domain/SetTransition.swift */; };
 		000000000000000000000050 /* Vertax/Domain/Stores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000049 /* Vertax/Domain/Stores.swift */; };
+		000000000000000000000064 /* Vertax/Domain/VertaxAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000063 /* Vertax/Domain/VertaxAPI.swift */; };
 		000000000000000000000052 /* Vertax/Navigation/RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000051 /* Vertax/Navigation/RootView.swift */; };
 		000000000000000000000054 /* Vertax/Screens/ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000053 /* Vertax/Screens/ImportView.swift */; };
 		000000000000000000000056 /* Vertax/Screens/LiveSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000055 /* Vertax/Screens/LiveSetView.swift */; };
@@ -52,6 +53,7 @@
 		000000000000000000000045 /* Vertax/Domain/Record.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Domain/Record.swift; sourceTree = "<group>"; };
 		000000000000000000000047 /* Vertax/Domain/SetTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Domain/SetTransition.swift; sourceTree = "<group>"; };
 		000000000000000000000049 /* Vertax/Domain/Stores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Domain/Stores.swift; sourceTree = "<group>"; };
+		000000000000000000000063 /* Vertax/Domain/VertaxAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Domain/VertaxAPI.swift; sourceTree = "<group>"; };
 		000000000000000000000051 /* Vertax/Navigation/RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Navigation/RootView.swift; sourceTree = "<group>"; };
 		000000000000000000000053 /* Vertax/Screens/ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Screens/ImportView.swift; sourceTree = "<group>"; };
 		000000000000000000000055 /* Vertax/Screens/LiveSetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vertax/Screens/LiveSetView.swift; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 				000000000000000000000045 /* Vertax/Domain/Record.swift */,
 				000000000000000000000047 /* Vertax/Domain/SetTransition.swift */,
 				000000000000000000000049 /* Vertax/Domain/Stores.swift */,
+				000000000000000000000063 /* Vertax/Domain/VertaxAPI.swift */,
 				000000000000000000000051 /* Vertax/Navigation/RootView.swift */,
 				000000000000000000000053 /* Vertax/Screens/ImportView.swift */,
 				000000000000000000000055 /* Vertax/Screens/LiveSetView.swift */,
@@ -195,6 +198,7 @@
 				000000000000000000000046 /* Vertax/Domain/Record.swift in Sources */,
 				000000000000000000000048 /* Vertax/Domain/SetTransition.swift in Sources */,
 				000000000000000000000050 /* Vertax/Domain/Stores.swift in Sources */,
+				000000000000000000000064 /* Vertax/Domain/VertaxAPI.swift in Sources */,
 				000000000000000000000052 /* Vertax/Navigation/RootView.swift in Sources */,
 				000000000000000000000054 /* Vertax/Screens/ImportView.swift in Sources */,
 				000000000000000000000056 /* Vertax/Screens/LiveSetView.swift in Sources */,

@@ -11,8 +11,15 @@ public enum ImportState: Equatable {
     case idle
     case loading(step: Int)
     case done(ImportSummary)
+    case failed(String)
     public static func == (l: ImportState, r: ImportState) -> Bool {
-        switch (l, r) { case (.idle,.idle): true; case let (.loading(a),.loading(b)): a==b; case (.done,.done): true; default: false }
+        switch (l, r) {
+        case (.idle,.idle): true
+        case let (.loading(a),.loading(b)): a==b
+        case (.done,.done): true
+        case (.failed,.failed): true
+        default: false
+        }
     }
 }
 
@@ -35,6 +42,7 @@ public final class DiscogsImporter: ObservableObject {
     @Published public var url = ""
     @Published public var state: ImportState = .idle
     private var timers: [Timer] = []
+    private let api = VertaxAPI()
 
     public init() {}
     public var handle: String { DiscogsImport.parseHandle(url) }
@@ -44,18 +52,28 @@ public final class DiscogsImporter: ObservableObject {
         guard !handle.isEmpty else { return }
         cancel()
         state = .loading(step: 0)
-        for s in 1...DiscogsImport.steps.count {
-            timers.append(Timer.scheduledTimer(withTimeInterval: Double(s) * 0.56, repeats: false) { [weak self] _ in
-                if case .loading = self?.state { self?.state = .loading(step: s) }
-            })
+        Task { await runImport(into: crate) }
+    }
+
+    @MainActor
+    private func runImport(into crate: CrateStore) async {
+        let username = handle
+        guard !username.isEmpty else { return }
+
+        for step in 1..<DiscogsImport.steps.count {
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            if case .loading = state { state = .loading(step: step) }
         }
-        timers.append(Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { [weak self] _ in
-            guard let self else { return }
-            let recs = Record.sample          // ← replace with real Discogs fetch
-            crate.records = recs
+
+        do {
+            let recs = try await api.importDiscogsCollection(username: username)
+            if case .loading = state { state = .loading(step: DiscogsImport.steps.count) }
+            crate.records = recs.isEmpty ? crate.records : recs
             let labels = Set(recs.map { $0.label }).count
-            self.state = .done(ImportSummary(records: recs.count, labels: labels, handle: self.handle))
-        })
+            state = .done(ImportSummary(records: recs.count, labels: labels, handle: username))
+        } catch {
+            state = .failed(error.localizedDescription)
+        }
     }
     public func cancel() { timers.forEach { $0.invalidate() }; timers = [] }
 }
