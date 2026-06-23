@@ -7,6 +7,9 @@ import SwiftUI
 
 public struct SettingsSheet: View {
     @EnvironmentObject var theme: VertaxTheme
+    @EnvironmentObject var crate: CrateStore
+    @EnvironmentObject var set: SetStore
+    @EnvironmentObject var wishlist: WishlistStore
     @EnvironmentObject var router: AppRouter
     @Environment(\.colorScheme) var scheme
     @Environment(\.dismiss) var dismiss
@@ -93,10 +96,28 @@ public struct SettingsSheet: View {
                 rowLabel("square.and.arrow.down", L.t("settings.import", lang), "Re-sync or add a collection", chevron: true)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            ShareLink(item: "vertax-crate.json") { rowLabel("square.and.arrow.up", L.t("settings.export", lang), "Save crate.json to Files", chevron: true) }
+            ShareLink(item: exportPayload) { rowLabel("square.and.arrow.up", L.t("settings.export", lang), "Share crate JSON", chevron: true) }
                 .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            rowLabel("externaldrive", "Backup sets & history", "On-device · last: today", chevron: true)
+            Button {
+                crate.loadDemo()
+                set.clear()
+                wishlist.clear()
+                dismiss()
+            } label: {
+                rowLabel("opticaldisc", L.t("settings.demo", lang), nil, chevron: false)
+            }
+            .buttonStyle(.plain)
+            Divider().overlay(VxColor.hairline)
+            Button(role: .destructive) {
+                crate.clear()
+                set.clear()
+                wishlist.clear()
+                dismiss()
+            } label: {
+                rowLabel("trash", L.t("settings.clear_local", lang), nil, chevron: false, tint: VxColor.amber)
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -107,6 +128,16 @@ public struct SettingsSheet: View {
             toggleRow("Anonymous analytics", "Help improve Vertax", $analytics, divider: true)
             toggleRow("Crash reports", nil, $crash, divider: false)
         }
+    }
+
+    private var exportPayload: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(crate.records),
+              let text = String(data: data, encoding: .utf8) else {
+            return "[]"
+        }
+        return text
     }
 
     // SUPPORT

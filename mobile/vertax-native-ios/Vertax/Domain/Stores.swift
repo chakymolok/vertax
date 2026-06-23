@@ -18,6 +18,8 @@ public enum L {
             "common.records": "RECORDS",
             "common.labels": "LABELS",
             "common.shown": "shown",
+            "common.demo": "Load demo crate",
+            "common.clear": "Clear local data",
             "search.crate": "Search artist, label, cat #",
             "search.find": "Artist, title or catalog #",
             "filter.all": "All",
@@ -28,8 +30,8 @@ public enum L {
             "onboarding.smart_title": "Math decides the fit.\nVertax explains it.",
             "onboarding.smart_hint": "Fills your 170–174 / 8A bridge.",
             "onboarding.start_title": "Start your crate",
-            "onboarding.start_body": "Bring your records in — or look around first with a demo.",
-            "onboarding.start_card": "Import from Discogs, add manually, or continue with the sample crate.",
+            "onboarding.start_body": "Bring your records in from Discogs, or try Vertax with a demo crate first.",
+            "onboarding.start_card": "Import from Discogs, search BPM/Key, save records, and build your first set.",
             "action.continue": "Continue",
             "action.demo_crate": "Continue with demo crate",
             "action.import_discogs": "Import from Discogs",
@@ -37,7 +39,7 @@ public enum L {
             "crate.title": "Crate",
             "crate.sorted": "Sorted by tempo",
             "crate.empty_title": "No records match",
-            "crate.empty_body": "Try clearing filters or searching a different label.",
+            "crate.empty_body": "Import from Discogs, save a BPM/Key lookup, or load the demo crate.",
             "find.title": "Find",
             "find.not_found": "No reliable match",
             "find.loading": "Checking Vertax BPM/Key…",
@@ -49,15 +51,25 @@ public enum L {
             "find.saved_crate": "Saved to crate",
             "find.use_set": "Use in set",
             "find.new_search": "New search",
+            "find.recent": "Recent",
+            "find.recent_hint": "Tap to look up again",
+            "find.import_hint": "Pull a whole collection by profile link",
             "build.title": "Warehouse",
             "build.start_live": "Start Live",
             "build.auto": "Auto",
             "build.manual": "Manual",
             "build.from_crate": "Build from crate",
             "build.clear": "Clear",
+            "build.no_crate_title": "Your crate is empty",
+            "build.no_crate_body": "Import your Discogs collection or load the demo crate before building a set.",
+            "build.empty_title": "No set yet",
+            "build.empty_body": "Build a tempo-sorted set from your crate, or add records manually from release actions.",
+            "build.opener": "Opener · first record",
             "dig.title": "Dig",
             "dig.analyze": "Analyze",
             "dig.gaps": "Gaps",
+            "dig.empty_title": "No records yet",
+            "dig.empty_body": "Import from Discogs or save a BPM/Key lookup to start analyzing.",
             "wishlist.title": "Wishlist",
             "wishlist.kicker": "DIG · SAVED RELEASES",
             "wishlist.empty_title": "Wishlist is empty",
@@ -71,6 +83,8 @@ public enum L {
             "settings.import": "Import from Discogs",
             "settings.export": "Export collection",
             "settings.about": "About Vertax",
+            "settings.demo": "Load demo crate",
+            "settings.clear_local": "Clear local crate, set and wishlist",
             "live.end": "End",
             "live.time": "TIME IN SET",
             "live.now": "NOW PLAYING",
@@ -115,6 +129,8 @@ public enum L {
             "common.records": "ПЛАСТИНОК",
             "common.labels": "ЛЕЙБЛОВ",
             "common.shown": "показано",
+            "common.demo": "Загрузить демо-ящик",
+            "common.clear": "Очистить локальные данные",
             "search.crate": "Артист, лейбл, кат. номер",
             "search.find": "Артист, трек или кат. номер",
             "filter.all": "Все",
@@ -125,8 +141,8 @@ public enum L {
             "onboarding.smart_title": "Совместимость считает математика.\nVertax объясняет результат.",
             "onboarding.smart_hint": "Закрывает мост 170–174 / 8A.",
             "onboarding.start_title": "Начни собирать ящик",
-            "onboarding.start_body": "Импортируй коллекцию или сначала посмотри демо.",
-            "onboarding.start_card": "Импорт из Discogs, ручное добавление или демо-коллекция.",
+            "onboarding.start_body": "Импортируй коллекцию из Discogs или сначала попробуй Vertax с демо-ящиком.",
+            "onboarding.start_card": "Импортируй Discogs, ищи BPM/Key, сохраняй пластинки и собирай первый сет.",
             "action.continue": "Дальше",
             "action.demo_crate": "Открыть демо-ящик",
             "action.import_discogs": "Импорт из Discogs",
@@ -134,7 +150,7 @@ public enum L {
             "crate.title": "Ящик",
             "crate.sorted": "По темпу",
             "crate.empty_title": "Ничего не найдено",
-            "crate.empty_body": "Сбрось фильтры или попробуй другой лейбл.",
+            "crate.empty_body": "Импортируй Discogs, сохрани результат BPM/Key или загрузи демо-ящик.",
             "find.title": "Найти",
             "find.not_found": "Надёжного совпадения нет",
             "find.loading": "Проверяю Vertax BPM/Key…",
@@ -146,15 +162,25 @@ public enum L {
             "find.saved_crate": "В ящике",
             "find.use_set": "В сет",
             "find.new_search": "Новый поиск",
+            "find.recent": "Недавнее",
+            "find.recent_hint": "Нажми, чтобы проверить ещё раз",
+            "find.import_hint": "Загрузи всю коллекцию по ссылке профиля",
             "build.title": "Собрать сет",
             "build.start_live": "Играть",
             "build.auto": "Авто",
             "build.manual": "Вручную",
             "build.from_crate": "Собрать из ящика",
             "build.clear": "Очистить",
+            "build.no_crate_title": "Ящик пуст",
+            "build.no_crate_body": "Импортируй коллекцию из Discogs или загрузи демо-ящик, чтобы собрать сет.",
+            "build.empty_title": "Сет ещё не собран",
+            "build.empty_body": "Собери сет по темпу из ящика или добавляй пластинки вручную из меню релиза.",
+            "build.opener": "Открывающий · первая пластинка",
             "dig.title": "Докопать",
             "dig.analyze": "Проверить",
             "dig.gaps": "Пробелы",
+            "dig.empty_title": "Пластинок пока нет",
+            "dig.empty_body": "Импортируй Discogs или сохрани результат BPM/Key, чтобы начать анализ.",
             "wishlist.title": "Вишлист",
             "wishlist.kicker": "DIG · СОХРАНЁННЫЕ РЕЛИЗЫ",
             "wishlist.empty_title": "Вишлист пуст",
@@ -168,6 +194,8 @@ public enum L {
             "settings.import": "Импорт из Discogs",
             "settings.export": "Экспорт коллекции",
             "settings.about": "О Vertax",
+            "settings.demo": "Загрузить демо-ящик",
+            "settings.clear_local": "Очистить ящик, сет и вишлист",
             "live.end": "Завершить",
             "live.time": "ВРЕМЯ СЕТА",
             "live.now": "ИГРАЕТ СЕЙЧАС",
@@ -212,6 +240,8 @@ public enum L {
             "common.records": "张唱片",
             "common.labels": "厂牌",
             "common.shown": "显示",
+            "common.demo": "载入演示唱片箱",
+            "common.clear": "清除本地数据",
             "search.crate": "搜索艺人、厂牌、编号",
             "search.find": "艺人、曲名或编号",
             "filter.all": "全部",
@@ -231,7 +261,7 @@ public enum L {
             "crate.title": "唱片箱",
             "crate.sorted": "按速度排序",
             "crate.empty_title": "没有匹配的唱片",
-            "crate.empty_body": "清除筛选，或试试其他厂牌。",
+            "crate.empty_body": "从 Discogs 导入、保存 BPM/Key 搜索结果，或载入演示唱片箱。",
             "find.title": "搜索",
             "find.not_found": "没有可靠匹配",
             "find.loading": "正在检查 Vertax BPM/Key…",
@@ -243,15 +273,25 @@ public enum L {
             "find.saved_crate": "已存入",
             "find.use_set": "加入 Set",
             "find.new_search": "重新搜索",
+            "find.recent": "最近",
+            "find.recent_hint": "点按再次查询",
+            "find.import_hint": "通过个人主页链接导入整套收藏",
             "build.title": "编排 Set",
             "build.start_live": "开始 Live",
             "build.auto": "自动",
             "build.manual": "手动",
             "build.from_crate": "从唱片箱生成",
             "build.clear": "清空",
+            "build.no_crate_title": "唱片箱为空",
+            "build.no_crate_body": "先导入 Discogs 收藏，或载入演示唱片箱再编排 set。",
+            "build.empty_title": "还没有 set",
+            "build.empty_body": "从唱片箱按速度生成 set，或在发行操作中手动加入唱片。",
+            "build.opener": "开场 · 第一张",
             "dig.title": "Dig",
             "dig.analyze": "分析",
             "dig.gaps": "缺口",
+            "dig.empty_title": "还没有唱片",
+            "dig.empty_body": "从 Discogs 导入，或保存 BPM/Key 查询结果后开始分析。",
             "wishlist.title": "愿望单",
             "wishlist.kicker": "DIG · 已保存发行",
             "wishlist.empty_title": "愿望单为空",
@@ -265,6 +305,8 @@ public enum L {
             "settings.import": "从 Discogs 导入",
             "settings.export": "导出收藏",
             "settings.about": "关于 Vertax",
+            "settings.demo": "载入演示唱片箱",
+            "settings.clear_local": "清除本地唱片箱、Set 和愿望单",
             "live.end": "结束",
             "live.time": "SET 时间",
             "live.now": "正在播放",
@@ -309,6 +351,8 @@ public enum L {
             "common.records": "枚",
             "common.labels": "レーベル",
             "common.shown": "表示",
+            "common.demo": "デモCrateを読み込む",
+            "common.clear": "ローカルデータを消去",
             "search.crate": "アーティスト、レーベル、品番",
             "search.find": "アーティスト、曲名、品番",
             "filter.all": "全て",
@@ -328,7 +372,7 @@ public enum L {
             "crate.title": "Crate",
             "crate.sorted": "テンポ順",
             "crate.empty_title": "一致するレコードがありません",
-            "crate.empty_body": "フィルターを解除するか、別のレーベルで検索してください。",
+            "crate.empty_body": "Discogsから読み込む、BPM/Key検索を保存する、またはデモCrateを読み込んでください。",
             "find.title": "検索",
             "find.not_found": "信頼できる一致なし",
             "find.loading": "Vertax BPM/Key を確認中…",
@@ -340,15 +384,25 @@ public enum L {
             "find.saved_crate": "保存済み",
             "find.use_set": "Setで使う",
             "find.new_search": "新規検索",
+            "find.recent": "最近",
+            "find.recent_hint": "タップして再検索",
+            "find.import_hint": "プロフィールリンクからコレクション全体を読み込みます",
             "build.title": "Set作成",
             "build.start_live": "Live開始",
             "build.auto": "自動",
             "build.manual": "手動",
             "build.from_crate": "Crateから作成",
             "build.clear": "クリア",
+            "build.no_crate_title": "Crate が空です",
+            "build.no_crate_body": "Discogs コレクションを読み込むか、デモCrateを読み込んでから Set を作成してください。",
+            "build.empty_title": "Set はまだ空です",
+            "build.empty_body": "Crateからテンポ順のSetを作るか、リリース操作から手動で追加してください。",
+            "build.opener": "オープナー · 1枚目",
             "dig.title": "Dig",
             "dig.analyze": "分析",
             "dig.gaps": "不足",
+            "dig.empty_title": "まだレコードがありません",
+            "dig.empty_body": "Discogsから読み込むか、BPM/Key検索を保存すると分析できます。",
             "wishlist.title": "Wishlist",
             "wishlist.kicker": "DIG · 保存したリリース",
             "wishlist.empty_title": "Wishlist は空です",
@@ -362,6 +416,8 @@ public enum L {
             "settings.import": "Discogsから読み込む",
             "settings.export": "コレクションを書き出す",
             "settings.about": "Vertaxについて",
+            "settings.demo": "デモCrateを読み込む",
+            "settings.clear_local": "ローカルのCrate、Set、Wishlistを消去",
             "live.end": "終了",
             "live.time": "SET時間",
             "live.now": "再生中",
@@ -424,7 +480,7 @@ public final class CrateStore: ObservableObject {
     public init(records: [Record]? = nil) {
         self.records = records
             ?? VertaxLocalStore.load([Record].self, key: Self.storageKey)
-            ?? Record.sample
+            ?? []
     }
 
     public func add(_ r: Record) {
@@ -438,6 +494,9 @@ public final class CrateStore: ObservableObject {
         guard let index = records.firstIndex(where: { $0.id == record.id }) else { return }
         records[index] = record
     }
+
+    public func loadDemo() { records = Record.sample }
+    public func clear() { records = [] }
 
     /// Filtered + tempo-sorted view used by CrateView.
     public func filtered(query: String, chips: Set<CrateFilter>) -> [Record] {
@@ -466,7 +525,7 @@ public final class SetStore: ObservableObject {
     public init(orderedIDs: [String]? = nil) {
         self.orderedIDs = orderedIDs
             ?? VertaxLocalStore.load([String].self, key: Self.storageKey)
-            ?? ["r3","r1","r11","r5"]
+            ?? []
     }
 
     public func records(in crate: CrateStore) -> [Record] {
@@ -500,6 +559,7 @@ public final class WishlistStore: ObservableObject {
     public func add(_ id: String) { if !recordIDs.contains(id) { recordIDs.insert(id, at: 0) } }
     public func remove(_ id: String) { recordIDs.removeAll { $0 == id } }
     public func toggle(_ id: String) { contains(id) ? remove(id) : add(id) }
+    public func clear() { recordIDs.removeAll() }
 }
 
 // MARK: - Filters

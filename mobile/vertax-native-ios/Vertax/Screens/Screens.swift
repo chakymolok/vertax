@@ -4,7 +4,7 @@ import SwiftUI
 // These are STRUCTURAL ports of the prototype: correct state machines, data
 // wiring, navigation and component usage. Visual polish (exact paddings, hero
 // blocks, sticky bars) follows the prototype 1:1 — fill in against the tokens.
-// Every screen is runnable today on Record.sample.
+// Screens run with local storage first; demo data is an explicit user action.
 
 // =====================================================================
 // CRATE
@@ -19,10 +19,11 @@ public struct CrateView: View {
     public init() {}
     public var body: some View {
         let records = crate.filtered(query: query, chips: chips)
+        let labelCount = Set(crate.records.map { $0.label }.filter { !$0.isEmpty }).count
         VStack(spacing: 0) {
             HStack(alignment: .bottom, spacing: VxSpace.m) {
                 VStack(alignment: .leading, spacing: VxSpace.xs) {
-                    Text("\(crate.records.count) \(L.t("common.records", lang)) · 7 \(L.t("common.labels", lang))")
+                    Text("\(crate.records.count) \(L.t("common.records", lang)) · \(labelCount) \(L.t("common.labels", lang))")
                         .font(VxFont.labelMono)
                         .tracking(VxTracking.labelMono)
                         .foregroundStyle(VxColor.textTertiary)
@@ -55,8 +56,20 @@ public struct CrateView: View {
             }.padding(.horizontal, VxSpace.xl)
 
             if records.isEmpty {
-                VxEmptyState(system: "magnifyingglass", title: L.t("crate.empty_title", lang),
-                             message: L.t("crate.empty_body", lang))
+                VStack(spacing: VxSpace.m) {
+                    VxEmptyState(system: "square.stack.3d.down.right", title: L.t("crate.empty_title", lang),
+                                 message: L.t("crate.empty_body", lang))
+                        .frame(maxHeight: 330)
+                    VStack(spacing: VxSpace.s) {
+                        VxButton(L.t("action.import_discogs", lang), icon: "square.and.arrow.down") {
+                            router.sheet = .discogsImport
+                        }
+                        VxButton(L.t("common.demo", lang), icon: "opticaldisc", style: .dark) {
+                            crate.loadDemo()
+                        }
+                    }
+                    .padding(.horizontal, VxSpace.xl)
+                }
             } else {
                 ScrollView {
                     SectionHead(title: L.t("crate.sorted", lang), count: "\(records.count) \(L.t("common.shown", lang))")
@@ -146,13 +159,8 @@ public struct FindView: View {
                     let hit = try await api.lookupBeatport(artist: parsed.artist, title: parsed.title)
                     await MainActor.run { state = .result(hit) }
                 } catch {
-                    let fallback = Self.lookup(query)
                     await MainActor.run {
-                        if let fallback {
-                            state = .result(fallback)
-                        } else {
-                            state = .notFound(query)
-                        }
+                        state = .notFound(query)
                     }
                 }
             }
@@ -173,16 +181,6 @@ public struct FindView: View {
         if parts.count == 2 { return (parts[0], parts[1]) }
         return (trimmed, trimmed)
     }
-    // Demo database — swap for the real Vertax API.
-    static func lookup(_ q: String) -> BpmKeyLookup? {
-        let s = q.lowercased()
-        let db = [
-            BpmKeyLookup(artist:"Nilo Reign", title:"Halflight", label:"Proxima", catalog:"PRX114", key:"8A", musicalKey:"A min", genre:"Deep DnB", source:"Beatport", bpm:172, confidence:96),
-            BpmKeyLookup(artist:"Komatic", title:"Northwall", label:"Halftone", catalog:"HLF005", key:"9A", musicalKey:"E min", genre:"UK Bass", source:"GetSongBPM", bpm:174, confidence:92),
-            BpmKeyLookup(artist:"Senan", title:"Driftwood Dub", label:"Bunker Dub", catalog:"BNK012", key:"4A", musicalKey:"F min", genre:"Halftime", source:"AcousticBrainz", bpm:86, confidence:81),
-        ]
-        return db.first { "\($0.artist) \($0.title) \($0.catalog)".lowercased().contains(s) }
-    }
 }
 
 // =====================================================================
@@ -202,7 +200,11 @@ public struct BuildView: View {
                 HStack {
                     VxScreenHeader(kicker: "SET · \(records.count) \(L.t("common.records", lang)) · ~\(records.count*4) MIN", title: L.t("build.title", lang))
                     Spacer()
-                    VxButton(L.t("build.start_live", lang), icon: "play.fill") { router.showLiveSet = true }
+                    VxButton(L.t("build.start_live", lang), icon: "play.fill", style: records.isEmpty ? .dark : .primary) {
+                        if !records.isEmpty { router.showLiveSet = true }
+                    }
+                    .disabled(records.isEmpty)
+                    .opacity(records.isEmpty ? 0.45 : 1)
                         .frame(width: 130)
                 }
                 VxSegmented(selection: $source, options: [(.auto, L.t("build.auto", lang)), (.manual, L.t("build.manual", lang))])
@@ -216,23 +218,50 @@ public struct BuildView: View {
             }
             .padding(.horizontal, VxSpace.xl)
             .padding(.bottom, VxSpace.m)
-            List {
-                ForEach(Array(records.enumerated()), id: \.element.id) { i, r in
-                    BuildRow(index: i, record: r, transition: i > 0 ? SetTransition(from: records[i-1], to: r) : nil)
-                        .listRowInsets(EdgeInsets(top: 5, leading: VxSpace.xl, bottom: 5, trailing: VxSpace.xl))
-                        .listRowBackground(Color.clear).listRowSeparator(.hidden)
-                        .onTapGesture { router.openRelease(r) }
+            if records.isEmpty {
+                VStack(spacing: VxSpace.m) {
+                    VxEmptyState(
+                        system: crate.records.isEmpty ? "square.stack.3d.down.right" : "slider.horizontal.3",
+                        title: crate.records.isEmpty ? L.t("build.no_crate_title", lang) : L.t("build.empty_title", lang),
+                        message: crate.records.isEmpty ? L.t("build.no_crate_body", lang) : L.t("build.empty_body", lang)
+                    )
+                    .frame(maxHeight: 330)
+                    VStack(spacing: VxSpace.s) {
+                        if crate.records.isEmpty {
+                            VxButton(L.t("action.import_discogs", lang), icon: "square.and.arrow.down") {
+                                router.sheet = .discogsImport
+                            }
+                            VxButton(L.t("common.demo", lang), icon: "opticaldisc", style: .dark) {
+                                crate.loadDemo()
+                            }
+                        } else {
+                            VxButton(L.t("build.from_crate", lang), icon: "sparkles") {
+                                set.autoBuild(from: crate.records)
+                                source = .auto
+                            }
+                        }
+                    }
+                    .padding(.horizontal, VxSpace.xl)
                 }
-                .onMove { set.move(from: $0, to: $1) }   // native drag-to-reorder
-                .onDelete { offsets in
-                    for offset in offsets {
-                        guard records.indices.contains(offset) else { continue }
-                        set.remove(records[offset].id)
+            } else {
+                List {
+                    ForEach(Array(records.enumerated()), id: \.element.id) { i, r in
+                        BuildRow(index: i, record: r, transition: i > 0 ? SetTransition(from: records[i-1], to: r) : nil)
+                            .listRowInsets(EdgeInsets(top: 5, leading: VxSpace.xl, bottom: 5, trailing: VxSpace.xl))
+                            .listRowBackground(Color.clear).listRowSeparator(.hidden)
+                            .onTapGesture { router.openRelease(r) }
+                    }
+                    .onMove { set.move(from: $0, to: $1) }   // native drag-to-reorder
+                    .onDelete { offsets in
+                        for offset in offsets {
+                            guard records.indices.contains(offset) else { continue }
+                            set.remove(records[offset].id)
+                        }
                     }
                 }
+                .listStyle(.plain).environment(\.editMode, .constant(.active))
+                .scrollContentBackground(.hidden)
             }
-            .listStyle(.plain).environment(\.editMode, .constant(.active))
-            .scrollContentBackground(.hidden)
         }
     }
 }
@@ -602,13 +631,14 @@ struct VxEmptyState: View {
 // — Find sub-bodies —
 struct FindIdle: View {
     @EnvironmentObject var router: AppRouter
+    @AppStorage("vx_lang") private var lang = "en"
     var onPick: (String) -> Void
     // RECENT lookups + an "Import from Discogs" card (router.sheet = .discogsImport).
     // No label-scan entry — that feature does not exist in Vertax.
     private let recent = ["Komatic Northwall", "Dovetail Undertow", "Senan Driftwood Dub"]
     var body: some View {
         VStack(alignment: .leading, spacing: VxSpace.m) {
-            SectionHead(title: "Recent")
+            SectionHead(title: L.t("find.recent", lang))
             VxCard(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(recent, id: \.self) { item in
@@ -624,7 +654,7 @@ struct FindIdle: View {
                                         .font(VxFont.body)
                                         .foregroundStyle(VxColor.text)
                                         .lineLimit(1)
-                                    Text("Tap to look up again")
+                                    Text(L.t("find.recent_hint", lang))
                                         .font(VxFont.caption)
                                         .foregroundStyle(VxColor.textSecondary)
                                 }
@@ -648,10 +678,10 @@ struct FindIdle: View {
                             .background(VxColor.lime.opacity(0.14))
                             .clipShape(RoundedRectangle(cornerRadius: VxRadius.control, style: .continuous))
                         VStack(alignment: .leading, spacing: VxSpace.xs) {
-                            Text("Import from Discogs")
+                            Text(L.t("action.import_discogs", lang))
                                 .font(VxFont.bodyStrong)
                                 .foregroundStyle(VxColor.text)
-                            Text("Pull a whole collection by profile link")
+                            Text(L.t("find.import_hint", lang))
                                 .font(VxFont.caption)
                                 .foregroundStyle(VxColor.textSecondary)
                         }
@@ -759,6 +789,7 @@ struct FindResult: View { let lookup: BpmKeyLookup; var onReset: () -> Void
 struct BuildRow: View {
     @EnvironmentObject var theme: VertaxTheme
     @Environment(\.colorScheme) var scheme
+    @AppStorage("vx_lang") private var lang = "en"
     let index: Int; let record: Record; let transition: SetTransition?
     var body: some View {
         VxCard(padding: 9) {
@@ -767,7 +798,7 @@ struct BuildRow: View {
                 VxCover(seed: record.coverSeed, catalog: record.catalog, size: 42)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(record.artist) — \(record.title)").font(VxFont.body).foregroundStyle(VxColor.text).lineLimit(1)
-                    Text(transition?.text ?? "Opener · first record")
+                    Text(transition?.text ?? L.t("build.opener", lang))
                         .font(VxFont.caption)
                         .foregroundStyle(transition.map { $0.tone == .warn ? VxColor.amber : theme.accentText(scheme) } ?? VxColor.textSecondary)
                 }
@@ -782,6 +813,7 @@ struct BuildRow: View {
 // — Analyze sub-body —
 struct AnalyzeBody: View {
     @EnvironmentObject var theme: VertaxTheme
+    @AppStorage("vx_lang") private var lang = "en"
     let targets: [Record]
     @Binding var state: AnalyzeState
     var run: (Record) -> Void
@@ -790,8 +822,8 @@ struct AnalyzeBody: View {
             switch state {
             case .idle:
                 if targets.isEmpty {
-                    VxEmptyState(system: "square.stack.3d.down.right", title: "No records yet",
-                                 message: "Import a Discogs collection or save a lookup to start analyzing.")
+                    VxEmptyState(system: "square.stack.3d.down.right", title: L.t("dig.empty_title", lang),
+                                 message: L.t("dig.empty_body", lang))
                 } else {
                     ForEach(targets) { t in
                         Button { run(t) } label: { VxRecordRow(t) }.buttonStyle(.plain)
@@ -1050,6 +1082,7 @@ public struct WishlistView: View {
 
 struct OnboardingView: View {
     @EnvironmentObject var theme: VertaxTheme
+    @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var router: AppRouter
     @AppStorage("vx_lang") private var lang = "en"
     @State private var step = 0
@@ -1090,7 +1123,10 @@ struct OnboardingView: View {
                     VxButton(L.t("action.continue", lang)) { step += 1 }
                 } else {
                     VStack(spacing: VxSpace.m) {
-                        VxButton(L.t("action.demo_crate", lang)) { router.showOnboarding = false }
+                        VxButton(L.t("action.demo_crate", lang)) {
+                            crate.loadDemo()
+                            router.showOnboarding = false
+                        }
                         VxButton(L.t("action.import_discogs", lang), icon: "square.and.arrow.down", style: .dark) {
                             router.showOnboarding = false
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
