@@ -93,7 +93,7 @@ public enum L {
             "action.save": "Save",
             "edit.title": "Edit track",
             "edit.section": "Track metadata",
-            "edit.note": "This edits the local demo crate now. Later this is the same seam for local persistence and Vertax API sync.",
+            "edit.note": "Saved on this device. Server sync will be added after the native data model stabilizes.",
             "import.title": "Import from Discogs",
             "import.subtitle": "Yours or anyone's public collection",
             "import.placeholder": "Profile link or username",
@@ -190,7 +190,7 @@ public enum L {
             "action.save": "Сохранить",
             "edit.title": "Правка трека",
             "edit.section": "Метаданные трека",
-            "edit.note": "Сейчас это правит локальную демо-коллекцию. Позже здесь будет сохранение на устройстве и синк с API Vertax.",
+            "edit.note": "Сохраняется на этом устройстве. Серверный синк добавим после стабилизации нативной модели данных.",
             "import.title": "Импорт из Discogs",
             "import.subtitle": "Твоя или любая публичная коллекция",
             "import.placeholder": "Ссылка профиля или username",
@@ -287,7 +287,7 @@ public enum L {
             "action.save": "保存",
             "edit.title": "编辑曲目",
             "edit.section": "曲目元数据",
-            "edit.note": "现在只编辑本地演示唱片箱。之后这里会接入本地存储和 Vertax API 同步。",
+            "edit.note": "已保存在此设备上。原生数据模型稳定后会加入服务器同步。",
             "import.title": "从 Discogs 导入",
             "import.subtitle": "你的或任何公开收藏",
             "import.placeholder": "个人主页链接或用户名",
@@ -384,7 +384,7 @@ public enum L {
             "action.save": "保存",
             "edit.title": "曲を編集",
             "edit.section": "曲メタデータ",
-            "edit.note": "現在はローカルのデモCrateのみ編集します。後で端末保存と Vertax API 同期につながります。",
+            "edit.note": "この端末に保存されます。ネイティブのデータモデルが安定した後、サーバー同期を追加します。",
             "import.title": "Discogsから読み込む",
             "import.subtitle": "自分、または公開コレクション",
             "import.placeholder": "プロフィールURLまたはユーザー名",
@@ -401,9 +401,31 @@ public enum L {
 
 // MARK: - App-level stores & router
 
+private enum VertaxLocalStore {
+    private static let defaults = UserDefaults.standard
+
+    static func load<T: Decodable>(_ type: T.Type, key: String) -> T? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+
+    static func save<T: Encodable>(_ value: T, key: String) {
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        defaults.set(data, forKey: key)
+    }
+}
+
 public final class CrateStore: ObservableObject {
-    @Published public var records: [Record]
-    public init(records: [Record] = Record.sample) { self.records = records }
+    private static let storageKey = "vertax.native.crate.records.v1"
+    @Published public var records: [Record] {
+        didSet { VertaxLocalStore.save(records, key: Self.storageKey) }
+    }
+
+    public init(records: [Record]? = nil) {
+        self.records = records
+            ?? VertaxLocalStore.load([Record].self, key: Self.storageKey)
+            ?? Record.sample
+    }
 
     public func add(_ r: Record) {
         if let index = records.firstIndex(where: { $0.id == r.id }) {
@@ -436,8 +458,16 @@ public final class CrateStore: ObservableObject {
 }
 
 public final class SetStore: ObservableObject {
-    @Published public var orderedIDs: [String]
-    public init(orderedIDs: [String] = ["r3","r1","r11","r5"]) { self.orderedIDs = orderedIDs }
+    private static let storageKey = "vertax.native.set.ordered_ids.v1"
+    @Published public var orderedIDs: [String] {
+        didSet { VertaxLocalStore.save(orderedIDs, key: Self.storageKey) }
+    }
+
+    public init(orderedIDs: [String]? = nil) {
+        self.orderedIDs = orderedIDs
+            ?? VertaxLocalStore.load([String].self, key: Self.storageKey)
+            ?? ["r3","r1","r11","r5"]
+    }
 
     public func records(in crate: CrateStore) -> [Record] {
         orderedIDs.compactMap { id in crate.records.first { $0.id == id } }
@@ -456,8 +486,16 @@ public final class SetStore: ObservableObject {
 }
 
 public final class WishlistStore: ObservableObject {
-    @Published public var recordIDs: [String] = []
-    public init() {}
+    private static let storageKey = "vertax.native.wishlist.record_ids.v1"
+    @Published public var recordIDs: [String] {
+        didSet { VertaxLocalStore.save(recordIDs, key: Self.storageKey) }
+    }
+
+    public init(recordIDs: [String]? = nil) {
+        self.recordIDs = recordIDs
+            ?? VertaxLocalStore.load([String].self, key: Self.storageKey)
+            ?? []
+    }
     public func contains(_ id: String) -> Bool { recordIDs.contains(id) }
     public func add(_ id: String) { if !recordIDs.contains(id) { recordIDs.insert(id, at: 0) } }
     public func remove(_ id: String) { recordIDs.removeAll { $0 == id } }
@@ -491,6 +529,7 @@ public struct CrateFilter: Hashable, Identifiable {
 // MARK: - Router
 
 public final class AppRouter: ObservableObject {
+    private static let onboardingKey = "vertax.native.onboarding.dismissed.v1"
     public enum Tab: Hashable { case crate, find, build, dig, wishlist, settings }
     @Published public var tab: Tab = .crate
 
@@ -502,10 +541,14 @@ public final class AppRouter: ObservableObject {
 
     // modals
     @Published public var sheet: AppSheet?
-    @Published public var showOnboarding = true
+    @Published public var showOnboarding: Bool {
+        didSet { UserDefaults.standard.set(!showOnboarding, forKey: Self.onboardingKey) }
+    }
     @Published public var showLiveSet = false   // reserved — next milestone
 
-    public init() {}
+    public init() {
+        self.showOnboarding = !UserDefaults.standard.bool(forKey: Self.onboardingKey)
+    }
     public func openRelease(_ r: Record) {
         switch tab {
         case .crate: cratePath.append(r)

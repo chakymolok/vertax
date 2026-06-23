@@ -1,9 +1,8 @@
 import SwiftUI
 
 // MARK: - Discogs import — domain
-// Paste a profile link or username → pull the public collection. Port of the
-// prototype's DiscogsImportSheet. The fetch here is stubbed with Record.sample;
-// wire it to the real Discogs API (or the Vertax backend) when available.
+// Paste a profile link or username → pull the public collection through the
+// Vertax backend Discogs proxy.
 
 public struct ImportSummary { public let records: Int; public let labels: Int; public let handle: String }
 
@@ -41,7 +40,6 @@ public enum DiscogsImport {
 public final class DiscogsImporter: ObservableObject {
     @Published public var url = ""
     @Published public var state: ImportState = .idle
-    private var timers: [Timer] = []
     private let api = VertaxAPI()
 
     public init() {}
@@ -75,5 +73,5 @@ public final class DiscogsImporter: ObservableObject {
             state = .failed(error.localizedDescription)
         }
     }
-    public func cancel() { timers.forEach { $0.invalidate() }; timers = [] }
+    public func cancel() {}
 }
