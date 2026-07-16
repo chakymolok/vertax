@@ -69,7 +69,7 @@ public struct ImportSheet: View {
                 .font(VxFont.caption).foregroundStyle(VxColor.textTertiary).lineSpacing(3).padding(.top, 16)
 
             VxButton(L.t("import.button", lang), icon: "square.and.arrow.down",
-                     style: importer.handle.isEmpty ? .dark : .primary) { importer.run(into: crate) }
+                     style: importer.handle.isEmpty ? .dark : .primary) { importer.run(into: crate, lang: lang) }
                 .opacity(importer.handle.isEmpty ? 0.55 : 1).padding(.top, 18)
         }
     }
@@ -87,7 +87,7 @@ public struct ImportSheet: View {
             }.padding(14).background(VxColor.card).clipShape(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
             VxCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array(DiscogsImport.steps.enumerated()), id: \.offset) { i, s in
+                    ForEach(Array(DiscogsImport.steps(lang: lang).enumerated()), id: \.offset) { i, s in
                         HStack(spacing: 11) {
                             ZStack {
                                 Circle().strokeBorder(i < step ? .clear : VxColor.hairlineStrong, lineWidth: 1.5)
@@ -140,7 +140,7 @@ public struct ImportSheet: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
             VxButton(L.t("import.retry", lang), icon: "arrow.clockwise") {
-                importer.run(into: crate)
+                importer.run(into: crate, lang: lang)
             }
         }
         .frame(maxWidth: .infinity)

@@ -75,7 +75,7 @@ public struct LiveSetView: View {
             HStack(spacing: 2) {
                 ForEach(LiveMode.allCases) { m in
                     Button { session.mode = m; session.index = 0; session.playedIDs = [] } label: {
-                        Text(m == .set ? "SET" : "FREE").font(VxFont.mono(11, .medium))
+                        Text(m == .set ? L.t("live.set_mode", lang) : L.t("live.free_mode", lang)).font(VxFont.mono(11, .medium))
                             .foregroundStyle(session.mode == m ? .white : VxColor.textTertiary)
                             .padding(.horizontal, 9).padding(.vertical, 5)
                             .background(session.mode == m ? Color.white.opacity(0.13) : .clear)
@@ -106,7 +106,7 @@ public struct LiveSetView: View {
                 HStack(alignment: .bottom, spacing: 0) {
                     bigStat("\(now.bpm)", "BPM", .white, align: .leading)
                     bigStat(now.keyCode, now.camelot.musicalKey.uppercased(), theme.accent, align: .center)
-                    bigStat(now.side, "SLEEVE", .white, align: .trailing)
+                    bigStat(now.side, L.t("live.sleeve", lang), .white, align: .trailing)
                 }.padding(.top, 20)
             }
         }
@@ -122,7 +122,7 @@ public struct LiveSetView: View {
     private func setlist(order: [Record]) -> some View {
         VStack(spacing: 2) {
             HStack {
-                Text(session.mode == .set ? "SETLIST" : "CRATE QUEUE").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text(session.mode == .set ? L.t("live.setlist", lang) : L.t("live.crate_queue", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
                 Spacer()
                 Text("\(session.playedIDs.count) \(L.t("live.played", lang))").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             }.padding(.vertical, 10)

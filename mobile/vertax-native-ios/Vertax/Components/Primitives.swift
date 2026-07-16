@@ -51,7 +51,8 @@ public struct VxKeyBadge: View {
     var highlighted = false      // lime when it's a perfect/same-key match
     public init(_ code: String, highlighted: Bool = false) { self.code = code; self.highlighted = highlighted }
     public var body: some View {
-        Text(code)
+        let displayCode = code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "KEY?" : code
+        Text(displayCode)
             .font(VxFont.keyBadge)
             .foregroundStyle(highlighted ? theme.accentText(scheme) : VxColor.cyan)
             .padding(.horizontal, 7).frame(minWidth: 30, minHeight: 26)
@@ -72,7 +73,7 @@ public struct VxBpmText: View {
     }
     public var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text("\(value)").font(VxFont.bpm(size)).foregroundStyle(VxColor.text)
+            Text(value > 0 ? "\(value)" : "--").font(VxFont.bpm(size)).foregroundStyle(VxColor.text)
             if unit { Text("BPM").font(VxFont.bpm(size * 0.42)).foregroundStyle(VxColor.textTertiary) }
         }
     }
@@ -167,7 +168,7 @@ public struct VxRecordRow: View {
                     Text("\(record.label) · \(record.catalog) · \(record.genre)").font(VxFont.caption).foregroundStyle(VxColor.textSecondary).lineLimit(1)
                 }
                 Spacer(minLength: 8)
-                Text("\(record.bpm)").font(VxFont.bpm(15)).foregroundStyle(VxColor.text)
+                VxBpmText(record.bpm, size: 15, unit: false)
                 VxKeyBadge(record.keyCode, highlighted: record.keyCode == "8A")
             }
             .padding(.vertical, theme.metrics.rowPaddingV)

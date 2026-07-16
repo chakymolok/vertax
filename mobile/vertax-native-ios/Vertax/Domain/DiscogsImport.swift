@@ -24,6 +24,14 @@ public enum ImportState: Equatable {
 
 public enum DiscogsImport {
     public static let steps = ["Fetching Discogs profile", "Reading collection", "Matching BPM & Key", "Building your crate"]
+    public static func steps(lang: String) -> [String] {
+        [
+            L.t("import.step_profile", lang),
+            L.t("import.step_collection", lang),
+            L.t("import.step_matching", lang),
+            L.t("import.step_crate", lang)
+        ]
+    }
 
     /// Extract a username from a pasted profile URL, @handle, or bare username.
     public static func parseHandle(_ raw: String) -> String {
@@ -46,15 +54,15 @@ public final class DiscogsImporter: ObservableObject {
     public var handle: String { DiscogsImport.parseHandle(url) }
 
     /// Kicks off the staged import; on completion replaces the crate's records.
-    public func run(into crate: CrateStore) {
+    public func run(into crate: CrateStore, lang: String = "en") {
         guard !handle.isEmpty else { return }
         cancel()
         state = .loading(step: 0)
-        Task { await runImport(into: crate) }
+        Task { await runImport(into: crate, lang: lang) }
     }
 
     @MainActor
-    private func runImport(into crate: CrateStore) async {
+    private func runImport(into crate: CrateStore, lang: String) async {
         let username = handle
         guard !username.isEmpty else { return }
 
@@ -66,7 +74,11 @@ public final class DiscogsImporter: ObservableObject {
         do {
             let recs = try await api.importDiscogsCollection(username: username)
             if case .loading = state { state = .loading(step: DiscogsImport.steps.count) }
-            crate.records = recs.isEmpty ? crate.records : recs
+            guard !recs.isEmpty else {
+                state = .failed(L.t("import.empty", lang))
+                return
+            }
+            crate.records = recs
             let labels = Set(recs.map { $0.label }).count
             state = .done(ImportSummary(records: recs.count, labels: labels, handle: username))
         } catch {

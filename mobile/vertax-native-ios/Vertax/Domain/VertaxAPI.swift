@@ -235,7 +235,7 @@ private struct DiscogsBasicInformation: Decodable {
             catalog: catalog,
             year: year.map(String.init) ?? "",
             bpm: 0,
-            keyCode: "1A",
+            keyCode: "",
             side: "A1",
             genre: genre,
             rating: 0,

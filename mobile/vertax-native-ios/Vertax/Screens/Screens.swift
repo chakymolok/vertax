@@ -322,6 +322,7 @@ public struct ReleaseView: View {
     public var body: some View {
         let record = crate.records.first { $0.id == self.record.id } ?? self.record
         let fitCount = crate.records.filter { $0.id != record.id && record.camelot.relation(to: $0.camelot) != nil }.count
+        let tracks = releaseTracks(for: record)
         ScrollView {
             VStack(alignment: .leading, spacing: VxSpace.l) {
                 // header
@@ -340,7 +341,7 @@ public struct ReleaseView: View {
                 // technical block
                 VxCard {
                     HStack {
-                        techCell(label: "Tempo") { VxBpmText(record.bpm, size: 30) }
+                        techCell(label: L.t("release.tempo", lang)) { VxBpmText(record.bpm, size: 30) }
                         Divider().frame(height: 40).overlay(VxColor.hairline)
                         techCell(label: record.camelot.musicalKey) { Text(record.keyCode).font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
                         Divider().frame(height: 40).overlay(VxColor.hairline)
@@ -350,25 +351,25 @@ public struct ReleaseView: View {
                 .onTapGesture { router.sheet = .editRecord(record) }
                 // cue preview
                 VxCard { VxWaveform(bars: 54, seed: 11, height: 30, lime: true, playhead: 19) }
-                SectionHead(title: "Tracklist", count: "4 tracks")
+                SectionHead(title: L.t("release.tracklist", lang), count: "\(tracks.count) \(L.t("release.tracks", lang))")
                 VxCard(padding: 0) {
                     VStack(spacing: 0) {
-                        ForEach(releaseTracks(for: record)) { track in
+                        ForEach(tracks) { track in
                             ReleaseTrackRow(track: track, highlightedKey: record.keyCode)
-                            if track.id != releaseTracks(for: record).last?.id {
+                            if track.id != tracks.last?.id {
                                 Divider().overlay(VxColor.hairline)
                             }
                         }
                     }
                 }
-                SectionHead(title: "Mixes well into", count: "\(fitCount) in crate")
+                SectionHead(title: L.t("release.mixes_well", lang), count: "\(fitCount) \(L.t("release.in_crate", lang))")
                 HStack(spacing: VxSpace.s) {
                     ForEach(harmonicNeighbours(for: record, in: crate.records)) { item in
                         HarmonicNeighbourCell(item: item)
                     }
                 }
                 // notes
-                SectionHead(title: "Notes")
+                SectionHead(title: L.t("release.notes", lang))
                 VxCard { Text(record.notes).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary) }
             }
             .padding(VxSpace.xl)
@@ -803,7 +804,7 @@ struct BuildRow: View {
                         .foregroundStyle(transition.map { $0.tone == .warn ? VxColor.amber : theme.accentText(scheme) } ?? VxColor.textSecondary)
                 }
                 Spacer(minLength: 6)
-                Text("\(record.bpm)").font(VxFont.bpm(14)).foregroundStyle(VxColor.text)
+                VxBpmText(record.bpm, size: 14, unit: false)
                 VxKeyBadge(record.keyCode, highlighted: record.keyCode == "8A")
             }
         }
@@ -867,6 +868,7 @@ struct AnalyzeBody: View {
 struct GapsBody: View {
     @EnvironmentObject var theme: VertaxTheme
     @EnvironmentObject var crate: CrateStore
+    @AppStorage("vx_lang") private var lang = "en"
     private let buckets: [(String, ClosedRange<Int>)] = [
         ("84–90", 84...90), ("160–166", 160...166), ("166–170", 166...170),
         ("170–174", 170...174), ("174–178", 174...178), ("178+", 178...220),
@@ -876,11 +878,11 @@ struct GapsBody: View {
             VxCard {
                 VStack(alignment: .leading, spacing: VxSpace.l) {
                     HStack {
-                        Text("Tempo coverage")
+                        Text(L.t("dig.tempo_coverage", lang))
                             .font(VxFont.bodyStrong)
                             .foregroundStyle(VxColor.text)
                         Spacer()
-                        Text("RECORDS / BPM")
+                        Text(L.t("dig.records_bpm", lang))
                             .font(VxFont.labelMono)
                             .tracking(VxTracking.labelMono)
                             .foregroundStyle(VxColor.textTertiary)
@@ -913,11 +915,11 @@ struct GapsBody: View {
             VxCard {
                 VStack(alignment: .leading, spacing: VxSpace.m) {
                     HStack {
-                        Text("Camelot map")
+                        Text(L.t("dig.camelot_map", lang))
                             .font(VxFont.bodyStrong)
                             .foregroundStyle(VxColor.text)
                         Spacer()
-                        Text("A · MINOR ROW")
+                        Text(L.t("dig.minor_row", lang))
                             .font(VxFont.labelMono)
                             .tracking(VxTracking.labelMono)
                             .foregroundStyle(VxColor.textTertiary)
@@ -939,11 +941,11 @@ struct GapsBody: View {
                     }
                 }
             }
-            SectionHead(title: "Dig here next")
+            SectionHead(title: L.t("dig.next", lang))
             VStack(spacing: VxSpace.s) {
-                DigSuggestion(title: "174–178 · 9A", subtitle: "Thin bridge after your 170–174 core")
-                DigSuggestion(title: "11A · cold keys", subtitle: "Useful harmonic exit from 12A and 10A")
-                DigSuggestion(title: "Halftime · 84–90", subtitle: "Strong opener pool, still easy to expand")
+                DigSuggestion(title: L.t("dig.suggestion_1_title", lang), subtitle: L.t("dig.suggestion_1_body", lang))
+                DigSuggestion(title: L.t("dig.suggestion_2_title", lang), subtitle: L.t("dig.suggestion_2_body", lang))
+                DigSuggestion(title: L.t("dig.suggestion_3_title", lang), subtitle: L.t("dig.suggestion_3_body", lang))
             }
         }
         .padding(.horizontal, VxSpace.xl)

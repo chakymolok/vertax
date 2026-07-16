@@ -15,10 +15,6 @@ public struct SettingsSheet: View {
     @Environment(\.dismiss) var dismiss
 
     @AppStorage("vx_lang") private var lang = "en"
-    @AppStorage("vx_on_device") private var onDevice = true
-    @AppStorage("vx_analytics") private var analytics = false
-    @AppStorage("vx_crash") private var crash = true
-
     public init() {}
 
     static let accents: [(UInt, String)] = [(0xC8FF2E,"Lime"),(0x67D4E6,"Cyan"),(0xE8B15F,"Amber"),(0xE58FB0,"Rose"),(0x9CA8FF,"Indigo")]
@@ -45,9 +41,9 @@ public struct SettingsSheet: View {
 
     // APPEARANCE
     private var appearance: some View {
-        group("APPEARANCE") {
+        group(L.t("settings.appearance", lang)) {
             VStack(alignment: .leading, spacing: 11) {
-                Text("Accent").font(VxFont.body).foregroundStyle(VxColor.text)
+                Text(L.t("settings.accent", lang)).font(VxFont.body).foregroundStyle(VxColor.text)
                 HStack(spacing: 11) {
                     ForEach(Self.accents, id: \.0) { hex, name in
                         Button { theme.accentHex = hex } label: {
@@ -79,24 +75,24 @@ public struct SettingsSheet: View {
 
     // GENERAL
     private var general: some View {
-        group("GENERAL") {
+        group(L.t("settings.general", lang)) {
             NavigationLink {
                 langPicker
             } label: { rowLabel("globe", L.t("settings.language", lang), Self.langs.first { $0.0 == lang }?.1 ?? "English", chevron: true) }
             .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            rowLabel("metronome", "Default BPM range", "168–176 · DnB", chevron: true)
+            rowLabel("metronome", L.t("settings.default_bpm", lang), "168–176 · DnB", chevron: true)
         }
     }
 
     // COLLECTION & DATA
     private var data: some View {
-        group("COLLECTION & DATA") {
+        group(L.t("settings.data", lang)) {
             Button { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.sheet = .discogsImport } } label: {
-                rowLabel("square.and.arrow.down", L.t("settings.import", lang), "Re-sync or add a collection", chevron: true)
+                rowLabel("square.and.arrow.down", L.t("settings.import", lang), L.t("settings.import_hint", lang), chevron: true)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            ShareLink(item: exportPayload) { rowLabel("square.and.arrow.up", L.t("settings.export", lang), "Share crate JSON", chevron: true) }
+            ShareLink(item: exportPayload) { rowLabel("square.and.arrow.up", L.t("settings.export", lang), L.t("settings.export_hint", lang), chevron: true) }
                 .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
             Button {
@@ -123,10 +119,8 @@ public struct SettingsSheet: View {
 
     // PRIVACY
     private var privacy: some View {
-        group("PRIVACY") {
-            toggleRow("Keep collection on device", "No cloud sync", $onDevice, divider: true)
-            toggleRow("Anonymous analytics", "Help improve Vertax", $analytics, divider: true)
-            toggleRow("Crash reports", nil, $crash, divider: false)
+        group(L.t("settings.privacy", lang)) {
+            rowLabel("lock.fill", L.t("settings.local_only", lang), L.t("settings.no_cloud", lang), chevron: false)
         }
     }
 
@@ -142,12 +136,12 @@ public struct SettingsSheet: View {
 
     // SUPPORT
     private var support: some View {
-        group("SUPPORT") {
+        group(L.t("settings.support", lang)) {
             Link(destination: URL(string: "https://1994lab.com")!) {
-                rowLabel("heart.fill", "Support the author", "Tip to keep Vertax independent", chevron: true, tint: VxColor.amber)
+                rowLabel("heart.fill", L.t("settings.support_author", lang), L.t("settings.support_hint", lang), chevron: true, tint: VxColor.amber)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            NavigationLink { aboutView } label: { rowLabel("opticaldisc", L.t("settings.about", lang), "Version 1.0", chevron: true) }.buttonStyle(.plain)
+            NavigationLink { aboutView } label: { rowLabel("opticaldisc", L.t("settings.about", lang), L.t("common.version", lang), chevron: true) }.buttonStyle(.plain)
         }
     }
 
@@ -165,10 +159,10 @@ public struct SettingsSheet: View {
             Circle().fill(RadialGradient(colors: [theme.accent, Color(rgb: 0x0C0F0E)], center: .center, startRadius: 0, endRadius: 28)).frame(width: 56, height: 56).padding(.top, 30)
             Text("VERTAX").font(VxFont.mono(16)).tracking(2).foregroundStyle(VxColor.text).padding(.top, 8)
             Text("DIG · PLAY · SHARE").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
-            Text("A smart crate assistant for vinyl DJs.").font(VxFont.subhead).foregroundStyle(VxColor.textSecondary).multilineTextAlignment(.center).padding(.horizontal, 40).padding(.top, 12)
-            Text("Version 1.0 · build 100").font(VxFont.mono(11.5)).foregroundStyle(VxColor.textTertiary).padding(.top, 14)
+            Text(L.t("settings.about_body", lang)).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary).multilineTextAlignment(.center).padding(.horizontal, 40).padding(.top, 12)
+            Text("\(L.t("common.version", lang)) · build 100").font(VxFont.mono(11.5)).foregroundStyle(VxColor.textTertiary).padding(.top, 14)
             Spacer()
-        }.frame(maxWidth: .infinity).background(VxColor.bg).navigationTitle("About").navigationBarTitleDisplayMode(.inline)
+        }.frame(maxWidth: .infinity).background(VxColor.bg).navigationTitle(L.t("settings.about_title", lang)).navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: builders
