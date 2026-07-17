@@ -631,7 +631,16 @@ function registerVertaxServiceWorker() {
     console.warn('IndexedDB unavailable, running in volatile mode:', e);
   }
   render();
-  initPlatformBridge();
+  var platformReady = initPlatformBridge();
+  function startCollectionSync() {
+    if (typeof window.vertaxSyncLocalCollectionToServer === 'function') {
+      window.vertaxSyncLocalCollectionToServer(state.collection || []);
+    }
+  }
+  Promise.resolve(platformReady).then(function () {
+    setTimeout(startCollectionSync, 750);
+  });
+  setTimeout(startCollectionSync, 2500);
   registerVertaxServiceWorker();
 }
 init();

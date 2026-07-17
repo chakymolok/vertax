@@ -3,6 +3,8 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const catalog = require('./api/catalog');
+const discogsIngest = require('./api/discogs-ingest');
+const { mergeDiscogsPayload } = require('./lib/redis-cache');
 const {
   normalizePublicRelease,
   releaseSlug,
@@ -143,5 +145,76 @@ assert.deepEqual(JSON.parse(cronUnauthorizedResponse.body), {
   ok: false,
   error: 'unauthorized',
 });
+
+const bulkIngestResponse = mockResponse();
+await discogsIngest(
+  {
+    method: 'POST',
+    url: '/api/discogs-ingest',
+    headers: {},
+    body: {
+      vinyls: [
+        {
+          discogsId: '10001',
+          artist: 'Catalog Artist',
+          title: 'Queued Release',
+          tracklist: [],
+        },
+        {
+          discogsId: '10002',
+          artist: 'Catalog Artist',
+          title: 'Known Release',
+          tracklist: [
+            {
+              position: 'A1',
+              title: 'Known Track',
+              bpm: 132,
+              camelot: '4A',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  bulkIngestResponse
+);
+const bulkIngestBody = JSON.parse(bulkIngestResponse.body);
+assert.equal(bulkIngestResponse.statusCode, 200);
+assert.equal(bulkIngestBody.mode, 'bulk');
+assert.equal(bulkIngestBody.releases_seen, 2);
+assert.equal(bulkIngestBody.releases_saved, 2);
+assert.equal(bulkIngestBody.releases[0].track_count, 0);
+assert.equal(bulkIngestBody.releases[1].track_count, 1);
+
+const protectedAdminTrack = mergeDiscogsPayload(
+  {
+    matched: true,
+    artist_original: 'Calibre',
+    title_original: 'Bellamee',
+    bpm: 175,
+    camelot: '9A',
+    key_name: 'E Minor',
+    bpm_source: 'admin',
+    key_source: 'admin',
+    meta_status: 'admin',
+  },
+  {
+    artist_original: 'Calibre',
+    title_original: 'Bellamee',
+    bpm: 174,
+    camelot: '8A',
+    key_name: 'A Minor',
+    bpm_source: 'beatport',
+    key_source: 'beatport',
+    original_bpm: 87,
+    halftime_corrected: true,
+  }
+);
+assert.equal(protectedAdminTrack.bpm, 175);
+assert.equal(protectedAdminTrack.camelot, '9A');
+assert.equal(protectedAdminTrack.bpm_source, 'admin');
+assert.equal(protectedAdminTrack.key_source, 'admin');
+assert.equal(protectedAdminTrack.original_bpm, undefined);
+assert.equal(protectedAdminTrack.halftime_corrected, false);
 
 console.log('catalog smoke ok');

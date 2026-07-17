@@ -6,6 +6,7 @@
     "api/analyze-release.js":   { "maxDuration": 60 },
     "api/candidates.js":        { "maxDuration": 30 },
     "api/catalog.js":           { "maxDuration": 60 },
+    "api/discogs-ingest.js":    { "maxDuration": 60 },
     "api/admin/maintenance.js": { "maxDuration": 60 }
   },
   "rewrites": [

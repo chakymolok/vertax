@@ -21,7 +21,7 @@
   }
 
   function compactVinylForIngest(v) {
-    if (!v || !v.discogsId || !Array.isArray(v.tracklist) || !v.tracklist.length) return null;
+    if (!v || !v.discogsId) return null;
     function cleanNumber(value) {
       if (value === null || value === undefined || value === '') return null;
       var n = Number(value);
@@ -36,7 +36,7 @@
       year: v.year || '',
       genre: cleanArray(v.genre || v.genres),
       style: cleanArray(v.style || v.styles),
-      tracklist: v.tracklist
+      tracklist: (Array.isArray(v.tracklist) ? v.tracklist : [])
         .slice(0, 200)
         .map(function (t) {
           return {
@@ -104,9 +104,78 @@
     }
   }
 
+  function ingestRequestContext() {
+    var headers = { 'Content-Type': 'application/json' };
+    var initData = getTelegramInitData();
+    var vkLaunchParams = getVkLaunchParams();
+    var clientId = getVertaxClientId();
+    if (initData) headers['X-Telegram-Init-Data'] = initData;
+    if (vkLaunchParams) headers['X-VK-Launch-Params'] = vkLaunchParams;
+    if (clientId) headers['X-Vertax-Client-Id'] = clientId;
+    var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(
+      window.location.hostname || ''
+    );
+    return {
+      headers: headers,
+      initData: initData,
+      vkLaunchParams: vkLaunchParams,
+      clientId: clientId,
+      isLocal: isLocal,
+      isNativeShell:
+        typeof vertaxIsNativeShellOrigin === 'function' && vertaxIsNativeShellOrigin(),
+      apiUrl:
+        typeof vertaxApiUrl === 'function'
+          ? vertaxApiUrl('/api/discogs-ingest').toString()
+          : (isLocal ? 'https://vertax.live' : '') + '/api/discogs-ingest',
+    };
+  }
+
+  function canUseIngestEndpoint(context) {
+    if (!window.location || !/^https?:$/.test(window.location.protocol)) return false;
+    return !(
+      context.isLocal &&
+      !context.isNativeShell &&
+      !canSendLocalIngestToProduction()
+    );
+  }
+
+  var COLLECTION_SYNC_KEY = 'vertax-server-catalog-sync-v1';
+
+  function payloadFingerprint(payload) {
+    var text = JSON.stringify(payload || {});
+    var hash = 2166136261;
+    for (var i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16) + ':' + text.length;
+  }
+
+  function readSyncState() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(COLLECTION_SYNC_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writeSyncState(value) {
+    try {
+      localStorage.setItem(COLLECTION_SYNC_KEY, JSON.stringify(value || {}));
+    } catch (_) {}
+  }
+
+  function markPayloadSynced(payload) {
+    if (!payload || !payload.discogsId) return;
+    var syncState = readSyncState();
+    syncState[String(payload.discogsId)] = payloadFingerprint(payload);
+    writeSyncState(syncState);
+  }
+
   function sendDiscogsIngest(v) {
     var payload = compactVinylForIngest(v);
-    if (!payload || !payload.tracklist.length) {
+    if (!payload) {
       window.__vertaxLastIngest = {
         ok: false,
         skipped: true,
@@ -116,53 +185,31 @@
       return;
     }
     try {
-      if (!window.location || !/^https?:$/.test(window.location.protocol)) {
+      var context = ingestRequestContext();
+      if (!canUseIngestEndpoint(context)) {
         window.__vertaxLastIngest = {
           ok: false,
           skipped: true,
-          reason: 'non_http_origin',
+          reason: context.isLocal ? 'local_prod_ingest_disabled' : 'non_http_origin',
           at: new Date().toISOString(),
         };
         return;
       }
-      var headers = { 'Content-Type': 'application/json' };
-      var initData = getTelegramInitData();
-      var vkLaunchParams = getVkLaunchParams();
-      var clientId = getVertaxClientId();
-      if (initData) headers['X-Telegram-Init-Data'] = initData;
-      if (vkLaunchParams) headers['X-VK-Launch-Params'] = vkLaunchParams;
-      if (clientId) headers['X-Vertax-Client-Id'] = clientId;
-      var isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname || '');
-      var isNativeShell = typeof vertaxIsNativeShellOrigin === 'function' && vertaxIsNativeShellOrigin();
-      if (isLocal && !isNativeShell && !canSendLocalIngestToProduction()) {
-        window.__vertaxLastIngest = {
-          ok: false,
-          skipped: true,
-          reason: 'local_prod_ingest_disabled',
-          tracks: payload.tracklist.length,
-          at: new Date().toISOString(),
-        };
-        return;
-      }
-      var apiUrl =
-        typeof vertaxApiUrl === 'function'
-          ? vertaxApiUrl('/api/discogs-ingest').toString()
-          : (isLocal ? 'https://vertax.live' : '') + '/api/discogs-ingest';
       window.__vertaxLastIngest = {
         ok: null,
         status: 'sending',
-        url: apiUrl,
+        url: context.apiUrl,
         tracks: payload.tracklist.length,
         at: new Date().toISOString(),
       };
-      fetch(apiUrl, {
+      fetch(context.apiUrl, {
         method: 'POST',
-        headers: headers,
+        headers: context.headers,
         body: JSON.stringify({
           vinyl: payload,
-          clientId: clientId,
-          telegramInitData: initData,
-          vkLaunchParams: vkLaunchParams,
+          clientId: context.clientId,
+          telegramInitData: context.initData,
+          vkLaunchParams: context.vkLaunchParams,
         }),
       })
         .then(function (res) {
@@ -172,11 +219,12 @@
               return {};
             })
             .then(function (body) {
+              if (res.ok && body && body.catalog_saved) markPayloadSynced(payload);
               window.__vertaxLastIngest = {
                 ok: res.ok,
                 httpStatus: res.status,
                 body: body,
-                url: apiUrl,
+                url: context.apiUrl,
                 tracks: payload.tracklist.length,
                 at: new Date().toISOString(),
               };
@@ -186,7 +234,7 @@
           window.__vertaxLastIngest = {
             ok: false,
             error: e && e.message ? e.message : String(e),
-            url: apiUrl,
+            url: context.apiUrl,
             tracks: payload.tracklist.length,
             at: new Date().toISOString(),
           };
@@ -202,7 +250,94 @@
     }
   }
 
+  async function syncLocalCollectionToServer(collection) {
+    if (window.__vertaxCollectionSyncRunning) return window.__vertaxCollectionSyncRunning;
+    var context = ingestRequestContext();
+    if (!canUseIngestEndpoint(context) || !navigator.onLine) return null;
+    var payloads = (collection || [])
+      .map(compactVinylForIngest)
+      .filter(Boolean);
+    var syncState = readSyncState();
+    var pending = payloads.filter(function (payload) {
+      return syncState[String(payload.discogsId)] !== payloadFingerprint(payload);
+    });
+    if (!pending.length) {
+      window.__vertaxCollectionSync = {
+        ok: true,
+        pending: 0,
+        synced: 0,
+        at: new Date().toISOString(),
+      };
+      return window.__vertaxCollectionSync;
+    }
+
+    window.__vertaxCollectionSyncRunning = (async function () {
+      var synced = 0;
+      var failed = 0;
+      for (var offset = 0; offset < pending.length; offset += 10) {
+        var batch = pending.slice(offset, offset + 10);
+        try {
+          var response = await fetch(context.apiUrl, {
+            method: 'POST',
+            headers: context.headers,
+            body: JSON.stringify({
+              vinyls: batch,
+              clientId: context.clientId,
+              telegramInitData: context.initData,
+              vkLaunchParams: context.vkLaunchParams,
+            }),
+          });
+          var body = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || !body.ok) throw new Error(body.message || 'collection_sync_failed');
+          var byId = {};
+          (body.releases || []).forEach(function (release) {
+            byId[String(release.discogs_release_id)] = release;
+          });
+          batch.forEach(function (payload) {
+            var result = byId[String(payload.discogsId)];
+            if (result && result.catalog_saved) {
+              syncState[String(payload.discogsId)] = payloadFingerprint(payload);
+              synced += 1;
+            } else {
+              failed += 1;
+            }
+          });
+          writeSyncState(syncState);
+        } catch (error) {
+          failed += batch.length;
+          console.warn(
+            '[VERTAX] Collection sync batch failed:',
+            error && error.message ? error.message : error
+          );
+          break;
+        }
+      }
+      window.__vertaxCollectionSync = {
+        ok: failed === 0,
+        pending: pending.length,
+        synced: synced,
+        failed: failed,
+        at: new Date().toISOString(),
+      };
+      return window.__vertaxCollectionSync;
+    })();
+
+    try {
+      return await window.__vertaxCollectionSyncRunning;
+    } finally {
+      window.__vertaxCollectionSyncRunning = null;
+    }
+  }
+
   window.sendDiscogsIngest = sendDiscogsIngest;
+  window.vertaxSyncLocalCollectionToServer = syncLocalCollectionToServer;
+  window.addEventListener('online', function () {
+    setTimeout(function () {
+      syncLocalCollectionToServer(state && state.collection || []);
+    }, 1000);
+  });
 
   function wrapPersist() {
     if (typeof persistVinyl !== 'function') {

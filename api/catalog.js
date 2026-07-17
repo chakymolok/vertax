@@ -545,7 +545,7 @@ async function catalogHandler(req, res) {
 
   const releaseId = extractReleaseId(path);
   const release = releaseId ? await getPublicRelease(releaseId) : null;
-  if (!release || !release.tracks || !release.tracks.some((track) => track.bpm || track.camelot)) {
+  if (!release || !release.tracks || !release.tracks.length) {
     sendHtml(res, 404, renderNotFoundPage(), 'no-store');
     return;
   }

@@ -44,7 +44,7 @@ function readJsonBody(req) {
     let raw = '';
     req.on('data', (chunk) => {
       raw += chunk;
-      if (raw.length > 1024 * 1024) {
+      if (raw.length > 4 * 1024 * 1024) {
         raw = '';
         req.destroy();
       }
@@ -119,31 +119,36 @@ function normalizeTrack(vinyl, track) {
   };
 }
 
-module.exports = async function discogsIngest(req, res) {
-  setCors(res);
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
-    return;
-  }
-  if (req.method !== 'POST') {
-    send(res, 405, { message: 'Method not allowed' });
-    return;
-  }
+function requestContext(req, body) {
+  const auth = getTelegramUserFromRequest(req, body);
+  const vkAuth = getVkUserFromRequest(req, body);
+  const telegramUser = auth && auth.user ? auth.user : null;
+  const vkUser = vkAuth && vkAuth.user ? vkAuth.user : null;
+  const clientId = String(
+    (req.headers && (
+      req.headers['x-vertax-client-id'] ||
+      req.headers['X-Vertax-Client-Id']
+    )) ||
+    body.clientId ||
+    ''
+  ).trim();
+  return {
+    isAdmin: isAdminTelegramUser(auth) || isAdminVkUser(vkAuth),
+    userContext: {
+      telegramUserId: telegramUser && telegramUser.id != null ? String(telegramUser.id) : '',
+      telegramUsername: telegramUser && telegramUser.username ? String(telegramUser.username) : '',
+      telegramFirstName: telegramUser && telegramUser.first_name ? String(telegramUser.first_name) : '',
+      telegramLastName: telegramUser && telegramUser.last_name ? String(telegramUser.last_name) : '',
+      vkUserId: vkUser && vkUser.id != null ? String(vkUser.id) : '',
+      vkAppId: vkUser && vkUser.app_id != null ? String(vkUser.app_id) : '',
+      userId: vkUser && vkUser.id != null ? 'vk:' + String(vkUser.id) : '',
+      clientId
+    }
+  };
+}
 
-  const body = await readJsonBody(req);
-  if (!body || typeof body !== 'object') {
-    send(res, 400, { message: 'invalid JSON body' });
-    return;
-  }
-
-  const vinyl = body.vinyl || body;
+async function ingestVinyl(vinyl, context) {
   const tracks = Array.isArray(vinyl.tracklist) ? vinyl.tracklist : [];
-  if (!tracks.length) {
-    send(res, 400, { message: 'tracklist is required' });
-    return;
-  }
-
   let upserted = 0;
   let created = 0;
   let proposed = 0;
@@ -155,22 +160,6 @@ module.exports = async function discogsIngest(req, res) {
   const publicTracks = [];
   let catalogSaved = false;
   let catalogError = null;
-  const auth = getTelegramUserFromRequest(req, body);
-  const vkAuth = getVkUserFromRequest(req, body);
-  const isAdmin = isAdminTelegramUser(auth) || isAdminVkUser(vkAuth);
-  const clientId = String((req.headers && (req.headers['x-vertax-client-id'] || req.headers['X-Vertax-Client-Id'])) || body.clientId || '').trim();
-  const telegramUser = auth && auth.user ? auth.user : null;
-  const vkUser = vkAuth && vkAuth.user ? vkAuth.user : null;
-  const userContext = {
-    telegramUserId: telegramUser && telegramUser.id != null ? String(telegramUser.id) : '',
-    telegramUsername: telegramUser && telegramUser.username ? String(telegramUser.username) : '',
-    telegramFirstName: telegramUser && telegramUser.first_name ? String(telegramUser.first_name) : '',
-    telegramLastName: telegramUser && telegramUser.last_name ? String(telegramUser.last_name) : '',
-    vkUserId: vkUser && vkUser.id != null ? String(vkUser.id) : '',
-    vkAppId: vkUser && vkUser.app_id != null ? String(vkUser.app_id) : '',
-    userId: vkUser && vkUser.id != null ? 'vk:' + String(vkUser.id) : '',
-    clientId
-  };
 
   for (const track of tracks.slice(0, 200)) {
     const payload = normalizeTrack(vinyl, track || {});
@@ -180,7 +169,7 @@ module.exports = async function discogsIngest(req, res) {
     }
     try {
       const manual = hasManualFields(payload);
-      const writePayload = manual && isAdmin
+      const writePayload = manual && context.isAdmin
         ? markAdminManualFields(payload)
         : (manual ? stripManualFields(payload) : payload);
       const result = await upsertDiscogsTrackCache(writePayload);
@@ -192,11 +181,11 @@ module.exports = async function discogsIngest(req, res) {
         skipped += 1;
         publicTracks.push(writePayload);
       }
-      if (manual && !isAdmin) {
-        const proposal = await submitTrackProposal(payload, userContext);
+      if (manual && !context.isAdmin) {
+        const proposal = await submitTrackProposal(payload, context.userContext);
         if (proposal && proposal.ok && !proposal.skipped) {
           proposed += 1;
-          const notice = await notifyNewProposal(proposal.proposal, userContext);
+          const notice = await notifyNewProposal(proposal.proposal, context.userContext);
           if (notice && notice.ok) telegram_notified += 1;
           else {
             telegram_skipped += 1;
@@ -208,8 +197,13 @@ module.exports = async function discogsIngest(req, res) {
             }
           }
         }
-      } else if (manual && isAdmin && result && result.ok) {
-        const notice = await notifyAdminTrackEdit(payload, result.previous, result.record, userContext);
+      } else if (manual && context.isAdmin && result && result.ok) {
+        const notice = await notifyAdminTrackEdit(
+          payload,
+          result.previous,
+          result.record,
+          context.userContext
+        );
         if (notice && notice.ok) telegram_notified += 1;
         else {
           telegram_skipped += 1;
@@ -232,8 +226,10 @@ module.exports = async function discogsIngest(req, res) {
   }
 
   try {
-    const catalogResult = await savePublicReleaseFromVinyl(vinyl, publicTracks, {
-      ingested_from: 'discogs_app'
+    const catalogResult = await savePublicReleaseFromVinyl(vinyl, publicTracks.length
+      ? publicTracks
+      : tracks, {
+      ingested_from: tracks.length ? 'discogs_app' : 'local_collection_sync'
     });
     catalogSaved = Boolean(catalogResult && catalogResult.ok);
     if (!catalogSaved) catalogError = catalogResult && catalogResult.error || 'catalog_save_failed';
@@ -241,11 +237,12 @@ module.exports = async function discogsIngest(req, res) {
     catalogError = error && error.message ? error.message : String(error);
   }
 
-  send(res, 200, {
+  return {
     ok: true,
     source: 'discogs',
     discogs_release_id: vinyl.discogsId || null,
-    admin_write: isAdmin,
+    admin_write: context.isAdmin,
+    track_count: tracks.length,
     upserted,
     created,
     proposed,
@@ -256,5 +253,88 @@ module.exports = async function discogsIngest(req, res) {
     catalog_saved: catalogSaved,
     catalog_error: catalogError,
     errors
+  };
+}
+
+function aggregateResults(results, context) {
+  const totals = {
+    ok: true,
+    source: 'discogs',
+    mode: 'bulk',
+    admin_write: context.isAdmin,
+    releases_seen: results.length,
+    releases_saved: 0,
+    upserted: 0,
+    created: 0,
+    proposed: 0,
+    skipped: 0,
+    telegram_notified: 0,
+    telegram_skipped: 0,
+    errors: [],
+    releases: []
+  };
+  results.forEach((result) => {
+    if (result.catalog_saved) totals.releases_saved += 1;
+    totals.upserted += result.upserted || 0;
+    totals.created += result.created || 0;
+    totals.proposed += result.proposed || 0;
+    totals.skipped += result.skipped || 0;
+    totals.telegram_notified += result.telegram_notified || 0;
+    totals.telegram_skipped += result.telegram_skipped || 0;
+    if (result.catalog_error && totals.errors.length < 30) {
+      totals.errors.push({
+        discogs_release_id: result.discogs_release_id,
+        error: result.catalog_error
+      });
+    }
+    (result.errors || []).forEach((error) => {
+      if (totals.errors.length < 30) totals.errors.push(error);
+    });
+    totals.releases.push({
+      discogs_release_id: result.discogs_release_id,
+      catalog_saved: result.catalog_saved,
+      track_count: result.track_count,
+      upserted: result.upserted,
+      proposed: result.proposed
+    });
   });
+  return totals;
+}
+
+module.exports = async function discogsIngest(req, res) {
+  setCors(res);
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+  if (req.method !== 'POST') {
+    send(res, 405, { message: 'Method not allowed' });
+    return;
+  }
+
+  const body = await readJsonBody(req);
+  if (!body || typeof body !== 'object') {
+    send(res, 400, { message: 'invalid JSON body' });
+    return;
+  }
+
+  const context = requestContext(req, body);
+  const isBulk = Array.isArray(body.vinyls);
+  const vinyls = isBulk ? body.vinyls.slice(0, 20) : [body.vinyl || body];
+  const validVinyls = vinyls.filter((vinyl) => {
+    return vinyl && /^\d+$/.test(String(vinyl.discogsId || vinyl.discogs_id || ''));
+  });
+  if (!validVinyls.length) {
+    send(res, 400, { message: 'discogs release is required' });
+    return;
+  }
+
+  const results = [];
+  for (const vinyl of validVinyls) {
+    if (!vinyl.discogsId && vinyl.discogs_id) vinyl.discogsId = vinyl.discogs_id;
+    results.push(await ingestVinyl(vinyl, context));
+  }
+
+  send(res, 200, isBulk ? aggregateResults(results, context) : results[0]);
 };
