@@ -22,6 +22,7 @@ const entries = [
 const fileCopies = [
   ['css/about.css', 'about.css'],
   ['css/admin.css', 'admin.css'],
+  ['css/music.css', 'music.css'],
 ];
 
 function copyRecursive(src, dest) {

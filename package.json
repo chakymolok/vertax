@@ -10,7 +10,8 @@
     "lint": "npm run format:check",
     "seed:candidates": "node scripts/seed-candidates.mjs",
     "smoke": "node smoke.mjs",
-    "test": "npm run smoke",
+    "catalog:smoke": "node catalog-smoke.mjs",
+    "test": "npm run smoke && npm run catalog:smoke",
     "format": "prettier --write \"js/*.js\" \"scripts/*.js\" \"scripts/*.mjs\" \"smoke.mjs\"",
     "format:check": "prettier --check \"js/*.js\" \"scripts/*.js\" \"scripts/*.mjs\" \"smoke.mjs\"",
     "serve": "npx serve public -p 4177"

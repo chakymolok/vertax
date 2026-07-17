@@ -25,6 +25,12 @@ const {
   mapTrack,
   trackId,
 } = require('../beatport-lookup');
+const {
+  fetchDiscogsRelease,
+  mergeCachedTracksIntoDiscogs,
+  savePublicRelease,
+  savePublicReleaseFromVinyl,
+} = require('../../lib/public-catalog');
 
 const TRACK_KEY_PATTERN = 'vertax:beatport:track:*';
 const CANDIDATE_LABELS_PATH = path.resolve(__dirname, '../../config/candidate-labels.json');
@@ -191,10 +197,12 @@ async function runImportBackup(body) {
   let updated = 0;
   let created = 0;
   let skipped = 0;
+  let catalog_releases = 0;
   const errors = [];
 
   for (const vinyl of vinyls) {
     const tracklist = Array.isArray(vinyl && vinyl.tracklist) ? vinyl.tracklist : [];
+    const publicTracks = [];
     for (const track of tracklist) {
       tracks_seen += 1;
       const payload = normalizeBackupTrack(vinyl || {}, track || {});
@@ -207,8 +215,10 @@ async function runImportBackup(body) {
         if (result && result.ok) {
           updated += 1;
           if (result.created) created += 1;
+          publicTracks.push(result.record || payload);
         } else {
           skipped += 1;
+          publicTracks.push(payload);
         }
       } catch (error) {
         if (errors.length < 30) {
@@ -218,6 +228,20 @@ async function runImportBackup(body) {
             error: error && error.message ? error.message : String(error),
           });
         }
+      }
+    }
+    try {
+      const catalog = await savePublicReleaseFromVinyl(vinyl || {}, publicTracks, {
+        ingested_from: 'admin_backup'
+      });
+      if (catalog && catalog.ok) catalog_releases += 1;
+    } catch (error) {
+      if (errors.length < 30) {
+        errors.push({
+          artist: vinyl && vinyl.artist || '',
+          title: vinyl && vinyl.title || '',
+          error: 'catalog: ' + (error && error.message ? error.message : String(error)),
+        });
       }
     }
   }
@@ -231,6 +255,83 @@ async function runImportBackup(body) {
     updated,
     created,
     skipped,
+    catalog_releases,
+    errors,
+  };
+}
+
+async function backfillPublicCatalog(body) {
+  const offset = Math.max(0, Number(body && body.offset) || 0);
+  const limit = Math.max(1, Math.min(20, Number(body && body.limit) || 10));
+  const keys = (await scanKeys(TRACK_KEY_PATTERN)).sort();
+  const groups = new Map();
+
+  for (let index = 0; index < keys.length; index += 200) {
+    const chunk = keys.slice(index, index + 200);
+    const values = await safeRedis('MGET', chunk, []) || [];
+    values.forEach((raw, valueIndex) => {
+      if (!raw) return;
+      let parsed;
+      try {
+        parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      } catch (_) {
+        return;
+      }
+      const flat = readTrack(parsed) || {};
+      const releaseId = String(flat.discogs_release_id || '').trim();
+      if (!/^\d+$/.test(releaseId)) return;
+      if (!groups.has(releaseId)) groups.set(releaseId, []);
+      groups.get(releaseId).push(flat);
+    });
+  }
+
+  const releaseIds = Array.from(groups.keys()).sort((a, b) => Number(a) - Number(b));
+  const selected = releaseIds.slice(offset, offset + limit);
+  let updated = 0;
+  let failed = 0;
+  const errors = [];
+
+  for (let index = 0; index < selected.length; index += 1) {
+    const releaseId = selected[index];
+    try {
+      const discogs = await fetchDiscogsRelease(releaseId);
+      const release = mergeCachedTracksIntoDiscogs(discogs, groups.get(releaseId));
+      if (!release) throw new Error('release_normalization_failed');
+      const result = await savePublicRelease(release);
+      if (!result || !result.ok) throw new Error(result && result.error || 'catalog_save_failed');
+      updated += 1;
+      console.log(
+        '[catalog-backfill]',
+        offset + index + 1,
+        '/',
+        releaseIds.length,
+        release.artist,
+        '—',
+        release.title
+      );
+    } catch (error) {
+      failed += 1;
+      if (errors.length < 30) {
+        errors.push({
+          discogs_release_id: releaseId,
+          error: error && error.message ? error.message : String(error),
+        });
+      }
+    }
+    if (index < selected.length - 1) await sleep(1100);
+  }
+
+  const nextOffset = offset + selected.length;
+  return {
+    ok: true,
+    total: releaseIds.length,
+    offset,
+    limit,
+    processed_in_batch: selected.length,
+    updated,
+    failed,
+    next_offset: nextOffset < releaseIds.length ? nextOffset : null,
+    has_more: nextOffset < releaseIds.length,
     errors,
   };
 }
@@ -1072,6 +1173,11 @@ module.exports = async function adminMaintenance(req, res) {
     if (body.action === 'import_backup') {
       const result = await runImportBackup(body);
       send(res, result.status || (result.ok ? 200 : 400), result);
+      return;
+    }
+    if (body.action === 'backfill_public_catalog') {
+      const result = await backfillPublicCatalog(body);
+      send(res, result.ok ? 200 : 400, result);
       return;
     }
     if (body.action === 'rebuild') {

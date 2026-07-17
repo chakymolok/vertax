@@ -15,6 +15,9 @@ const {
   getVkUserFromRequest,
   isAdminVkUser
 } = require('../lib/vk-auth');
+const {
+  savePublicReleaseFromVinyl
+} = require('../lib/public-catalog');
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -149,6 +152,9 @@ module.exports = async function discogsIngest(req, res) {
   let telegram_skipped = 0;
   const errors = [];
   const telegram_errors = [];
+  const publicTracks = [];
+  let catalogSaved = false;
+  let catalogError = null;
   const auth = getTelegramUserFromRequest(req, body);
   const vkAuth = getVkUserFromRequest(req, body);
   const isAdmin = isAdminTelegramUser(auth) || isAdminVkUser(vkAuth);
@@ -181,8 +187,10 @@ module.exports = async function discogsIngest(req, res) {
       if (result && result.ok) {
         upserted += 1;
         if (result.created) created += 1;
+        publicTracks.push(result.record || writePayload);
       } else {
         skipped += 1;
+        publicTracks.push(writePayload);
       }
       if (manual && !isAdmin) {
         const proposal = await submitTrackProposal(payload, userContext);
@@ -223,6 +231,16 @@ module.exports = async function discogsIngest(req, res) {
     }
   }
 
+  try {
+    const catalogResult = await savePublicReleaseFromVinyl(vinyl, publicTracks, {
+      ingested_from: 'discogs_app'
+    });
+    catalogSaved = Boolean(catalogResult && catalogResult.ok);
+    if (!catalogSaved) catalogError = catalogResult && catalogResult.error || 'catalog_save_failed';
+  } catch (error) {
+    catalogError = error && error.message ? error.message : String(error);
+  }
+
   send(res, 200, {
     ok: true,
     source: 'discogs',
@@ -235,6 +253,8 @@ module.exports = async function discogsIngest(req, res) {
     telegram_notified,
     telegram_skipped,
     telegram_errors,
+    catalog_saved: catalogSaved,
+    catalog_error: catalogError,
     errors
   });
 };
