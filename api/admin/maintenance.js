@@ -26,10 +26,8 @@ const {
   trackId,
 } = require('../beatport-lookup');
 const {
-  fetchDiscogsRelease,
-  mergeCachedTracksIntoDiscogs,
-  savePublicRelease,
   savePublicReleaseFromVinyl,
+  syncPublicCatalogBatch,
 } = require('../../lib/public-catalog');
 
 const TRACK_KEY_PATTERN = 'vertax:beatport:track:*';
@@ -261,79 +259,11 @@ async function runImportBackup(body) {
 }
 
 async function backfillPublicCatalog(body) {
-  const offset = Math.max(0, Number(body && body.offset) || 0);
-  const limit = Math.max(1, Math.min(20, Number(body && body.limit) || 10));
-  const keys = (await scanKeys(TRACK_KEY_PATTERN)).sort();
-  const groups = new Map();
-
-  for (let index = 0; index < keys.length; index += 200) {
-    const chunk = keys.slice(index, index + 200);
-    const values = await safeRedis('MGET', chunk, []) || [];
-    values.forEach((raw, valueIndex) => {
-      if (!raw) return;
-      let parsed;
-      try {
-        parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      } catch (_) {
-        return;
-      }
-      const flat = readTrack(parsed) || {};
-      const releaseId = String(flat.discogs_release_id || '').trim();
-      if (!/^\d+$/.test(releaseId)) return;
-      if (!groups.has(releaseId)) groups.set(releaseId, []);
-      groups.get(releaseId).push(flat);
-    });
-  }
-
-  const releaseIds = Array.from(groups.keys()).sort((a, b) => Number(a) - Number(b));
-  const selected = releaseIds.slice(offset, offset + limit);
-  let updated = 0;
-  let failed = 0;
-  const errors = [];
-
-  for (let index = 0; index < selected.length; index += 1) {
-    const releaseId = selected[index];
-    try {
-      const discogs = await fetchDiscogsRelease(releaseId);
-      const release = mergeCachedTracksIntoDiscogs(discogs, groups.get(releaseId));
-      if (!release) throw new Error('release_normalization_failed');
-      const result = await savePublicRelease(release);
-      if (!result || !result.ok) throw new Error(result && result.error || 'catalog_save_failed');
-      updated += 1;
-      console.log(
-        '[catalog-backfill]',
-        offset + index + 1,
-        '/',
-        releaseIds.length,
-        release.artist,
-        '—',
-        release.title
-      );
-    } catch (error) {
-      failed += 1;
-      if (errors.length < 30) {
-        errors.push({
-          discogs_release_id: releaseId,
-          error: error && error.message ? error.message : String(error),
-        });
-      }
-    }
-    if (index < selected.length - 1) await sleep(1100);
-  }
-
-  const nextOffset = offset + selected.length;
-  return {
-    ok: true,
-    total: releaseIds.length,
-    offset,
-    limit,
-    processed_in_batch: selected.length,
-    updated,
-    failed,
-    next_offset: nextOffset < releaseIds.length ? nextOffset : null,
-    has_more: nextOffset < releaseIds.length,
-    errors,
-  };
+  return syncPublicCatalogBatch({
+    offset: body && body.offset,
+    limit: body && body.limit,
+    missing_only: false,
+  });
 }
 
 /* One-shot backfill: for cached Beatport tracks that lack sample_url,

@@ -1,8 +1,10 @@
+const crypto = require('crypto');
 const {
   getPublicRelease,
   listAllPublicReleases,
   listPublicReleases,
   releaseSlug,
+  syncPublicCatalogBatch,
 } = require('../lib/public-catalog');
 
 const SITE_URL = 'https://vertax.live';
@@ -65,6 +67,22 @@ function sendXml(res, status, xml) {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   res.end(xml);
+}
+
+function sendJson(res, status, body) {
+  setCommonHeaders(res);
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(JSON.stringify(body));
+}
+
+function isCronAuthorized(req) {
+  const secret = String(process.env.CRON_SECRET || '');
+  const authorization = String(req.headers && req.headers.authorization || '');
+  const expected = 'Bearer ' + secret;
+  if (!secret || authorization.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(authorization), Buffer.from(expected));
 }
 
 function redirect(res, location) {
@@ -468,6 +486,27 @@ async function catalogHandler(req, res) {
     return;
   }
   const url = requestUrl(req);
+  const task = queryValue(req.query && req.query.task) || url.searchParams.get('task');
+  if (task === 'sync') {
+    if (!isCronAuthorized(req)) {
+      sendJson(res, 401, { ok: false, error: 'unauthorized' });
+      return;
+    }
+    try {
+      const result = await syncPublicCatalogBatch({
+        limit: 15,
+        missing_only: true,
+      });
+      sendJson(res, 200, result);
+    } catch (error) {
+      console.error('Catalog sync failed:', error && error.message ? error.message : error);
+      sendJson(res, 500, {
+        ok: false,
+        error: error && error.message ? error.message : 'catalog_sync_failed',
+      });
+    }
+    return;
+  }
   const format = queryValue(req.query && req.query.format) || url.searchParams.get('format');
   if (format === 'sitemap') {
     const xml = await renderSitemap();

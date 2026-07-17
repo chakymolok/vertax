@@ -5,11 +5,16 @@
   "functions": {
     "api/analyze-release.js":   { "maxDuration": 60 },
     "api/candidates.js":        { "maxDuration": 30 },
+    "api/catalog.js":           { "maxDuration": 60 },
     "api/admin/maintenance.js": { "maxDuration": 60 }
   },
   "rewrites": [
+    { "source": "/cron/catalog-sync", "destination": "/api/catalog?task=sync" },
     { "source": "/music-sitemap.xml", "destination": "/api/catalog?format=sitemap" },
     { "source": "/music", "destination": "/api/catalog" },
     { "source": "/music/:path*", "destination": "/api/catalog?path=:path*" }
+  ],
+  "crons": [
+    { "path": "/cron/catalog-sync", "schedule": "0 4 * * 1" }
   ]
 }

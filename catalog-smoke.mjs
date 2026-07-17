@@ -128,4 +128,20 @@ await catalog(
 assert.equal(sitemapResponse.statusCode, 200);
 assert.match(sitemapResponse.headers['content-type'], /application\/xml/);
 
+const cronUnauthorizedResponse = mockResponse();
+await catalog(
+  {
+    method: 'GET',
+    url: '/api/catalog?task=sync',
+    query: { task: 'sync' },
+    headers: {},
+  },
+  cronUnauthorizedResponse
+);
+assert.equal(cronUnauthorizedResponse.statusCode, 401);
+assert.deepEqual(JSON.parse(cronUnauthorizedResponse.body), {
+  ok: false,
+  error: 'unauthorized',
+});
+
 console.log('catalog smoke ok');
