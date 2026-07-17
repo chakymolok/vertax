@@ -130,6 +130,22 @@ await catalog(
 assert.equal(sitemapResponse.statusCode, 200);
 assert.match(sitemapResponse.headers['content-type'], /application\/xml/);
 
+const statsResponse = mockResponse();
+await catalog(
+  {
+    method: 'GET',
+    url: '/api/catalog?format=stats',
+    query: { format: 'stats' },
+    headers: {},
+  },
+  statsResponse
+);
+const statsBody = JSON.parse(statsResponse.body);
+assert.equal(statsResponse.statusCode, 200);
+assert.equal(statsBody.ok, true);
+assert.equal(typeof statsBody.unique_releases_total, 'number');
+assert.equal(typeof statsBody.track_cache_entries, 'number');
+
 const cronUnauthorizedResponse = mockResponse();
 await catalog(
   {

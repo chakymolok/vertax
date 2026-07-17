@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const {
   getPublicRelease,
+  getPublicCatalogStats,
   listAllPublicReleases,
   listPublicReleases,
   releaseSlug,
@@ -508,6 +509,10 @@ async function catalogHandler(req, res) {
     return;
   }
   const format = queryValue(req.query && req.query.format) || url.searchParams.get('format');
+  if (format === 'stats') {
+    sendJson(res, 200, await getPublicCatalogStats());
+    return;
+  }
   if (format === 'sitemap') {
     const xml = await renderSitemap();
     if (req.method === 'HEAD') {
