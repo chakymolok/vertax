@@ -4,12 +4,53 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#ECEFF1">
+  <meta name="description" content="Vertax — веб-инструмент для виниловых DJ: коллекция пластинок, импорт Discogs, BPM/Key, Camelot, сборка DJ-сетов и резервные копии.">
+  <meta name="keywords" content="Vertax, VERTAX-01, виниловый DJ, винил, коллекция пластинок, Discogs, BPM, Key, Camelot, сборка сетов, DJ set builder, vinyl DJ tool">
+  <meta name="author" content="Michael Proskurin / 1994lab">
+  <meta name="robots" content="index, follow">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org https://st.max.ru https://unpkg.com https://mc.yandex.ru https://api.deezer.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://vertax.live https://vertax-one.vercel.app https://api.discogs.com https://acousticbrainz.org https://musicbrainz.org https://api.deezer.com https://api.beatport.com https://www.beatport.com https://mc.yandex.ru wss://mc.yandex.ru https://api.telegram.org https://api.onedam.me; frame-src 'self' https://t.me https://vk.com;">
-  <title>VERTAX-01</title>
+  <title>Vertax — инструмент для виниловых DJ: BPM, Camelot, Discogs и сборка сетов</title>
+  <link rel="canonical" href="https://vertax.live/">
+  <link rel="alternate" hreflang="ru" href="https://vertax.live/">
+  <link rel="alternate" hreflang="x-default" href="https://vertax.live/">
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
   <link rel="alternate icon" href="/assets/icons/favicon.svg">
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.svg">
   <link rel="mask-icon" href="/assets/icons/favicon.svg" color="#C8FF2E">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vertax.live/">
+  <meta property="og:site_name" content="Vertax">
+  <meta property="og:title" content="Vertax — инструмент для виниловых DJ">
+  <meta property="og:description" content="Коллекция пластинок, импорт Discogs, BPM/Key, Camelot и сборка DJ-сетов для vinyl-only диджеев.">
+  <meta property="og:image" content="https://vertax.live/assets/og-vertax.svg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Vertax — инструмент для виниловых DJ">
+  <meta name="twitter:description" content="Коллекция пластинок, импорт Discogs, BPM/Key, Camelot и сборка DJ-сетов для vinyl-only диджеев.">
+  <meta name="twitter:image" content="https://vertax.live/assets/og-vertax.svg">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Vertax",
+    "alternateName": "VERTAX-01",
+    "url": "https://vertax.live/",
+    "description": "Веб-инструмент для виниловых DJ: коллекция пластинок, импорт Discogs, BPM/Key, Camelot и сборка DJ-сетов.",
+    "applicationCategory": "MusicApplication",
+    "operatingSystem": "Web, Telegram",
+    "inLanguage": "ru",
+    "creator": {
+      "@type": "Person",
+      "name": "Michael Proskurin"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
   <link rel="stylesheet" href="dist/app.css">
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
@@ -31,7 +72,6 @@
       trackLinks: true
     });
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/109258707" style="position:absolute; left:-9999px;" alt=""></div></noscript>
   <!-- /Yandex.Metrika counter -->
 </head>
 <body class="vertax-theme-light">
@@ -40,6 +80,13 @@
     <div id="laiso-main"></div>
     <div id="laiso-overlay"></div>
   </div>
+  <noscript>
+    <section class="laiso-container" aria-label="О Vertax">
+      <h1>Vertax — инструмент для виниловых DJ</h1>
+      <p>Vertax помогает вести коллекцию пластинок, импортировать релизы из Discogs, находить BPM и Camelot, собирать DJ-сеты и сохранять резервные копии коллекции.</p>
+      <p><a href="/about">Подробнее о Vertax</a></p>
+    </section>
+  </noscript>
   <footer class="vertax-global-footer" aria-label="BPM and key data sources">
     BPM/KEY · POWERED BY
     <a href="https://www.beatport.com" target="_blank" rel="noopener">Beatport</a>
@@ -51,6 +98,7 @@
     <a href="https://www.deezer.com" target="_blank" rel="noopener">Deezer</a>
   </footer>
 </div>
+  <noscript><div><img src="https://mc.yandex.ru/watch/109258707" style="position:absolute; left:-9999px;" alt=""></div></noscript>
   <script src="dist/app.js" defer></script>
 </body>
 </html>
