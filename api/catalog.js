@@ -6,6 +6,7 @@ const {
   listPublicReleases,
   releaseSlug,
   syncPublicCatalogBatch,
+  enrichPublicCatalogTracksBatch,
 } = require('../lib/public-catalog');
 
 const SITE_URL = 'https://vertax.live';
@@ -253,9 +254,12 @@ function durationToIso(value) {
 }
 
 function renderReleasePage(release) {
+  const hasTracklist = Boolean(release.tracks && release.tracks.length);
   const slug = release.slug || releaseSlug(release);
   const canonical = SITE_URL + '/music/' + encodeURIComponent(slug);
-  const title = release.artist + ' — ' + release.title + ': BPM и Camelot треков | VERTAX';
+  const title = hasTracklist
+    ? release.artist + ' — ' + release.title + ': BPM и Camelot треков | VERTAX'
+    : release.artist + ' — ' + release.title + ': виниловая пластинка | VERTAX';
   const description = releaseDescription(release);
   const meta = formatMeta(release);
   const discogsUrl = safeHttpUrl(
@@ -296,12 +300,14 @@ function renderReleasePage(release) {
           '<div><p class="music-eyebrow">TRACKLIST</p><h2 id="tracklist-title">Треки пластинки</h2></div>' +
           '<span>' + escapeHtml((release.tracks || []).length) + ' трек.</span>' +
         '</div>' +
-        '<div class="music-table-wrap">' +
-          '<table>' +
-            '<thead><tr><th>Поз.</th><th>Название</th><th>Время</th><th>BPM</th><th>Camelot</th></tr></thead>' +
-            '<tbody>' + trackRows(release) + '</tbody>' +
-          '</table>' +
-        '</div>' +
+        (hasTracklist
+          ? '<div class="music-table-wrap">' +
+              '<table>' +
+                '<thead><tr><th>Поз.</th><th>Название</th><th>Время</th><th>BPM</th><th>Camelot</th></tr></thead>' +
+                '<tbody>' + trackRows(release) + '</tbody>' +
+              '</table>' +
+            '</div>'
+          : '<div class="music-tracklist-pending"><strong>Треклист ожидает загрузки</strong><p>Пластинка уже есть в общей базе VERTAX. Данные Discogs, BPM и Camelot будут добавлены автоматически.</p></div>') +
       '</section>' +
       '<aside class="music-about-card">' +
         '<div><p class="music-eyebrow">ABOUT VERTAX</p><h2>От пластинки к готовому сету</h2></div>' +
@@ -335,6 +341,7 @@ function renderReleasePage(release) {
     canonical,
     image: coverUrl,
     ogType: 'music.album',
+    robots: hasTracklist ? 'index, follow' : 'noindex, follow',
     jsonLd: albumSchema,
     body,
   });
@@ -494,11 +501,19 @@ async function catalogHandler(req, res) {
       return;
     }
     try {
-      const result = await syncPublicCatalogBatch({
-        limit: 15,
+      const discogs = await syncPublicCatalogBatch({
+        limit: 16,
         missing_only: true,
       });
-      sendJson(res, 200, result);
+      const metadata = await enrichPublicCatalogTracksBatch({
+        limit: 8,
+        deadline_at: Date.now() + 30000,
+      });
+      sendJson(res, 200, {
+        ok: true,
+        discogs,
+        metadata,
+      });
     } catch (error) {
       console.error('Catalog sync failed:', error && error.message ? error.message : error);
       sendJson(res, 500, {
@@ -544,13 +559,18 @@ async function catalogHandler(req, res) {
       res.end();
       return;
     }
-    sendHtml(res, 200, html, q ? 'no-store' : undefined);
+    sendHtml(
+      res,
+      200,
+      html,
+      q ? 'no-store' : 'public, s-maxage=60, stale-while-revalidate=300'
+    );
     return;
   }
 
   const releaseId = extractReleaseId(path);
   const release = releaseId ? await getPublicRelease(releaseId) : null;
-  if (!release || !release.tracks || !release.tracks.length) {
+  if (!release) {
     sendHtml(res, 404, renderNotFoundPage(), 'no-store');
     return;
   }

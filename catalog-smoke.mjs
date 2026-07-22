@@ -57,6 +57,21 @@ const unsafeHtml = catalog.renderReleasePage(Object.assign({}, release, {
 }));
 assert.doesNotMatch(unsafeHtml, /javascript:/);
 
+const queuedRelease = normalizePublicRelease(
+  {
+    discogsId: '10003',
+    artist: 'Queued Artist',
+    title: 'Queued Release',
+    label: 'Queued Label',
+  },
+  [],
+  { ingested_from: 'smoke' }
+);
+queuedRelease.slug = releaseSlug(queuedRelease);
+const queuedHtml = catalog.renderReleasePage(queuedRelease);
+assert.match(queuedHtml, /Треклист ожидает загрузки/);
+assert.match(queuedHtml, /noindex, follow/);
+
 const catalogHtml = catalog.renderCatalogPage({
   page: 1,
   limit: 24,

@@ -31,6 +31,7 @@
       discogsId: v.discogsId,
       artist: v.artist || '',
       title: v.title || '',
+      cover: v.cover || v.coverUrl || v.cover_url || v.cover_image || v.thumb || '',
       label: v.label || '',
       catno: v.catno || '',
       year: v.year || '',

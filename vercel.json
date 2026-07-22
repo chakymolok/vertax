@@ -16,6 +16,6 @@
     { "source": "/music/:path*", "destination": "/api/catalog?path=:path*" }
   ],
   "crons": [
-    { "path": "/cron/catalog-sync", "schedule": "0 4 * * 1" }
+    { "path": "/cron/catalog-sync", "schedule": "0 4 * * *" }
   ]
 }

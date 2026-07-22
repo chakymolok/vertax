@@ -26,6 +26,7 @@ const {
   trackId,
 } = require('../beatport-lookup');
 const {
+  enrichPublicCatalogTracksBatch,
   savePublicReleaseFromVinyl,
   syncPublicCatalogBatch,
 } = require('../../lib/public-catalog');
@@ -262,7 +263,15 @@ async function backfillPublicCatalog(body) {
   return syncPublicCatalogBatch({
     offset: body && body.offset,
     limit: body && body.limit,
-    missing_only: false,
+    missing_only: Boolean(body && body.missing_only),
+  });
+}
+
+async function enrichPublicCatalog(body) {
+  return enrichPublicCatalogTracksBatch({
+    limit: body && body.limit,
+    retry_after_ms: body && body.retry_after_ms,
+    deadline_at: Date.now() + 50000,
   });
 }
 
@@ -1107,6 +1116,11 @@ module.exports = async function adminMaintenance(req, res) {
     }
     if (body.action === 'backfill_public_catalog') {
       const result = await backfillPublicCatalog(body);
+      send(res, result.ok ? 200 : 400, result);
+      return;
+    }
+    if (body.action === 'enrich_public_catalog') {
+      const result = await enrichPublicCatalog(body);
       send(res, result.ok ? 200 : 400, result);
       return;
     }

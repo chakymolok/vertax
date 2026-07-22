@@ -347,6 +347,25 @@ input {
   overflow-x: auto;
 }
 
+.music-tracklist-pending {
+  padding: 32px;
+  border: 1px dashed var(--music-line);
+  background: var(--music-card-soft);
+}
+
+.music-tracklist-pending strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--music-text);
+  font-size: 18px;
+}
+
+.music-tracklist-pending p {
+  margin: 0;
+  color: var(--music-muted);
+  line-height: 1.6;
+}
+
 .music-tracklist table {
   width: 100%;
   min-width: 680px;
