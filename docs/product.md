@@ -79,6 +79,15 @@ Current intent:
 - Present ecosystem links and contact placeholders.
 - Support RU, EN, ZH, and JA landing-page copy.
 
+### `/music`
+
+Public SEO catalog backed by the shared Redis metadata cache.
+
+- Visitors can submit any public Discogs username from the catalog page.
+- Only vinyl releases are accepted; CD entries are ignored.
+- The Discogs username is used for the import request but is not stored with releases.
+- Imported release IDs enter the shared catalog queue; tracklists, BPM, and Camelot are completed by existing server maintenance jobs.
+
 ### `/vk`
 
 Reserved route for VK Mini App.

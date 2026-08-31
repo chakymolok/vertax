@@ -142,6 +142,9 @@ function documentShell(options) {
   const jsonLd = options.jsonLd
     ? '<script type="application/ld+json">' + safeJson(options.jsonLd) + '</script>'
     : '';
+  const scripts = (options.scripts || [])
+    .map((src) => '<script src="' + escapeHtml(src) + '" defer></script>')
+    .join('');
   return (
     '<!doctype html>' +
     '<html lang="ru">' +
@@ -176,6 +179,7 @@ function documentShell(options) {
       '</div>' +
       '<noscript><img src="https://mc.yandex.ru/watch/109258707" class="music-metrika" alt=""></noscript>' +
       '<script>(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return}}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js?id=109258707","ym");ym(109258707,"init",{clickmap:true,accurateTrackBounce:true,trackLinks:true});</script>' +
+      scripts +
     '</body>' +
     '</html>'
   );
@@ -409,6 +413,24 @@ function renderCatalogPage(result) {
         '<div><input id="music-q" name="q" value="' + escapeHtml(query) + '" placeholder="Calibre, Hyperdub, SIGLP010…"><button type="submit">Найти</button></div>' +
       '</form>' +
     '</section>' +
+    '<section class="music-discogs-import" aria-labelledby="music-discogs-title">' +
+      '<div class="music-discogs-copy">' +
+        '<h2 id="music-discogs-title">Добавить публичную коллекцию Discogs</h2>' +
+        '<p>Введите username. Виниловые релизы попадут в общую базу VERTAX, а треклисты, BPM и Camelot будут дополнены автоматически.</p>' +
+      '</div>' +
+      '<form id="music-discogs-import" class="music-discogs-form">' +
+        '<label for="music-discogs-username">Discogs username</label>' +
+        '<div class="music-discogs-controls">' +
+          '<input id="music-discogs-username" name="username" maxlength="100" autocomplete="username" placeholder="discogs_username" required>' +
+          '<button type="submit">Добавить в базу</button>' +
+        '</div>' +
+        '<div class="music-discogs-progress" hidden>' +
+          '<progress value="0" max="1"></progress>' +
+          '<p role="status" aria-live="polite"></p>' +
+        '</div>' +
+      '</form>' +
+      '<p class="music-discogs-note">Имя владельца не сохраняется. Учитываются только публичные виниловые релизы; CD пропускаются.</p>' +
+    '</section>' +
     '<div class="music-catalog-summary"><span>Найдено: ' + escapeHtml(result.total) + '</span><span>Страница ' + escapeHtml(page) + ' / ' + escapeHtml(result.page_count) + '</span></div>' +
     (result.releases.length
       ? '<section class="music-grid" aria-label="Каталог пластинок">' + result.releases.map(catalogCard).join('') + '</section>'
@@ -438,6 +460,7 @@ function renderCatalogPage(result) {
         })),
       },
     },
+    scripts: ['/js/music-import.js'],
     body,
   });
 }

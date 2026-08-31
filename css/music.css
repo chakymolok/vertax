@@ -552,6 +552,139 @@ input {
   background: var(--music-accent-dark);
 }
 
+.music-discogs-import {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(320px, 1.15fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: start;
+  padding: 38px 0;
+  border-bottom: 1px solid var(--music-line);
+}
+
+.music-discogs-copy h2 {
+  max-width: 520px;
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.music-discogs-copy p,
+.music-discogs-note {
+  max-width: 64ch;
+  color: var(--music-muted);
+}
+
+.music-discogs-copy p {
+  margin: 13px 0 0;
+}
+
+.music-discogs-form label {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--music-faint);
+  font-family: var(--music-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.music-discogs-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.music-discogs-controls input {
+  min-width: 0;
+  height: 52px;
+  padding: 0 15px;
+  border: 1px solid var(--music-line);
+  border-right: 0;
+  outline: 0;
+  background: var(--music-card);
+  color: var(--music-text);
+  caret-color: var(--music-accent);
+}
+
+.music-discogs-controls input::placeholder {
+  color: var(--music-faint);
+}
+
+.music-discogs-controls input:focus {
+  border-color: var(--music-accent);
+}
+
+.music-discogs-controls button {
+  min-width: 168px;
+  border: 1px solid var(--music-accent);
+  background: var(--music-accent);
+  color: #101010;
+  cursor: pointer;
+  font-family: var(--music-mono);
+  text-transform: uppercase;
+}
+
+.music-discogs-controls button:hover,
+.music-discogs-controls button:focus-visible {
+  border-color: var(--music-accent-dark);
+  background: var(--music-accent-dark);
+  color: #101010;
+}
+
+.music-discogs-controls button:disabled {
+  border-color: var(--music-line);
+  background: var(--music-card-soft);
+  color: var(--music-muted);
+  cursor: wait;
+}
+
+.music-discogs-progress {
+  margin-top: 14px;
+}
+
+.music-discogs-progress progress {
+  width: 100%;
+  height: 4px;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  background: var(--music-line-soft);
+  accent-color: var(--music-accent);
+}
+
+.music-discogs-progress progress::-webkit-progress-bar {
+  background: var(--music-line-soft);
+}
+
+.music-discogs-progress progress::-webkit-progress-value {
+  background: var(--music-accent);
+}
+
+.music-discogs-progress progress::-moz-progress-bar {
+  background: var(--music-accent);
+}
+
+.music-discogs-progress p {
+  margin: 9px 0 0;
+  color: var(--music-muted);
+  font-family: var(--music-mono);
+  font-size: 12px;
+}
+
+.music-discogs-progress[data-state="success"] p {
+  color: var(--music-accent);
+}
+
+.music-discogs-progress[data-state="error"] p {
+  color: #ff8b52;
+}
+
+.music-discogs-note {
+  grid-column: 1 / -1;
+  margin: -12px 0 0;
+  font-family: var(--music-mono);
+  font-size: 11px;
+}
+
 .music-catalog-summary {
   min-height: 64px;
   display: flex;
@@ -787,6 +920,16 @@ input {
   .music-about-card a {
     white-space: normal;
   }
+
+  .music-discogs-import {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .music-discogs-note {
+    grid-column: auto;
+    margin-top: -10px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -854,6 +997,19 @@ input {
   }
 
   .music-search button {
+    min-height: 50px;
+  }
+
+  .music-discogs-controls {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .music-discogs-controls input {
+    border-right: 1px solid var(--music-line);
+  }
+
+  .music-discogs-controls button {
     min-height: 50px;
   }
 

@@ -1978,6 +1978,9 @@ async function replaceDiscogsImport() {
   for (var i = 0; i < vinyls.length; i++) await dbPut('vinyls', vinyls[i]);
   state.collection = vinyls.slice();
   state.vinyls = [];
+  if (typeof vertaxSyncLocalCollectionToServer === 'function') {
+    vertaxSyncLocalCollectionToServer(state.collection).catch(function () {});
+  }
   state.ui.discogsImportLoaded = false;
   state.ui.discogsImportVinyls = [];
   showToast('Импортировано пластинок: ' + vinyls.length);
@@ -2014,6 +2017,9 @@ async function mergeDiscogsImport() {
   }
   state.collection = current;
   state.vinyls = [];
+  if (typeof vertaxSyncLocalCollectionToServer === 'function') {
+    vertaxSyncLocalCollectionToServer(state.collection).catch(function () {});
+  }
   state.ui.discogsImportLoaded = false;
   state.ui.discogsImportVinyls = [];
   showToast('Добавлено: ' + added + ' пластинок. Пропущено дублей: ' + skipped + '.');

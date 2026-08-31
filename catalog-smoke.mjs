@@ -82,6 +82,9 @@ const catalogHtml = catalog.renderCatalogPage({
 });
 assert.match(catalogHtml, /Каталог винила с BPM и Camelot/);
 assert.match(catalogHtml, /href="\/music\/calibre-bellamee-5675416"/);
+assert.match(catalogHtml, /id="music-discogs-import"/);
+assert.match(catalogHtml, /Добавить публичную коллекцию Discogs/);
+assert.match(catalogHtml, /src="\/js\/music-import\.js"/);
 assert.match(catalogHtml, /index, follow/);
 
 const searchHtml = catalog.renderCatalogPage({

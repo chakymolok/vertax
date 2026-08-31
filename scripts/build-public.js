@@ -17,6 +17,7 @@ const entries = [
   'fonts',
   'js/about.js',
   'js/admin.js',
+  'js/music-import.js',
 ];
 
 const fileCopies = [
