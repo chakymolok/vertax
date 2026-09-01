@@ -51,6 +51,28 @@ assert.match(detailHtml, /9A/);
 assert.match(detailHtml, /Открыть VERTAX/);
 assert.match(detailHtml, /Запустить в Telegram/);
 assert.match(detailHtml, /Discogs/);
+assert.match(detailHtml, /hreflang="en" href="https:\/\/vertax\.live\/en\/music\/calibre-bellamee-5675416"/);
+assert.match(detailHtml, /hreflang="es" href="https:\/\/vertax\.live\/es\/music\/calibre-bellamee-5675416"/);
+assert.match(detailHtml, /hreflang="ja" href="https:\/\/vertax\.live\/ja\/music\/calibre-bellamee-5675416"/);
+assert.match(detailHtml, /hreflang="zh-Hans" href="https:\/\/vertax\.live\/zh\/music\/calibre-bellamee-5675416"/);
+
+const englishDetailHtml = catalog.renderReleasePage(release, 'en');
+assert.match(englishDetailHtml, /<html lang="en">/);
+assert.match(englishDetailHtml, /Calibre — Bellamee: track BPM and Camelot/);
+assert.match(englishDetailHtml, /canonical" href="https:\/\/vertax\.live\/en\/music\/calibre-bellamee-5675416"/);
+assert.match(englishDetailHtml, /Record tracklist/);
+
+const spanishDetailHtml = catalog.renderReleasePage(release, 'es');
+assert.match(spanishDetailHtml, /<html lang="es">/);
+assert.match(spanishDetailHtml, /Tracklist del disco/);
+
+const japaneseDetailHtml = catalog.renderReleasePage(release, 'ja');
+assert.match(japaneseDetailHtml, /<html lang="ja">/);
+assert.match(japaneseDetailHtml, /トラックリスト/);
+
+const chineseDetailHtml = catalog.renderReleasePage(release, 'zh');
+assert.match(chineseDetailHtml, /<html lang="zh-CN">/);
+assert.match(chineseDetailHtml, /唱片曲目表/);
 const unsafeHtml = catalog.renderReleasePage(Object.assign({}, release, {
   cover_url: 'javascript:alert(1)',
   discogs_url: 'javascript:alert(2)',
@@ -87,6 +109,18 @@ assert.match(catalogHtml, /Добавить публичную коллекци�
 assert.match(catalogHtml, /src="\/js\/music-import\.js"/);
 assert.match(catalogHtml, /index, follow/);
 
+const englishCatalogHtml = catalog.renderCatalogPage({
+  page: 1,
+  limit: 24,
+  q: '',
+  total: 1,
+  page_count: 1,
+  releases: [release],
+}, 'en');
+assert.match(englishCatalogHtml, /Vinyl records, BPM and Camelot/);
+assert.match(englishCatalogHtml, /action="\/en\/music"/);
+assert.match(englishCatalogHtml, /href="\/en\/music\/calibre-bellamee-5675416"/);
+
 const searchHtml = catalog.renderCatalogPage({
   page: 1,
   limit: 24,
@@ -103,6 +137,12 @@ assert.match(notFoundHtml, /noindex, follow/);
 
 const sitemap = await catalog.renderSitemap();
 assert.match(sitemap, /<loc>https:\/\/vertax\.live\/music<\/loc>/);
+assert.match(sitemap, /<loc>https:\/\/vertax\.live\/en\/music<\/loc>/);
+assert.match(sitemap, /<loc>https:\/\/vertax\.live\/es\/music<\/loc>/);
+assert.match(sitemap, /<loc>https:\/\/vertax\.live\/ja\/music<\/loc>/);
+assert.match(sitemap, /<loc>https:\/\/vertax\.live\/zh\/music<\/loc>/);
+assert.match(sitemap, /xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
+assert.match(sitemap, /hreflang="x-default"/);
 
 function mockResponse() {
   return {
@@ -123,6 +163,15 @@ await catalog({ method: 'GET', url: '/api/catalog', query: {} }, catalogResponse
 assert.equal(catalogResponse.statusCode, 200);
 assert.match(catalogResponse.headers['content-type'], /text\/html/);
 assert.match(catalogResponse.body, /Пластинки, BPM и Camelot/);
+
+const englishCatalogResponse = mockResponse();
+await catalog(
+  { method: 'GET', url: '/api/catalog?lang=en', query: { lang: 'en' } },
+  englishCatalogResponse
+);
+assert.equal(englishCatalogResponse.statusCode, 200);
+assert.match(englishCatalogResponse.body, /<html lang="en">/);
+assert.match(englishCatalogResponse.body, /Vinyl records, BPM and Camelot/);
 
 const missingResponse = mockResponse();
 await catalog(

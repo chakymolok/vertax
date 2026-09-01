@@ -12,6 +12,14 @@
   "rewrites": [
     { "source": "/cron/catalog-sync", "destination": "/api/catalog?task=sync" },
     { "source": "/music-sitemap.xml", "destination": "/api/catalog?format=sitemap" },
+    { "source": "/en/music", "destination": "/api/catalog?lang=en" },
+    { "source": "/en/music/:path*", "destination": "/api/catalog?lang=en&path=:path*" },
+    { "source": "/es/music", "destination": "/api/catalog?lang=es" },
+    { "source": "/es/music/:path*", "destination": "/api/catalog?lang=es&path=:path*" },
+    { "source": "/ja/music", "destination": "/api/catalog?lang=ja" },
+    { "source": "/ja/music/:path*", "destination": "/api/catalog?lang=ja&path=:path*" },
+    { "source": "/zh/music", "destination": "/api/catalog?lang=zh" },
+    { "source": "/zh/music/:path*", "destination": "/api/catalog?lang=zh&path=:path*" },
     { "source": "/music", "destination": "/api/catalog" },
     { "source": "/music/:path*", "destination": "/api/catalog?path=:path*" }
   ],

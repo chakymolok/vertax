@@ -83,6 +83,10 @@ Current intent:
 
 Public SEO catalog backed by the shared Redis metadata cache.
 
+- The catalog is server-rendered in Russian, English, Spanish, Japanese, and Simplified Chinese.
+- Russian uses `/music`; localized routes use `/en/music`, `/es/music`, `/ja/music`, and `/zh/music`.
+- Release names, artist names, labels, and track titles remain in their original language.
+- Every locale has a self-canonical URL, reciprocal `hreflang` links, localized metadata, and entries in `music-sitemap.xml`.
 - Visitors can submit any public Discogs username from the catalog page.
 - Only vinyl releases are accepted; CD entries are ignored.
 - The Discogs username is used for the import request but is not stored with releases.
