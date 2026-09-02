@@ -21,46 +21,337 @@
 @media(max-width:520px){ #laiso-app .laiso-track{ grid-template-columns:40px minmax(0,1fr) 54px 42px 28px!important; gap:7px!important; padding:12px 10px!important; align-items:center!important; } #laiso-app .laiso-track-title{ font-size:16px!important; line-height:1.18!important; } #laiso-app .laiso-track-bpm, #laiso-app .laiso-track-key{ font-size:13px!important; }
 }
 /* Compact set list */
-#laiso-app .runt-set-list{ display:flex; flex-direction:column; gap:10px;
+#laiso-app .runt-set-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
 }
-#laiso-app .runt-set-card{ position:relative; display:grid; grid-template-columns:96px minmax(0,1fr); gap:14px; align-items:start; padding:14px 46px 14px 14px; background:#fffdf7; border:1px solid var(--runt-line, #e2d9cd); border-radius:18px; box-shadow:0 8px 24px rgba(20,16,10,.045);
+#laiso-app .runt-set-card{
+  position:relative;
+  display:grid;
+  grid-template-columns:40px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  min-height:76px;
+  padding:9px 10px;
+  background:var(--runt-card);
+  border:1px solid var(--runt-line);
+  border-radius:8px;
+  box-shadow:0 5px 16px var(--runt-shadow);
+  color:var(--runt-text);
 }
-#laiso-app .runt-set-card[draggable="true"]{ cursor:grab;
+#laiso-app .runt-set-reorder{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  width:40px;
+  min-width:0;
 }
-#laiso-app .runt-set-card.runt-dragging{ opacity:.55; cursor:grabbing;
+#laiso-app .runt-set-drag-handle{
+  display:grid;
+  grid-template-columns:repeat(2,4px);
+  grid-template-rows:repeat(3,4px);
+  place-content:center;
+  gap:3px;
+  width:40px;
+  height:40px;
+  padding:0;
+  border:1px solid var(--runt-line);
+  border-radius:6px;
+  background:var(--runt-card-soft);
+  color:var(--runt-muted);
+  cursor:grab;
+  touch-action:none;
 }
-#laiso-app .runt-set-order{ position:absolute; top:14px; right:16px; font-family:var(--font-mono); font-size:13px; color:var(--text-tertiary); letter-spacing:.05em;
+#laiso-app .runt-set-drag-handle:active{cursor:grabbing}
+#laiso-app .runt-set-drag-handle span{
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:currentColor;
 }
-#laiso-app .runt-set-left{ display:flex; flex-direction:column; gap:7px; min-width:0;
+#laiso-app .runt-set-position-control{
+  display:grid;
+  grid-template-columns:12px minmax(0,1fr);
+  align-items:center;
+  width:40px;
+  height:34px;
+  padding:0 3px 0 5px;
+  border:1px solid var(--runt-line-soft);
+  border-radius:6px;
+  background:var(--runt-card-soft);
+  color:var(--runt-muted);
+  font-family:var(--font-mono);
+  font-size:10px;
+  font-weight:700;
 }
-#laiso-app .runt-metric{ display:flex; align-items:center; justify-content:center; height:42px; border-radius:14px; font-family:var(--font-mono); font-weight:700; letter-spacing:.04em; line-height:1; white-space:nowrap;
+#laiso-app .runt-set-position-control select{
+  width:100%;
+  min-width:0;
+  height:32px;
+  padding:0;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--runt-text)!important;
+  -webkit-text-fill-color:var(--runt-text)!important;
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
 }
-#laiso-app .runt-metric-bpm{ background:#0b0b0a; color:var(--runt-accent, #C4F542); font-size:21px; text-shadow:0 0 8px rgba(196,245,66,.3);
+#laiso-app .runt-set-main{min-width:0}
+#laiso-app .runt-set-title{
+  margin:0 0 3px;
+  overflow:hidden;
+  color:var(--runt-text);
+  font-family:var(--font-sans);
+  font-size:16px;
+  font-weight:700;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
-#laiso-app .runt-metric-cam{ background:var(--runt-accent, #C4F542); color:#111; font-size:22px;
+#laiso-app .runt-set-release{
+  margin:0 0 6px;
+  overflow:hidden;
+  color:var(--runt-muted);
+  font-family:var(--font-mono);
+  font-size:9px;
+  line-height:1.25;
+  letter-spacing:.08em;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
 }
-#laiso-app .runt-set-main{ min-width:0; padding-right:8px;
+#laiso-app .runt-set-metrics{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
 }
-#laiso-app .runt-set-title{ margin:0 0 7px; font-family:var(--font-sans); font-size:24px; line-height:1.05; font-weight:750; letter-spacing:-.045em; color:#111; overflow-wrap:anywhere; word-break:normal;
+#laiso-app .runt-metric,
+#laiso-app .runt-chip,
+#laiso-app .runt-set-delta,
+#laiso-app .runt-set-warning{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:26px;
+  padding:0 8px;
+  border:1px solid transparent;
+  border-radius:6px;
+  font-family:var(--font-mono);
+  font-size:10px;
+  font-weight:700;
+  line-height:1;
+  letter-spacing:.04em;
+  white-space:nowrap;
 }
-#laiso-app .runt-set-release{ margin:0 0 10px; font-family:var(--font-mono); font-size:11px; line-height:1.35; letter-spacing:.14em; text-transform:uppercase; color:var(--text-tertiary); overflow-wrap:anywhere;
+#laiso-app .runt-metric-bpm{
+  gap:4px;
+  min-width:58px;
+  background:var(--runt-lcd);
+  border-color:var(--runt-lcd-2);
+  color:var(--runt-accent);
 }
-#laiso-app .runt-set-actions{ display:flex; align-items:center; flex-wrap:wrap; gap:7px;
+#laiso-app .runt-metric-bpm strong{font-size:13px}
+#laiso-app .runt-metric-bpm small{font-size:7px;letter-spacing:.08em}
+#laiso-app .runt-metric-cam{
+  min-width:38px;
+  background:var(--runt-accent);
+  border-color:var(--runt-accent-dark);
+  color:#101010;
+  font-size:12px;
 }
-#laiso-app .runt-chip{ display:inline-flex; align-items:center; justify-content:center; min-height:30px; padding:7px 11px; border-radius:999px; font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; border:1px solid transparent; white-space:nowrap;
+#laiso-app .runt-chip-pos{
+  background:var(--runt-card-soft);
+  border-color:var(--runt-line-soft);
+  color:var(--runt-text);
 }
-#laiso-app .runt-chip-pos,
-#laiso-app .runt-chip-bpm{ background:#0b0b0a; color:var(--runt-accent, #C4F542);
+#laiso-app .runt-set-delta{
+  padding:0 5px;
+  color:var(--runt-muted);
 }
-#laiso-app .runt-chip-light{ background:#f1ece3; color:#111;
+#laiso-app .runt-set-warning{
+  background:var(--runt-danger-soft);
+  border-color:var(--runt-danger);
+  color:var(--runt-danger);
 }
-#laiso-app .runt-chip-delta{ color:var(--runt-accent, #C4F542); margin-left:5px;
+#laiso-app .runt-set-tools{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
 }
-#laiso-app .runt-set-btn{ min-height:30px!important; padding:6px 11px!important; border-radius:999px!important; font-size:11px!important; letter-spacing:.04em!important;
+#laiso-app .runt-set-tool{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:34px;
+  padding:0 8px;
+  border:1px solid var(--runt-line);
+  border-radius:6px;
+  background:var(--runt-card-soft);
+  color:var(--runt-text);
+  font-family:var(--font-mono);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  cursor:pointer;
 }
-#laiso-app .runt-drag-hint{ font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-tertiary); margin-top:3px;
+#laiso-app .runt-set-drag-handle:focus-visible,
+#laiso-app .runt-set-position-control:focus-within,
+#laiso-app .runt-set-tool:focus-visible,
+#laiso-app .runt30-remove-track:focus-visible{
+  outline:2px solid var(--runt-accent);
+  outline-offset:2px;
 }
-@media(max-width:520px){ #laiso-app .runt-set-card{ grid-template-columns:74px minmax(0,1fr); gap:12px; padding:13px 38px 13px 12px; border-radius:18px; } #laiso-app .runt-set-order{ top:14px; right:13px; font-size:12px; } #laiso-app .runt-metric{ height:34px; border-radius:12px; } #laiso-app .runt-metric-bpm{ font-size:18px; } #laiso-app .runt-metric-cam{ font-size:19px; } #laiso-app .runt-set-title{ font-size:21px; line-height:1.08; margin-right:6px; } #laiso-app .runt-set-release{ font-size:10px; letter-spacing:.13em; line-height:1.3; margin-bottom:9px; } #laiso-app .runt-chip{ min-height:28px; padding:6px 9px; font-size:10px; } #laiso-app .runt-set-btn{ min-height:28px!important; padding:5px 9px!important; font-size:10px!important; }
+#laiso-app .runt-set-card.runt-dragging{opacity:.28}
+
+#laiso-app .vertax-set-actionbar{
+  position:sticky;
+  bottom:calc(8px + env(safe-area-inset-bottom));
+  z-index:24;
+  display:grid;
+  grid-template-columns:1fr 1.2fr 1fr;
+  gap:6px;
+  margin:14px 0 10px;
+  padding:6px;
+  border:1px solid var(--runt-line);
+  border-radius:var(--runt-radius-panel,12px);
+  background:var(--runt-card);
+  box-shadow:0 14px 36px var(--runt-shadow);
+}
+
+#laiso-app .vertax-set-config{
+  margin:0 0 12px;
+  border:1px solid var(--runt-line);
+  border-radius:var(--runt-radius-panel,12px);
+  background:var(--runt-card);
+  overflow:hidden;
+}
+#laiso-app .vertax-set-config-toggle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  min-height:44px;
+  padding:0 12px;
+  border:0;
+  background:var(--runt-card-soft);
+  color:var(--runt-text);
+  font-family:var(--font-mono);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-align:left;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+#laiso-app .vertax-set-config-toggle:hover{
+  color:var(--runt-accent-dark);
+}
+#laiso-app .vertax-set-config-summary{
+  color:var(--runt-muted);
+  font-size:9px;
+}
+#laiso-app .vertax-set-config.is-open .vertax-set-config-toggle{
+  border-bottom:1px solid var(--runt-line-soft);
+}
+#laiso-app .vertax-set-config-body{
+  padding:10px;
+}
+#laiso-app .vertax-set-config-body > .laiso-row:last-child{
+  margin-bottom:0!important;
+}
+#laiso-app .vertax-set-actionbar .laiso-btn{
+  min-height:44px!important;
+  padding:8px 10px!important;
+  border-radius:var(--runt-radius-control,8px)!important;
+  font-size:9px!important;
+  letter-spacing:.08em!important;
+}
+#laiso-app .vertax-set-actionbar .laiso-btn[data-action="set-save"]{
+  grid-column:2;
+  grid-row:1;
+  background:linear-gradient(180deg,var(--runt-accent),var(--runt-accent-dark))!important;
+  border-color:var(--runt-accent-dark)!important;
+  color:#101010!important;
+  -webkit-text-fill-color:#101010!important;
+}
+#laiso-app .vertax-set-actionbar .laiso-btn[data-action="add-track-from-collection"]{
+  grid-column:1;
+  grid-row:1;
+}
+#laiso-app .vertax-set-actionbar .laiso-btn[data-action="set-export"]{
+  grid-column:3;
+  grid-row:1;
+}
+
+@media(max-width:520px){
+  #laiso-app .runt-set-card{
+    grid-template-columns:44px minmax(0,1fr) auto;
+    grid-template-areas:"reorder main tools";
+    gap:8px;
+    min-height:0;
+    padding:8px;
+  }
+  #laiso-app .runt-set-reorder{
+    grid-area:reorder;
+    width:44px;
+  }
+  #laiso-app .runt-set-drag-handle{display:none}
+  #laiso-app .runt-set-position-control{
+    width:44px;
+    height:44px;
+  }
+  #laiso-app .runt-set-position-control select{
+    height:42px;
+    min-height:0!important;
+  }
+  #laiso-app .runt-set-main{grid-area:main}
+  #laiso-app .runt-set-tools{
+    grid-area:tools;
+    align-self:center;
+  }
+  #laiso-app .runt-set-title{font-size:15px}
+  #laiso-app .runt-set-release{display:none}
+  #laiso-app .runt-set-metrics{gap:3px}
+  #laiso-app .runt-metric,
+  #laiso-app .runt-chip,
+  #laiso-app .runt-set-delta,
+  #laiso-app .runt-set-warning{
+    height:24px;
+    padding:0 6px;
+  }
+  #laiso-app .runt-set-tool,
+  #laiso-app .runt30-remove-track{
+    min-height:44px;
+    height:44px;
+  }
+  #laiso-app .runt-set-edit{min-width:58px}
+  #laiso-app .vertax-set-actionbar{
+    grid-template-columns:1.15fr 1fr;
+  }
+  #laiso-app .vertax-set-actionbar .laiso-btn[data-action="set-save"]{
+    grid-column:1 / -1;
+    grid-row:1;
+  }
+  #laiso-app .vertax-set-actionbar .laiso-btn[data-action="add-track-from-collection"]{
+    grid-column:1;
+    grid-row:2;
+  }
+  #laiso-app .vertax-set-actionbar .laiso-btn[data-action="set-export"]{
+    grid-column:2;
+    grid-row:2;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  #laiso-app .runt-set-card{transition:none!important}
 }
 
 /* style block 11 */
@@ -73,7 +364,7 @@
 /* RUNT-01 patch 11: fetching rows remain editable after manual input */
 #laiso-app .runt-fetch-progress{ width:100%; height:8px; background:#E9E1D5; border-radius:999px; overflow:hidden;
 }
-#laiso-app .runt-fetch-progress > div{ height:100%; background:var(--runt-accent, #C4F542); transition:width .25s ease;
+#laiso-app .runt-fetch-progress > div{ height:100%; background:var(--runt-accent, #C4F542);
 }
 #laiso-app .runt-fetch-note{ margin-top:14px; padding:12px 14px; border-radius:14px; background:#FFF0E8; color:var(--warning, #E66A2C); font-family:var(--font-mono); font-size:10px; line-height:1.55; letter-spacing:.08em; text-transform:uppercase;
 }

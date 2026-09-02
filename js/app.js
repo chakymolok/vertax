@@ -685,11 +685,35 @@ window.__vertaxAfterRenderCallbacks = vertaxAfterRenderCallbacks;
   }
 })();
 
-(function installVertaxCompactSetTouchDnd() {
-  if (window.__vertaxCompactSetTouchDndInstalled) return;
-  window.__vertaxCompactSetTouchDndInstalled = true;
-  var drag = null;
+(function installVertaxSetReorder() {
+  if (window.__vertaxSetReorderInstalled) return;
+  window.__vertaxSetReorderInstalled = true;
+  var pointerDrag = null;
+  var desktopFrom = null;
   var ghost = null;
+  var autoScrollFrame = null;
+
+  function cardFromTarget(target) {
+    return target && target.closest && target.closest('#laiso-app .runt-set-card[data-set-idx]');
+  }
+
+  function handleFromTarget(target) {
+    return target && target.closest && target.closest('#laiso-app .runt-set-drag-handle');
+  }
+
+  function cardIndex(card) {
+    return card ? parseInt(card.getAttribute('data-set-idx'), 10) : NaN;
+  }
+
+  function setTrackKey(track) {
+    track = track || {};
+    return [
+      track.recordId || track.recordKey || '',
+      track.id || '',
+      track.position || track.displayPosition || '',
+      track.title || '',
+    ].join('|');
+  }
 
   function clearMarks() {
     document
@@ -698,26 +722,62 @@ window.__vertaxAfterRenderCallbacks = vertaxAfterRenderCallbacks;
       )
       .forEach(function (el) {
         el.classList.remove('runt-dragging', 'runt-drag-over');
+        el.removeAttribute('aria-grabbed');
       });
     if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
     ghost = null;
+    if (autoScrollFrame) cancelAnimationFrame(autoScrollFrame);
+    autoScrollFrame = null;
   }
 
-  function cardFromEventTarget(target) {
-    return target && target.closest && target.closest('#laiso-app .runt-set-card[data-set-idx]');
+  function moveSetItem(from, to, focusPosition) {
+    var arr = (state && state.ui && state.ui.generatedSet) || [];
+    if (isNaN(from) || isNaN(to) || from === to || !arr[from] || !arr[to]) return false;
+    var moved = arr.splice(from, 1)[0];
+    arr.splice(to, 0, moved);
+    state.ui.generatedSet = arr;
+    if (typeof haptic === 'function') haptic('light');
+    if (typeof showToast === 'function') showToast('Порядок изменён');
+    else if (typeof render === 'function') render();
+    if (focusPosition) {
+      setTimeout(function () {
+        var select = document.querySelector(
+          '#laiso-app .runt-set-position-control select[data-set-idx="' + to + '"]'
+        );
+        if (select) select.focus();
+      }, 0);
+    }
+    return true;
+  }
+
+  function markDropTarget(x, y) {
+    if (!pointerDrag) return;
+    var under = document.elementFromPoint(x, y);
+    var target = cardFromTarget(under);
+    document.querySelectorAll('#laiso-app .runt-set-card.runt-drag-over').forEach(function (el) {
+      if (el !== target) el.classList.remove('runt-drag-over');
+    });
+    if (!target || target === pointerDrag.card) return;
+    target.classList.add('runt-drag-over');
+    var to = cardIndex(target);
+    if (!isNaN(to)) pointerDrag.lastTo = to;
   }
 
   function moveGhost(x, y) {
-    if (!ghost) return;
+    if (!ghost || !pointerDrag) return;
     ghost.style.transform =
-      'translate3d(' + x + 'px,' + y + 'px,0) translate(-50%,-50%) rotate(-1.5deg)';
+      'translate3d(' + pointerDrag.left + 'px,' + (y - pointerDrag.offsetY) + 'px,0)';
+    pointerDrag.lastX = x;
+    pointerDrag.lastY = y;
+    markDropTarget(x, y);
   }
 
   function createGhost(card, x, y) {
-    if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
     var rect = card.getBoundingClientRect();
     ghost = card.cloneNode(true);
+    ghost.classList.remove('runt-dragging', 'runt-drag-over');
     ghost.classList.add('runt-touch-ghost');
+    ghost.removeAttribute('data-set-idx');
     ghost.style.width = rect.width + 'px';
     ghost.style.left = '0';
     ghost.style.top = '0';
@@ -725,91 +785,132 @@ window.__vertaxAfterRenderCallbacks = vertaxAfterRenderCallbacks;
     ghost.style.pointerEvents = 'none';
     ghost.style.zIndex = '99998';
     ghost.style.margin = '0';
-    document.body.appendChild(ghost);
+    (document.getElementById('laiso-app') || document.body).appendChild(ghost);
+    pointerDrag.left = rect.left;
+    pointerDrag.offsetY = Math.max(0, Math.min(rect.height, y - rect.top));
     moveGhost(x, y);
   }
 
-  document.addEventListener(
-    'touchstart',
-    function (e) {
-      if (e.touches && e.touches.length !== 1) return;
-      var card = cardFromEventTarget(e.target);
-      if (!card) return;
-      var idx = parseInt(card.getAttribute('data-set-idx'), 10);
-      if (isNaN(idx)) return;
+  function autoScroll() {
+    if (!pointerDrag) return;
+    var edge = Math.min(96, Math.max(64, window.innerHeight * 0.12));
+    var speed = 0;
+    if (pointerDrag.lastY < edge) {
+      speed = -Math.ceil((edge - pointerDrag.lastY) / 6);
+    } else if (pointerDrag.lastY > window.innerHeight - edge) {
+      speed = Math.ceil((pointerDrag.lastY - (window.innerHeight - edge)) / 6);
+    }
+    speed = Math.max(-18, Math.min(18, speed));
+    if (speed) {
+      window.scrollBy(0, speed);
+      markDropTarget(pointerDrag.lastX, pointerDrag.lastY);
+    }
+    autoScrollFrame = requestAnimationFrame(autoScroll);
+  }
 
-      var start = e.touches[0];
-      var sx = start.clientX;
-      var sy = start.clientY;
-      var timer = setTimeout(function () {
-        drag = { from: idx, card: card, lastTo: idx };
-        card.classList.add('runt-dragging');
-        createGhost(card, sx, sy);
-        if (typeof haptic === 'function') haptic('medium');
-      }, 280);
+  if (typeof handlers !== 'undefined' && handlers) {
+    handlers['set-move-to'] = function (_, el) {
+      var arr = (state && state.ui && state.ui.generatedSet) || [];
+      var stableKey = String(el.dataset.setKey || '');
+      var from = stableKey
+        ? arr.findIndex(function (track) {
+            return setTrackKey(track) === stableKey;
+          })
+        : parseInt(el.dataset.setIdx, 10);
+      var to = parseInt(el.value, 10);
+      moveSetItem(from, to, true);
+    };
+  }
 
-      function cancelPress() {
-        clearTimeout(timer);
-        document.removeEventListener('touchend', cancelPress);
-        document.removeEventListener('touchcancel', cancelPress);
-        document.removeEventListener('touchmove', maybeScroll);
-      }
-
-      function maybeScroll(ev) {
-        if (drag) return;
-        var t = ev.touches && ev.touches[0];
-        if (!t) return;
-        if (Math.abs(t.clientX - sx) > 8 || Math.abs(t.clientY - sy) > 8) cancelPress();
-      }
-
-      document.addEventListener('touchend', cancelPress, { once: true });
-      document.addEventListener('touchcancel', cancelPress, { once: true });
-      document.addEventListener('touchmove', maybeScroll, { passive: true });
-    },
-    { passive: true }
-  );
-
-  document.addEventListener(
-    'touchmove',
-    function (e) {
-      if (!drag) return;
-      if (e.cancelable) e.preventDefault();
-      var t = e.touches && e.touches[0];
-      if (!t) return;
-      moveGhost(t.clientX, t.clientY);
-      var under = document.elementFromPoint(t.clientX, t.clientY);
-      var target = cardFromEventTarget(under);
-      document.querySelectorAll('#laiso-app .runt-set-card.runt-drag-over').forEach(function (el) {
-        if (el !== target) el.classList.remove('runt-drag-over');
-      });
-      if (target && target !== drag.card) {
-        target.classList.add('runt-drag-over');
-        var to = parseInt(target.getAttribute('data-set-idx'), 10);
-        if (!isNaN(to)) drag.lastTo = to;
-      }
-    },
-    { passive: false }
-  );
-
-  document.addEventListener('touchend', function () {
-    if (!drag) return;
-    var from = drag.from;
-    var to = drag.lastTo;
-    clearMarks();
-    drag = null;
-    if (isNaN(from) || isNaN(to) || from === to) return;
-    var arr = (state && state.ui && state.ui.generatedSet) || [];
-    if (!arr[from] || !arr[to]) return;
-    var moved = arr.splice(from, 1)[0];
-    arr.splice(to, 0, moved);
-    state.ui.generatedSet = arr;
-    if (typeof haptic === 'function') haptic('light');
-    if (typeof render === 'function') render();
+  document.addEventListener('dragstart', function (e) {
+    var handle = handleFromTarget(e.target);
+    var card = handle && cardFromTarget(handle);
+    if (!card) return;
+    desktopFrom = cardIndex(card);
+    if (isNaN(desktopFrom)) return;
+    card.classList.add('runt-dragging');
+    card.setAttribute('aria-grabbed', 'true');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(desktopFrom));
+    }
   });
 
-  document.addEventListener('touchcancel', function () {
+  document.addEventListener('dragover', function (e) {
+    if (desktopFrom === null) return;
+    var card = cardFromTarget(e.target);
+    if (!card) return;
+    e.preventDefault();
+    document.querySelectorAll('#laiso-app .runt-set-card.runt-drag-over').forEach(function (el) {
+      if (el !== card) el.classList.remove('runt-drag-over');
+    });
+    card.classList.add('runt-drag-over');
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  });
+
+  document.addEventListener('drop', function (e) {
+    if (desktopFrom === null) return;
+    var card = cardFromTarget(e.target);
+    if (!card) return;
+    e.preventDefault();
+    var from = desktopFrom;
+    var to = cardIndex(card);
     clearMarks();
-    drag = null;
+    desktopFrom = null;
+    moveSetItem(from, to, false);
+  });
+
+  document.addEventListener('dragend', function () {
+    clearMarks();
+    desktopFrom = null;
+  });
+
+  document.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse') return;
+    var handle = handleFromTarget(e.target);
+    var card = handle && cardFromTarget(handle);
+    if (!handle || !card) return;
+    var from = cardIndex(card);
+    if (isNaN(from)) return;
+    e.preventDefault();
+    pointerDrag = {
+      pointerId: e.pointerId,
+      from: from,
+      lastTo: from,
+      card: card,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      left: 0,
+      offsetY: 0,
+    };
+    card.classList.add('runt-dragging');
+    card.setAttribute('aria-grabbed', 'true');
+    if (handle.setPointerCapture) handle.setPointerCapture(e.pointerId);
+    createGhost(card, e.clientX, e.clientY);
+    if (typeof haptic === 'function') haptic('medium');
+    autoScrollFrame = requestAnimationFrame(autoScroll);
+  });
+
+  document.addEventListener('pointermove', function (e) {
+    if (!pointerDrag || pointerDrag.pointerId !== e.pointerId) return;
+    e.preventDefault();
+    moveGhost(e.clientX, e.clientY);
+  });
+
+  function finishPointerDrag(e, cancelled) {
+    if (!pointerDrag || (e && pointerDrag.pointerId !== e.pointerId)) return;
+    var from = pointerDrag.from;
+    var to = pointerDrag.lastTo;
+    clearMarks();
+    pointerDrag = null;
+    if (!cancelled) moveSetItem(from, to, false);
+  }
+
+  document.addEventListener('pointerup', function (e) {
+    finishPointerDrag(e, false);
+  });
+  document.addEventListener('pointercancel', function (e) {
+    finishPointerDrag(e, true);
   });
 })();
 

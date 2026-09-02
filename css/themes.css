@@ -105,6 +105,12 @@ body.vertax-theme-dark #laiso-app,
   --runt-orange-cta: var(--runt-accent);
   --runt-orange-cta-dark: var(--runt-accent-dark);
   --runt-orange-cta-soft: var(--runt-accent-soft);
+  --runt-radius-shell: 28px;
+  --runt-radius-panel: 12px;
+  --runt-radius-control: 8px;
+  --runt-touch: 44px;
+  --runt-motion-fast: 120ms;
+  --runt-motion-ui: 180ms;
   background: var(--runt-page-gradient) !important;
   color: var(--runt-text) !important;
 }
@@ -154,6 +160,7 @@ body.vertax-theme-dark #laiso-app,
 #laiso-app .laiso-sticker {
   background: var(--runt-card) !important;
   border-color: var(--runt-line) !important;
+  border-radius: var(--runt-radius-panel) !important;
   color: var(--runt-text) !important;
   box-shadow: 0 16px 44px var(--runt-shadow) !important;
 }
@@ -168,6 +175,7 @@ body.vertax-theme-dark #laiso-app,
 #laiso-app .runt21-suggest-score {
   background: var(--runt-card-soft) !important;
   border-color: var(--runt-line-soft) !important;
+  border-radius: var(--runt-radius-control) !important;
   color: var(--runt-text) !important;
 }
 
@@ -239,6 +247,7 @@ body.vertax-theme-dark #laiso-app,
   background: linear-gradient(180deg, #D8FF55 0%, var(--runt-accent) 100%) !important;
   border-color: var(--runt-accent) !important;
   color: #101010 !important;
+  border-radius: var(--runt-radius-control) !important;
   text-shadow: none !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 12px 26px var(--runt-accent-soft) !important;
 }
@@ -260,6 +269,7 @@ body.vertax-theme-dark #laiso-app,
   background: var(--runt-card) !important;
   border-color: var(--runt-line) !important;
   color: var(--runt-text) !important;
+  border-radius: var(--runt-radius-control) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 22px var(--runt-shadow) !important;
 }
 
@@ -304,6 +314,7 @@ body.vertax-theme-dark #laiso-app .runt-set-btn {
   color: var(--runt-text) !important;
   -webkit-text-fill-color: var(--runt-text) !important;
   caret-color: var(--runt-text) !important;
+  border-radius: var(--runt-radius-control) !important;
 }
 
 #laiso-app .laiso-stepper {
@@ -396,6 +407,11 @@ body.vertax-theme-dark #laiso-app .laiso-dotmark {
 
 #laiso-app .laiso-modal-bg {
   background: rgba(5,6,5,.58) !important;
+}
+
+#laiso-app :where(button,a,summary,input,select,textarea):focus-visible {
+  outline:2px solid var(--runt-accent)!important;
+  outline-offset:2px!important;
 }
 
 #laiso-app .vertax-theme-panel {
@@ -492,7 +508,6 @@ body.vertax-theme-dark #laiso-app .vertax-theme-dot-dark {
 
 #laiso-app .runt-set-card {
   transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, border-color .18s ease, opacity .18s ease, background .18s ease !important;
-  will-change: transform;
 }
 
 #laiso-app .runt-set-card.runt-dragging {
@@ -502,9 +517,8 @@ body.vertax-theme-dark #laiso-app .vertax-theme-dot-dark {
 }
 
 #laiso-app .runt-set-card.runt-drag-over {
-  transform: translateY(6px) !important;
   border-color: var(--runt-accent) !important;
-  box-shadow: 0 0 0 3px var(--runt-accent-soft), 0 18px 42px rgba(0,0,0,.16) !important;
+  box-shadow: 0 0 0 3px var(--runt-accent-soft), 0 10px 24px rgba(0,0,0,.14) !important;
 }
 
 .runt-touch-ghost {
@@ -512,10 +526,6 @@ body.vertax-theme-dark #laiso-app .vertax-theme-dot-dark {
   border: 2px solid var(--runt-accent, #C8FF2E) !important;
   box-shadow: 0 24px 70px rgba(0,0,0,.30), 0 0 0 6px var(--runt-accent-soft, rgba(200,255,46,.22)) !important;
   filter: saturate(1.05);
-}
-
-.runt-touch-ghost .runt-drag-hint {
-  color: var(--runt-accent, #C8FF2E) !important;
 }
 
 /* Theme contrast hardening for legacy RUNT surfaces */
@@ -687,12 +697,44 @@ body.vertax-dark:not(.vertax-theme-dark) #laiso-app .vertax-suggest-row {
 
 @media (max-width: 620px) {
   #laiso-app {
-    padding-top: 18px !important;
+    padding-top: max(10px, env(safe-area-inset-top)) !important;
+    padding-right: max(8px, env(safe-area-inset-right)) !important;
+    padding-bottom: max(22px, env(safe-area-inset-bottom)) !important;
+    padding-left: max(8px, env(safe-area-inset-left)) !important;
   }
 
   #laiso-app .laiso-chassis-row {
     grid-template-columns: minmax(0,1fr) auto !important;
     gap: 12px !important;
+  }
+
+  #laiso-app .laiso-input,
+  #laiso-app .laiso-select,
+  #laiso-app .laiso-textarea,
+  #laiso-app input,
+  #laiso-app select,
+  #laiso-app textarea {
+    font-size:16px!important;
+  }
+
+  #laiso-app .laiso-tab,
+  #laiso-app .laiso-toggle button,
+  #laiso-app .laiso-chip {
+    min-height:var(--runt-touch)!important;
+  }
+
+  #laiso-app .laiso-modal-bg {
+    align-items:flex-end!important;
+    padding:0!important;
+  }
+
+  #laiso-app .laiso-modal {
+    width:100%!important;
+    max-width:none!important;
+    max-height:calc(100dvh - max(12px, env(safe-area-inset-top)))!important;
+    margin:0!important;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom))!important;
+    border-radius:var(--runt-radius-panel) var(--runt-radius-panel) 0 0!important;
   }
 
   #laiso-app .laiso-brand {
@@ -794,7 +836,6 @@ body.vertax-theme-dark #laiso-app .laiso-btn,
 body.vertax-theme-dark #laiso-app .laiso-btn-main,
 body.vertax-theme-dark #laiso-app .laiso-btn-secondary,
 body.vertax-theme-dark #laiso-app .runt-set-btn,
-body.vertax-theme-dark #laiso-app .runt30-remove-track,
 body.vertax-theme-dark #laiso-app .laiso-x2-btn,
 body.vertax-theme-dark #laiso-app .laiso-menu-list button {
   color: var(--runt-text) !important;
@@ -1000,8 +1041,7 @@ body.vertax-theme-dark #laiso-app .laiso-btn[data-action="track-toggle-exclude"]
 body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt19-reset-played"],
 body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt19-back-to-set"],
 body.vertax-theme-dark #laiso-app .laiso-x2-btn,
-body.vertax-theme-dark #laiso-app .runt-set-btn,
-body.vertax-theme-dark #laiso-app .runt30-remove-track {
+body.vertax-theme-dark #laiso-app .runt-set-btn {
   background: var(--runt-card-soft) !important;
   border-color: var(--runt-line) !important;
   color: var(--runt-text) !important;
@@ -1023,8 +1063,7 @@ body.vertax-theme-dark #laiso-app .laiso-btn[data-action="track-toggle-exclude"]
 body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt19-reset-played"]:hover,
 body.vertax-theme-dark #laiso-app .laiso-btn[data-action="runt19-back-to-set"]:hover,
 body.vertax-theme-dark #laiso-app .laiso-x2-btn:hover,
-body.vertax-theme-dark #laiso-app .runt-set-btn:hover,
-body.vertax-theme-dark #laiso-app .runt30-remove-track:hover {
+body.vertax-theme-dark #laiso-app .runt-set-btn:hover {
   background: linear-gradient(180deg, var(--runt-lcd-2), var(--runt-lcd)) !important;
   border-color: var(--runt-accent) !important;
   color: var(--runt-accent) !important;

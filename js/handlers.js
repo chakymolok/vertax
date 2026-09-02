@@ -1852,6 +1852,14 @@ on('collection-sort', function (_, el) {
   state.ui.collectionSort = el.dataset.mode || 'recent';
   render();
 });
+on('collection-sort-select', function (_, el) {
+  state.ui.collectionSort = el.value || 'recent';
+  render();
+});
+on('toggle-set-config', function () {
+  state.ui.setConfigOpen = state.ui.setConfigOpen !== true;
+  render();
+});
 on('export-json', function () {
   var data = { vinyls: state.collection, sets: state.sets, exportedAt: Date.now(), version: 1 };
   var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -2949,160 +2957,6 @@ function installRuntSetDndAndAddTrackModal() {
       state.ui.generatedSet = [];
       render();
     });
-    /* DnD reorder for current set */ if (!window.__runtSetDndPatchInstalled) {
-      window.__runtSetDndPatchInstalled = true;
-      window.__runtDragSetIndex = null;
-      document.addEventListener('dragstart', function (e) {
-        var card =
-          e.target.closest && e.target.closest('#laiso-app .laiso-set-card[data-set-index]');
-        if (!card) return;
-        window.__runtDragSetIndex = parseInt(card.dataset.setIndex, 10);
-        card.classList.add('is-dragging');
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', String(window.__runtDragSetIndex));
-        }
-      });
-      document.addEventListener('dragend', function (e) {
-        document
-          .querySelectorAll(
-            '#laiso-app .laiso-set-card.is-dragging,#laiso-app .laiso-set-card.is-drag-over'
-          )
-          .forEach(function (el) {
-            el.classList.remove('is-dragging', 'is-drag-over');
-          });
-        window.__runtDragSetIndex = null;
-      });
-      document.addEventListener('dragover', function (e) {
-        var card =
-          e.target.closest && e.target.closest('#laiso-app .laiso-set-card[data-set-index]');
-        if (!card) return;
-        e.preventDefault();
-        document.querySelectorAll('#laiso-app .laiso-set-card.is-drag-over').forEach(function (el) {
-          if (el !== card) el.classList.remove('is-drag-over');
-        });
-        card.classList.add('is-drag-over');
-        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-      });
-      document.addEventListener('drop', function (e) {
-        var card =
-          e.target.closest && e.target.closest('#laiso-app .laiso-set-card[data-set-index]');
-        if (!card) return;
-        e.preventDefault();
-        var from = window.__runtDragSetIndex;
-        if (from == null && e.dataTransfer)
-          from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        var to = parseInt(card.dataset.setIndex, 10);
-        document
-          .querySelectorAll(
-            '#laiso-app .laiso-set-card.is-dragging,#laiso-app .laiso-set-card.is-drag-over'
-          )
-          .forEach(function (el) {
-            el.classList.remove('is-dragging', 'is-drag-over');
-          });
-        if (isNaN(from) || isNaN(to) || from === to) return;
-        var arr = state.ui.generatedSet || [];
-        if (!arr[from] || !arr[to]) return;
-        var moved = arr.splice(from, 1)[0];
-        arr.splice(to, 0, moved);
-        state.ui.generatedSet = arr;
-        haptic('light');
-        showToast('Порядок изменён');
-        render();
-      });
-      /* Touch DnD for mobile (HTML5 dnd doesn't fire on touchscreens) */ window.__runtTouchDrag =
-        null;
-      function runtTouchClearMarks() {
-        document
-          .querySelectorAll(
-            '#laiso-app .laiso-set-card.is-dragging,#laiso-app .laiso-set-card.is-drag-over'
-          )
-          .forEach(function (el) {
-            el.classList.remove('is-dragging', 'is-drag-over');
-          });
-      }
-      document.addEventListener(
-        'touchstart',
-        function (e) {
-          if (e.touches && e.touches.length !== 1) return;
-          var card =
-            e.target.closest && e.target.closest('#laiso-app .laiso-set-card[data-set-index]');
-          if (!card) return;
-          var idx = parseInt(card.dataset.setIndex, 10);
-          if (isNaN(idx)) return;
-          var t0 = e.touches[0];
-          var sx = t0.clientX,
-            sy = t0.clientY;
-          var pressTimer = setTimeout(function () {
-            window.__runtTouchDrag = { from: idx, card: card, lastTo: idx };
-            card.classList.add('is-dragging');
-            haptic('medium');
-          }, 280);
-          function clear() {
-            clearTimeout(pressTimer);
-            document.removeEventListener('touchend', clear);
-            document.removeEventListener('touchcancel', clear);
-            document.removeEventListener('touchmove', moveMaybeCancel);
-          }
-          function moveMaybeCancel(ev) {
-            if (window.__runtTouchDrag) return;
-            var tt = ev.touches && ev.touches[0];
-            if (!tt) return;
-            if (Math.abs(tt.clientX - sx) > 8 || Math.abs(tt.clientY - sy) > 8) clear();
-          }
-          document.addEventListener('touchend', clear, { once: true });
-          document.addEventListener('touchcancel', clear, { once: true });
-          document.addEventListener('touchmove', moveMaybeCancel, { passive: true });
-        },
-        { passive: true }
-      );
-      document.addEventListener(
-        'touchmove',
-        function (e) {
-          if (!window.__runtTouchDrag) return;
-          if (e.cancelable) e.preventDefault();
-          var t = e.touches && e.touches[0];
-          if (!t) return;
-          var underEl = document.elementFromPoint(t.clientX, t.clientY);
-          var target =
-            underEl &&
-            underEl.closest &&
-            underEl.closest('#laiso-app .laiso-set-card[data-set-index]');
-          document
-            .querySelectorAll('#laiso-app .laiso-set-card.is-drag-over')
-            .forEach(function (el) {
-              if (el !== target) el.classList.remove('is-drag-over');
-            });
-          if (target && target !== window.__runtTouchDrag.card) {
-            target.classList.add('is-drag-over');
-            var ti = parseInt(target.dataset.setIndex, 10);
-            if (!isNaN(ti)) window.__runtTouchDrag.lastTo = ti;
-          }
-        },
-        { passive: false }
-      );
-      document.addEventListener('touchend', function () {
-        var d = window.__runtTouchDrag;
-        if (!d) return;
-        var from = d.from,
-          to = d.lastTo;
-        runtTouchClearMarks();
-        window.__runtTouchDrag = null;
-        if (isNaN(from) || isNaN(to) || from === to) return;
-        var arr = state.ui.generatedSet || [];
-        if (!arr[from] || !arr[to]) return;
-        var moved = arr.splice(from, 1)[0];
-        arr.splice(to, 0, moved);
-        state.ui.generatedSet = arr;
-        haptic('light');
-        showToast('Порядок изменён');
-        render();
-      });
-      document.addEventListener('touchcancel', function () {
-        runtTouchClearMarks();
-        window.__runtTouchDrag = null;
-      });
-    }
     /* Patch x2/div2 to sync generated set instantly */ var prevBpmX2 = handlers['bpm-x2'];
     on('bpm-x2', function (e, el) {
       if (prevBpmX2) prevBpmX2(e, el);
@@ -7990,9 +7844,9 @@ function installVertaxBackupFeature() {
     if (!shouldShowOnboarding()) return '';
     return (
       '<div class="vertax-backup-onboarding">' +
-      '<div class="vertax-backup-lock">🔒</div>' +
-      '<h2>Ваши данные — только ваши</h2>' +
-      '<p>VERTAX не собирает и не хранит вашу коллекцию на серверах. Мы не знаем кто вы и что у вас в коллекции — и не хотим знать.</p>' +
+      '<div class="vertax-backup-eyebrow">Локальное хранение</div>' +
+      '<h2>Личная коллекция — на вашем устройстве</h2>' +
+      '<p>VERTAX хранит вашу личную коллекцию в этом браузере. Обезличенные данные релизов и треков могут пополнять общий музыкальный каталог — без имени владельца и без привязки к вашему профилю.</p>' +
       '<p>Обратная сторона: если браузер очистит данные или вы смените телефон — коллекция пропадёт.</p>' +
       '<p>Поэтому мы сделали резервную копию. Это файл который вы сохраняете сами — в Telegram себе, в заметки, в облако. Вы полностью контролируете где он хранится.</p>' +
       '<p><strong>Честно. Просто. Надёжно.</strong></p>' +
@@ -8360,25 +8214,6 @@ function installVertaxBackupFeature() {
     },
     true
   );
-
-  var style = document.createElement('style');
-  style.textContent = [
-    '#laiso-app .vertax-backup-page p{font-size:14px;line-height:1.55;color:var(--text-secondary,#666158);margin:0 0 10px;}',
-    '#laiso-app .vertax-backup-status{display:flex;flex-direction:column;gap:6px;background:#101010;color:var(--accent-lime,#C4F542);border-radius:16px;padding:15px 16px;font-family:var(--font-mono,monospace);box-shadow:inset 0 0 20px rgba(0,0,0,.85);}',
-    '#laiso-app .vertax-backup-status strong{font-size:13px;letter-spacing:.04em;}',
-    '#laiso-app .vertax-backup-status span{font-size:11px;color:rgba(196,245,66,.72);}',
-    '#laiso-app .vertax-backup-warn{margin-top:10px;padding:14px 16px;border-radius:16px;background:#FFF0E8;color:var(--warning,#E66A2C);border:1px solid rgba(230,106,44,.35);font-weight:650;line-height:1.45;}',
-    '#laiso-app .vertax-backup-onboarding,.vertax-backup-restore{margin:14px 0;padding:18px;border:1px solid #111;border-radius:20px;background:#FFFDF7;box-shadow:0 14px 40px rgba(20,16,10,.08);}',
-    '#laiso-app .vertax-backup-onboarding{background:linear-gradient(180deg,#FBFFF0 0%,#FFFDF7 100%);}',
-    '#laiso-app .vertax-backup-lock{font-size:28px;margin-bottom:8px;}',
-    '#laiso-app .vertax-backup-onboarding h2{font-size:22px;line-height:1.08;margin:0 0 12px;letter-spacing:-.02em;}',
-    '#laiso-app .vertax-backup-onboarding p{font-size:15px;color:#111;}',
-    '#laiso-app .vertax-backup-restore{display:flex;flex-direction:column;gap:10px;}',
-    '#laiso-app .vertax-backup-restore strong{font-size:17px;}',
-    '#laiso-app .vertax-backup-restore span{font-family:var(--font-mono,monospace);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-tertiary,#8A847B);}',
-    '.vertax-backup-toast{border:0;cursor:pointer;}',
-  ].join('\n');
-  document.head.appendChild(style);
 
   loadSettings().then(function () {
     renderApp();
@@ -8996,10 +8831,11 @@ function installVertaxBackupFeature() {
       syncTrackSetSnapshots();
       root.querySelectorAll('.laiso-set-card, .runt-set-card').forEach(function (card, idx) {
         if (card.querySelector('.vertax-set-side-edit')) return;
-        var box = card.querySelector('.laiso-set-pills, .runt-set-actions') || card;
+        var box =
+          card.querySelector('.runt-set-tools, .laiso-set-pills, .runt-set-actions') || card;
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'laiso-x2-btn vertax-set-side-edit';
+        btn.className = 'runt-set-tool vertax-set-side-edit';
         btn.dataset.action = 'set-track-side-edit';
         btn.dataset.index = String(idx);
         btn.textContent = 'сторона';
@@ -9324,12 +9160,14 @@ function installVertaxBackupFeature() {
           .map(function (track) {
             var isSelected = !!selected[track.selectKey];
             return (
-              '<div class="runt26-card vertax-track-source-card ' +
+              '<button type="button" class="runt26-card vertax-track-source-card ' +
               (isSelected ? 'is-selected' : '') +
               '" data-action="set-track-toggle" data-track-key="' +
               safeEsc(track.selectKey) +
               '" data-track-search="' +
               safeEsc(trackSearchText(track)) +
+              '" aria-pressed="' +
+              (isSelected ? 'true' : 'false') +
               '">' +
               '<div class="runt26-cover vertax-track-source-pos">' +
               safeEsc(track.displayPosition || track.position || '-') +
@@ -9352,7 +9190,7 @@ function installVertaxBackupFeature() {
               '</span></div>' +
               '</div><div class="runt26-check">' +
               (isSelected ? '✓' : '') +
-              '</div></div>'
+              '</div></button>'
             );
           })
           .join('')
@@ -9420,6 +9258,7 @@ function installVertaxBackupFeature() {
       card.hidden = !isVisible;
       card.style.display = isVisible ? '' : 'none';
       card.classList.toggle('is-selected', isSelected);
+      card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
       var check = card.querySelector('.runt26-check');
       if (check) check.textContent = isSelected ? '✓' : '';
     });
@@ -9619,7 +9458,7 @@ function installVertaxBackupFeature() {
       setTimeout(boot, 200);
       return;
     }
-    if (!window.__runtSetDndPatchInstalled) {
+    if (!window.__vertaxSetReorderInstalled) {
       setTimeout(boot, 200);
       return;
     }
@@ -9982,25 +9821,6 @@ function installVertaxBackupFeature() {
       return html;
     }
 
-    function removeCollectionDuplicateBlock() {
-      var root = document.getElementById('laiso-root');
-      if (!root || state.view !== 'collection') return;
-      root.querySelectorAll('.runt18c-safe-build').forEach(function (el) {
-        el.remove();
-      });
-      root.querySelectorAll('.laiso-panel, .laiso-card, section, div').forEach(function (el) {
-        if (!el.parentNode) return;
-        var text = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        var isSafeBuild = el.classList && el.classList.contains('runt18c-safe-build');
-        if (
-          isSafeBuild ||
-          (text.indexOf('собрать сет из коллекции') >= 0 && text.indexOf('+ собрать сет') < 0)
-        ) {
-          el.parentNode.removeChild(el);
-        }
-      });
-    }
-
     function injectLiveSaveButton() {
       var root = document.getElementById('laiso-root');
       if (
@@ -10020,7 +9840,6 @@ function installVertaxBackupFeature() {
     function afterRender() {
       installTrackScopeWrapper();
       installGenerateWrapper();
-      removeCollectionDuplicateBlock();
       injectLiveSaveButton();
     }
 

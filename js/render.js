@@ -83,6 +83,8 @@ function render() {
   }
   if (mainEl) mainEl.innerHTML = viewHtml;
 
+  if (document.body) document.body.dataset.vertaxView = state.view || 'home';
+
   // --- Overlay (toast + modal — never touches main zone) ---
   if (overlayEl) {
     var overlayHtml = '';
@@ -230,11 +232,11 @@ function renderHeader(title, opts) {
     '' +
     renderChassis(opts.right || '') +
     '<div class="laiso-header">' +
-    '<button class="laiso-back" data-action="back">← Назад</button>' +
+    '<button class="laiso-back" data-action="back" aria-label="Назад"><span class="laiso-back-glyph" aria-hidden="true">←</span><span class="laiso-back-label">Назад</span></button>' +
     '<h1 class="laiso-h1">' +
     esc(title) +
     '</h1>' +
-    '<div style="min-width:54px;"></div>' +
+    '<div class="laiso-header-slot" aria-hidden="true"></div>' +
     '</div>'
   );
 }
@@ -246,7 +248,6 @@ function renderHeader(title, opts) {
   });
   var u = state.ui;
   /* SEARCH MODULE — main and only path on this screen */ var searchPanel =
-    '<div class="laiso-mod-label">найти пластинку</div>' +
     '<div class="laiso-panel">' +
     '<div class="laiso-search">' +
     '<input class="laiso-input" type="text" id="search-input" data-bind="searchQuery" data-action="search-input" ' +
@@ -319,7 +320,7 @@ function viewDiscogsImport() {
       esc(pct) +
       '%)</div><div style="margin-top:10px;height:6px;background:var(--panel-recess);border-radius:999px;overflow:hidden;"><div style="width:' +
       pct +
-      '%;height:100%;background:var(--accent-lime);transition:width .25s;"></div></div><button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="discogs-enrich-cancel" style="margin-top:14px;">Прервать (что успели — уже в коллекции)</button></div></div>'
+      '%;height:100%;background:var(--accent-lime);"></div></div><button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="discogs-enrich-cancel" style="margin-top:14px;">Прервать (что успели — уже в коллекции)</button></div></div>'
     );
   }
   var progress = u.discogsImportLoading
@@ -2904,7 +2905,23 @@ function viewDig() {
     vinyl: 'Каталог',
   };
   var sortHtml =
-    '<div class="laiso-row" style="gap:6px;flex-wrap:wrap;margin:6px 0;">' +
+    '<div class="vertax-collection-sort">' +
+    '<label class="vertax-collection-sort-select"><span>Сортировка</span><select class="laiso-select" data-action="collection-sort-select" aria-label="Сортировка коллекции">' +
+    Object.keys(sortLabels)
+      .map(function (k) {
+        return (
+          '<option value="' +
+          k +
+          '"' +
+          (sortMode === k ? ' selected' : '') +
+          '>' +
+          esc(sortLabels[k]) +
+          '</option>'
+        );
+      })
+      .join('') +
+    '</select></label>' +
+    '<div class="laiso-row vertax-collection-sort-chips">' +
     Object.keys(sortLabels)
       .map(function (k) {
         return (
@@ -2918,7 +2935,7 @@ function viewDig() {
         );
       })
       .join('') +
-    '</div>';
+    '</div></div>';
   var vinylsHtml = filtered.length
     ? filtered
         .map(function (v) {
@@ -2976,7 +2993,6 @@ function viewDig() {
     state.sets.length +
     ')</button>' +
     '</div>' +
-    '<div class="laiso-panel runt18c-safe-build vertax-collection-set-build" style="margin:10px 0 14px;"><div class="laiso-h2" style="margin-bottom:8px;">Собрать сет из коллекции</div><button type="button" class="laiso-btn laiso-btn-block" data-action="runt28-open-source">Выбрать пластинки / вся коллекция</button></div>' +
     '<div class="laiso-search">' +
     '<input class="laiso-input" type="search" placeholder="Поиск: артист / название / лейбл / каталог…" value="' +
     esc(state.ui.collectionFilter || '') +
@@ -2997,7 +3013,7 @@ function viewDig() {
     '<div class="laiso-stack-sm">' +
     '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="export-json">Экспорт коллекции (JSON)</button>' +
     '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="import-json">Импорт коллекции (JSON)</button>' +
-    '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="goto-backup">🗂 Резервная копия</button>' +
+    '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="goto-backup">Резервная копия</button>' +
     '<button class="laiso-btn laiso-btn-warning laiso-btn-block" data-action="confirm-clear">Стереть все данные</button>' +
     '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="open-about">О приложении</button>' +
     '<button class="laiso-btn laiso-btn-secondary laiso-btn-block" data-action="open-help">Справка</button>' +
@@ -3213,110 +3229,6 @@ function installRuntSetManualMetaControls() {
       showToast('BPM/Key обновлены');
       render();
     };
-    window.renderRuntSetCard = function (tr, idx, arr) {
-      var prev = idx > 0 ? arr[idx - 1] : null;
-      var dBpm = prev && prev.bpm && tr.bpm ? tr.bpm - prev.bpm : null;
-      var sameVinyl =
-        prev &&
-        ((prev.recordKey && tr.recordKey && prev.recordKey === tr.recordKey) ||
-          prev.recordId === tr.recordId);
-      var pos = tr.displayPosition || tr.position || '—';
-      var dStr = dBpm === null ? '' : ' (' + (dBpm > 0 ? '+' : '') + dBpm + ')';
-      var x2 = '';
-      if (tr.bpm) {
-        if (tr.originalBpm) {
-          x2 =
-            '<button class="laiso-x2-btn" data-action="bpm-divide-2" data-vid="' +
-            esc(tr.recordId) +
-            '" data-tid="' +
-            esc(tr.id) +
-            '">÷2</button>';
-        } else {
-          x2 =
-            '<button class="laiso-x2-btn" data-action="bpm-x2" data-vid="' +
-            esc(tr.recordId) +
-            '" data-tid="' +
-            esc(tr.id) +
-            '">×2</button>';
-        }
-      }
-      var warning = sameVinyl
-        ? '<div class="laiso-warn-line">⚠ Та же пластинка, что предыдущий трек</div>'
-        : '';
-      var bpmHint = tr.originalBpm
-        ? '<span class="laiso-set-bpm-hint">исх. ' + esc(String(tr.originalBpm)) + ' ×2</span>'
-        : '';
-      var catnoStr = tr.vinylCatno ? ' · ' + esc(tr.vinylCatno) : '';
-      return (
-        warning +
-        '<div class="laiso-set-card">' +
-        '<div class="laiso-set-order">#' +
-        (idx + 1) +
-        '</div>' +
-        '<div class="laiso-set-bigmeta">' +
-        '<span class="laiso-set-big-bpm">' +
-        (tr.bpm ? esc(String(tr.bpm)) : '—') +
-        '</span>' +
-        '<span class="laiso-set-big-cam">' +
-        esc(tr.camelot || '—') +
-        '</span>' +
-        (tr.key ? '<span class="laiso-set-big-key">KEY: ' + esc(tr.key) + '</span>' : '') +
-        '</div>' +
-        '<div class="laiso-set-body">' +
-        '<span class="laiso-set-title">' +
-        esc(tr.title || '—') +
-        '</span>' +
-        '<div class="laiso-set-meta">' +
-        esc(tr.vinylArtist || '') +
-        ' — ' +
-        esc(tr.vinylTitle || '') +
-        catnoStr +
-        '</div>' +
-        '<div class="laiso-set-bottom">' +
-        '<span class="laiso-set-pos-bottom">' +
-        esc(pos) +
-        '</span>' +
-        '<span class="laiso-pill laiso-pill-bpm">' +
-        (tr.bpm ? esc(String(tr.bpm)) + ' BPM' + dStr : '— BPM') +
-        '</span>' +
-        x2 +
-        bpmHint +
-        '<button class="laiso-x2-btn" data-action="track-manual-meta" data-vid="' +
-        esc(tr.recordId) +
-        '" data-tid="' +
-        esc(tr.id) +
-        '">править</button>' +
-        '</div>' +
-        '</div>' +
-        '</div>'
-      );
-    };
-    var oldViewSet = viewSet;
-    viewSet = function () {
-      var html = oldViewSet();
-      if (!state.ui || !state.ui.generatedSet || !state.ui.generatedSet.length) return html;
-      var newRows = state.ui.generatedSet
-        .map(function (tr, idx, arr) {
-          return window.renderRuntSetCard(tr, idx, arr);
-        })
-        .join('');
-      /* replace only the current generated set stack block; fallback leaves old markup if structure changes */ html =
-        html.replace(
-          /<div class="laiso-mod-label">сет · [\s\S]*?<div class="laiso-row" style="margin-top:14px;">/,
-          function (match) {
-            var exportStart = '<div class="laiso-row" style="margin-top:14px;">';
-            return (
-              '<div class="laiso-mod-label">сет · ' +
-              state.ui.generatedSet.length +
-              ' трек.</div><div class="laiso-stack-sm">' +
-              newRows +
-              '</div>' +
-              exportStart
-            );
-          }
-        );
-      return html;
-    };
   })();
 }
 
@@ -3346,44 +3258,65 @@ function installRuntCompactSetCards() {
         prev &&
         ((tr.recordKey && prev.recordKey && tr.recordKey === prev.recordKey) ||
           tr.recordId === prev.recordId);
+      var setTrackKey = [
+        tr.recordId || tr.recordKey || '',
+        tr.id || '',
+        tr.position || tr.displayPosition || '',
+        tr.title || '',
+      ].join('|');
+      var positionOptions = arr
+        .map(function (_, optionIdx) {
+          return (
+            '<option value="' +
+            optionIdx +
+            '"' +
+            (optionIdx === idx ? ' selected' : '') +
+            '>' +
+            (optionIdx + 1) +
+            '</option>'
+          );
+        })
+        .join('');
       var x2Button = '';
       if (tr.originalBpm && tr.bpm) {
         x2Button =
-          '<button class="laiso-btn laiso-btn-secondary runt-set-btn" data-action="bpm-divide-2" data-vid="' +
+          '<button class="runt-set-tool" type="button" data-action="bpm-divide-2" aria-label="Разделить BPM пополам" data-vid="' +
           safeEsc(tr.recordId) +
           '" data-tid="' +
           safeEsc(tr.id) +
           '">÷2</button>';
       } else if (tr.bpm && tr.bpm >= 70 && tr.bpm <= 100) {
         x2Button =
-          '<button class="laiso-btn laiso-btn-secondary runt-set-btn" data-action="bpm-x2" data-vid="' +
+          '<button class="runt-set-tool" type="button" data-action="bpm-x2" aria-label="Удвоить BPM" data-vid="' +
           safeEsc(tr.recordId) +
           '" data-tid="' +
           safeEsc(tr.id) +
           '">×2</button>';
       } else if (tr.bpm && tr.bpm >= 130) {
         x2Button =
-          '<button class="laiso-btn laiso-btn-secondary runt-set-btn" data-action="bpm-divide-2" data-vid="' +
+          '<button class="runt-set-tool" type="button" data-action="bpm-divide-2" aria-label="Разделить BPM пополам" data-vid="' +
           safeEsc(tr.recordId) +
           '" data-tid="' +
           safeEsc(tr.id) +
           '">÷2</button>';
       }
       return (
-        (sameVinyl ? '<div class="laiso-warn-line">⚠ Та же пластинка рядом</div>' : '') +
-        '<div class="runt-set-card" draggable="true" data-set-idx="' +
+        '<div class="runt-set-card" data-set-idx="' +
         idx +
         '">' +
-        '<div class="runt-set-order">#' +
-        (idx + 1) +
-        '</div>' +
-        '<div class="runt-set-left">' +
-        '<div class="runt-metric runt-metric-bpm">' +
-        safeEsc(bpm) +
-        '</div>' +
-        '<div class="runt-metric runt-metric-cam">' +
-        safeEsc(cam) +
-        '</div>' +
+        '<div class="runt-set-reorder">' +
+        '<button class="runt-set-drag-handle" type="button" draggable="true" aria-label="Перетащить трек ' +
+        safeEsc(tr.title || String(idx + 1)) +
+        '" title="Перетащить"><span></span><span></span><span></span><span></span><span></span><span></span></button>' +
+        '<label class="runt-set-position-control" title="Позиция в сете"><span>#</span><select data-action="set-move-to" data-set-idx="' +
+        idx +
+        '" data-set-key="' +
+        safeEsc(setTrackKey) +
+        '" aria-label="Позиция трека ' +
+        safeEsc(tr.title || String(idx + 1)) +
+        '">' +
+        positionOptions +
+        '</select></label>' +
         '</div>' +
         '<div class="runt-set-main">' +
         '<h3 class="runt-set-title">' +
@@ -3392,26 +3325,32 @@ function installRuntCompactSetCards() {
         '<div class="runt-set-release">' +
         safeEsc(release) +
         '</div>' +
-        '<div class="runt-set-actions">' +
-        '<span class="runt-chip runt-chip-pos">на пластинке ' +
+        '<div class="runt-set-metrics">' +
+        '<span class="runt-metric runt-metric-bpm"><strong>' +
+        safeEsc(bpm) +
+        '</strong><small>BPM</small></span>' +
+        '<span class="runt-metric runt-metric-cam">' +
+        safeEsc(cam) +
+        '</span>' +
+        '<span class="runt-chip runt-chip-pos">' +
         safeEsc(pos) +
         '</span>' +
-        '<span class="runt-chip runt-chip-bpm">' +
-        safeEsc(bpm) +
-        ' BPM' +
-        (dStr ? '<span class="runt-chip-delta">(' + safeEsc(dStr) + ')</span>' : '') +
-        '</span>' +
+        (dStr ? '<span class="runt-set-delta">' + safeEsc(dStr) + '</span>' : '') +
+        (sameVinyl ? '<span class="runt-set-warning">Та же пластинка рядом</span>' : '') +
+        '</div>' +
+        '</div>' +
+        '<div class="runt-set-tools">' +
         x2Button +
-        '<button class="laiso-btn laiso-btn-secondary runt-set-btn" data-action="track-manual-meta" data-vid="' +
+        '<button class="runt-set-tool runt-set-edit" type="button" data-action="track-manual-meta" data-vid="' +
         safeEsc(tr.recordId) +
         '" data-tid="' +
         safeEsc(tr.id) +
         '">править</button>' +
-        '<button class="runt30-remove-track" type="button" data-runt30-remove-index="' +
+        '<button class="runt30-remove-track" type="button" aria-label="Убрать трек ' +
+        safeEsc(tr.title || String(idx + 1)) +
+        '" title="Убрать" data-runt30-remove-index="' +
         idx +
-        '">убрать</button>' +
-        '</div>' +
-        '<div class="runt-drag-hint">↕ перетащить</div>' +
+        '"><span aria-hidden="true">×</span></button>' +
         '</div>' +
         '</div>'
       );
@@ -3475,7 +3414,7 @@ function installRuntCompactSetCards() {
           '</div>';
       } else if (mode === 'custom') {
         controls =
-          '<div class="laiso-panel"><div class="laiso-label">Свой сет</div><p style="margin:0;color:var(--text-secondary);">Добавляй треки из коллекции вручную, меняй порядок перетаскиванием и убирай лишнее прямо из списка.</p></div>';
+          '<div class="laiso-panel"><div class="laiso-label">Свой сет</div><p style="margin:0;color:var(--text-secondary);">Добавляй треки из коллекции и собирай порядок вручную.</p></div>';
       }
       return modeTabs + controls;
     }
@@ -3494,7 +3433,7 @@ function installRuntCompactSetCards() {
       var missingNotice = '';
       if (missing.length > 0 && !state.ui.setOpenDataPanel) {
         missingNotice =
-          '<div class="laiso-panel laiso-data-panel" style="border-color:var(--warning);background:#FFF8F2;">' +
+          '<div class="laiso-panel laiso-data-panel" style="border-color:var(--runt-danger);background:var(--runt-danger-soft);">' +
           '<div class="laiso-data-head">' +
           '<strong>Есть треки без BPM / Camelot</strong>' +
           '<span class="laiso-meta">' +
@@ -3527,61 +3466,41 @@ function installRuntCompactSetCards() {
           : availCount < 2
             ? '<div class="laiso-empty">Нужно минимум 2 трека. Добавь пластинки и проставь BPM/Key.</div>'
             : '';
+      var setConfigOpen = !hasSet || state.ui.setConfigOpen === true;
+      var setConfig =
+        '<section class="vertax-set-config' +
+        (setConfigOpen ? ' is-open' : '') +
+        '">' +
+        '<button class="vertax-set-config-toggle" type="button" data-action="toggle-set-config" aria-expanded="' +
+        (setConfigOpen ? 'true' : 'false') +
+        '"><span>Параметры сборки</span><span class="vertax-set-config-summary">' +
+        safeEsc((opts.targetMinutes || 60) + ' мин') +
+        '</span></button>' +
+        '<div class="vertax-set-config-body"' +
+        (setConfigOpen ? '' : ' hidden') +
+        '>' +
+        renderCompactControls(mode, opts) +
+        primaryRow +
+        '</div>' +
+        '</section>';
+      var setActions = hasSet
+        ? '<div class="vertax-set-actionbar" aria-label="Действия с сетом">' +
+          '<button class="laiso-btn vertax-set-actionbar-save" data-action="set-save">Сохранить</button>' +
+          '<button class="laiso-btn laiso-btn-secondary" data-action="add-track-from-collection">Добавить трек из коллекции</button>' +
+          '<button class="laiso-btn laiso-btn-secondary" data-action="set-export">Экспорт TXT</button>' +
+          '</div>'
+        : '';
       return (
         renderHeader('Сборка сета', {
           right: '<span class="laiso-counter">' + availCount + ' трек.</span>',
         }) +
-        renderCompactControls(mode, opts) +
-        primaryRow +
+        setConfig +
         emptyText +
         missingNotice +
-        setHtml +
-        (hasSet
-          ? '<div class="laiso-row" style="margin-top:14px;">' +
-            '<button class="laiso-btn laiso-btn-secondary laiso-grow" data-action="add-track-from-collection">+ Добавить трек из коллекции</button>' +
-            '<button class="laiso-btn laiso-btn-secondary laiso-grow" data-action="set-export">Экспорт TXT</button>' +
-            '<button class="laiso-btn laiso-grow" data-action="set-save">Сохранить сет</button>' +
-            '</div>'
-          : '')
+        setActions +
+        setHtml
       );
     };
-    /* Drag and drop reorder for compact set cards */ var dragIdx = null;
-    document.addEventListener('dragstart', function (e) {
-      var card = e.target && e.target.closest && e.target.closest('#laiso-app .runt-set-card');
-      if (!card) return;
-      dragIdx = parseInt(card.getAttribute('data-set-idx'), 10);
-      card.classList.add('runt-dragging');
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(dragIdx));
-      }
-    });
-    document.addEventListener('dragend', function (e) {
-      var card = e.target && e.target.closest && e.target.closest('#laiso-app .runt-set-card');
-      if (card) card.classList.remove('runt-dragging');
-      dragIdx = null;
-    });
-    document.addEventListener('dragover', function (e) {
-      var card = e.target && e.target.closest && e.target.closest('#laiso-app .runt-set-card');
-      if (!card) return;
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-    });
-    document.addEventListener('drop', function (e) {
-      var card = e.target && e.target.closest && e.target.closest('#laiso-app .runt-set-card');
-      if (!card) return;
-      e.preventDefault();
-      var from = dragIdx;
-      if (from === null && e.dataTransfer)
-        from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-      var to = parseInt(card.getAttribute('data-set-idx'), 10);
-      if (isNaN(from) || isNaN(to) || from === to) return;
-      var arr = state.ui.generatedSet || [];
-      var moved = arr.splice(from, 1)[0];
-      arr.splice(to, 0, moved);
-      state.ui.generatedSet = arr;
-      if (typeof render === 'function') render();
-    });
     if (typeof render === 'function') render();
   })();
 }
