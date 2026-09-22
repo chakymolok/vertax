@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const catalog = require('./api/catalog');
@@ -172,17 +172,28 @@ const notFoundHtml = catalog.renderNotFoundPage();
 assert.match(notFoundHtml, /Пластинка не найдена/);
 assert.match(notFoundHtml, /noindex, follow/);
 
-const sitemapIndex = readFileSync(new URL('./sitemap.xml', import.meta.url), 'utf8');
-const pagesSitemap = readFileSync(new URL('./pages-sitemap.xml', import.meta.url), 'utf8');
-assert.match(sitemapIndex, /<sitemapindex /);
-assert.match(sitemapIndex, /<loc>https:\/\/vertax.live\/music-sitemap.xml<\/loc>/);
-assert.match(sitemapIndex, /<loc>https:\/\/vertax.live\/pages-sitemap.xml<\/loc>/);
-assert.match(pagesSitemap, /<loc>https:\/\/vertax.live\/about<\/loc>/);
-assert.doesNotMatch(pagesSitemap, /<lastmod>/, 'Do not invent static page modification dates');
-assert.ok(
-  readFileSync(new URL('./scripts/build-public.js', import.meta.url), 'utf8').includes(
-    "'pages-sitemap.xml'"
-  )
+const vercelConfig = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'));
+const sitemapPaths = ['/sitemap.xml', '/pages-sitemap.xml', '/music-sitemap.xml'];
+for (const path of sitemapPaths) {
+  assert.equal(
+    vercelConfig.rewrites.find((route) => route.source === path)?.destination,
+    '/api/catalog?format=sitemap',
+    'All sitemap URLs must reach the same existing function'
+  );
+  assert.equal(
+    existsSync(new URL('.' + path, import.meta.url)),
+    false,
+    'No static sitemap may shadow the route'
+  );
+  assert.equal(
+    existsSync(new URL('./public' + path, import.meta.url)),
+    false,
+    'Build must remove obsolete static sitemaps'
+  );
+}
+assert.deepEqual(
+  readFileSync(new URL('./robots.txt', import.meta.url), 'utf8').match(/^Sitemap:.*$/gm),
+  ['Sitemap: https://vertax.live/sitemap.xml']
 );
 
 function mockResponse() {
@@ -234,9 +245,16 @@ try {
   const sitemap = await catalog.renderSitemap();
   assert.equal(
     (sitemap.match(/<url>/g) || []).length,
-    10,
-    'Five locales for catalog and hydrated release only'
+    12,
+    'Homepage, about, and five locales for catalog and hydrated release'
   );
+  assert.match(sitemap, /<urlset /);
+  assert.doesNotMatch(sitemap, /<sitemapindex|<loc>[^<]*sitemap\.xml<\/loc>/);
+  assert.match(sitemap, /<url><loc>https:\/\/vertax\.live\/<\/loc><\/url>/);
+  assert.match(sitemap, /<url><loc>https:\/\/vertax\.live\/about<\/loc><\/url>/);
+  const locations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
+  assert.equal(new Set(locations).size, locations.length, 'No duplicate page URLs');
+  assert.doesNotMatch(sitemap, /https:\/\/vertax\.live\/(en|es|ja|zh)\/about/);
   assert.match(sitemap, /<loc>https:\/\/vertax\.live\/music<\/loc>/);
   assert.match(sitemap, /<loc>https:\/\/vertax\.live\/en\/music<\/loc>/);
   assert.match(sitemap, /<loc>https:\/\/vertax\.live\/es\/music<\/loc>/);
@@ -295,6 +313,19 @@ try {
   );
   assert.equal(sitemapResponse.statusCode, 200);
   assert.match(sitemapResponse.headers['content-type'], /application\/xml/);
+  for (const path of sitemapPaths) {
+    const route = vercelConfig.rewrites.find((item) => item.source === path);
+    const query = Object.fromEntries(
+      new URL(route.destination, 'https://vertax.live').searchParams
+    );
+    for (const method of ['GET', 'HEAD']) {
+      const response = mockResponse();
+      await catalog({ method, url: path, query }, response);
+      assert.equal(response.statusCode, 200);
+      assert.match(response.headers['content-type'], /application\/xml/);
+      assert.equal(response.body, method === 'GET' ? sitemap : '');
+    }
+  }
 
   const detailResponse = mockResponse();
   await catalog({ method: 'GET', url: '/api/catalog?path=' + release.slug }, detailResponse);
@@ -341,7 +372,7 @@ try {
   const emptyResponse = mockResponse();
   await catalog({ method: 'GET', url: '/api/catalog' }, emptyResponse);
   assert.equal(emptyResponse.statusCode, 200);
-  assert.equal((await catalog.renderSitemap()).match(/<url>/g).length, 5);
+  assert.equal((await catalog.renderSitemap()).match(/<url>/g).length, 7);
 
   for (const key of redisEnvKeys) delete process.env[key];
   const unconfigured = mockResponse();

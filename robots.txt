@@ -5,4 +5,3 @@ Disallow: /api
 Disallow: /cron
 
 Sitemap: https://vertax.live/sitemap.xml
-Sitemap: https://vertax.live/music-sitemap.xml

@@ -11,6 +11,8 @@
   },
   "rewrites": [
     { "source": "/cron/catalog-sync", "destination": "/api/catalog?task=sync" },
+    { "source": "/sitemap.xml", "destination": "/api/catalog?format=sitemap" },
+    { "source": "/pages-sitemap.xml", "destination": "/api/catalog?format=sitemap" },
     { "source": "/music-sitemap.xml", "destination": "/api/catalog?format=sitemap" },
     { "source": "/en/music", "destination": "/api/catalog?lang=en" },
     { "source": "/en/music/:path*", "destination": "/api/catalog?lang=en&path=:path*" },

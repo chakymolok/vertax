@@ -31,11 +31,16 @@ requirement for a public page to enter search.
 
 ## Changes To Deploy
 
-1. `/sitemap.xml` is now an index pointing to `/pages-sitemap.xml` and the existing
-   `/music-sitemap.xml`. The build copies both static XML files.
+1. `/sitemap.xml` is a single dynamic `urlset`, not a sitemap index. It contains
+   `/`, `/about`, and all hydrated catalog/release pages in five languages.
+   It reads Redis through the existing `api/catalog.js`, with no new function.
+   `/pages-sitemap.xml` and `/music-sitemap.xml` remain aliases of the same full
+   map for previously submitted URLs. Static XML files are removed from the
+   source/build so they cannot shadow dynamic routes. `robots.txt` advertises
+   only `/sitemap.xml`. With the audited catalog size, this gives 982 URLs.
 2. Public catalog reads fail with 503/no-store/Retry-After on Redis errors instead
    of publishing a cacheable empty sitemap/catalog or a false 404.
-3. Music sitemap `lastmod` uses stored dates; missing/invalid/future dates are
+3. Sitemap `lastmod` uses stored dates; missing/invalid/future dates are
    omitted rather than replaced with today.
 4. Release pages expose a brief data summary and actual stored update date, plus
    linked WebPage, MusicAlbum and BreadcrumbList structured data. Track values,
@@ -82,10 +87,12 @@ dig +short TXT vertax.live @8.8.8.8
 
 ## After Deployment And Verification
 
-1. Confirm `https://vertax.live/sitemap.xml` returns a `sitemapindex` with both
-   child sitemap URLs, and that both children return 200 XML.
+1. Confirm `https://vertax.live/sitemap.xml` returns HTTP 200 and a `urlset` with
+   actual page URLs (not links to other sitemaps). No child sitemap is needed.
 2. Submit `https://vertax.live/sitemap.xml` in Google Search Console and Yandex
-   Webmaster. The old direct music sitemap URL continues to work.
+   Webmaster. The two old entries can be removed from the reports after the
+   unified map is processed; their URLs continue to work. Consolidation alone
+   does not prove that Google's earlier fetch error is resolved.
 3. Inspect `/music` and two real release URLs from the sitemap in each engine.
    Run a live URL test and request indexing for these representative pages.
 4. In coverage reports, distinguish not discovered, discovered/not indexed,
@@ -99,19 +106,19 @@ dig +short TXT vertax.live @8.8.8.8
 
 ```bash
 BASE=https://vertax.live
-curl -fsS "$BASE/sitemap.xml"
-curl -fsS "$BASE/pages-sitemap.xml"
-curl -fsS "$BASE/music-sitemap.xml" | head -c 1500
+curl -fsS "$BASE/sitemap.xml" | xmllint --xpath 'count(//*[local-name()="url"])' -
+curl -sSI "$BASE/sitemap.xml"
 curl -fsS "$BASE/api/catalog?format=stats" | jq
 curl -sSI "$BASE/music/a-t-o-s-outboxed-9757514"
 ```
 
 The unit/smoke tests mock Redis and do not write to production. They cover
-five-language sitemap contents, canonical redirects, noindex placeholders,
+the full sitemap and compatibility routes, unique URLs, five-language contents,
+canonical redirects, noindex placeholders,
 server-rendered track metadata, dates, structured data, missing records, and
 Redis outages/missing configuration.
 
-Verification during this change: `npm run build`, `npm test`, JS syntax checks
+Verification during the initial SEO change: `npm run build`, `npm test`, JS syntax checks
 and `git diff --check` passed. Chromium checked all five release locales at 375px
 and 1440px and parsed the built sitemap XML. `npm run lint` still reports existing
 formatting issues in `js/admin.js`, `js/handlers.js` and `js/music-import.js`;

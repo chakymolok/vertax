@@ -7,8 +7,6 @@ const outDir = path.join(root, 'public');
 const entries = [
   'index.html',
   'robots.txt',
-  'sitemap.xml',
-  'pages-sitemap.xml',
   'sw.js',
   'about',
   'admin',

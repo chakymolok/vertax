@@ -19,9 +19,10 @@
 - `/vk` - future VK Mini App placeholder.
 - `/music` and `/{en,es,ja,zh}/music` - server-rendered public catalog.
 - `/music/:slug` and localized equivalents - server-rendered release pages.
-- `/sitemap.xml` - sitemap index linking static pages and the live music sitemap.
-- `/pages-sitemap.xml` - static URLs (`/` and `/about`).
-- `/music-sitemap.xml` - Redis-backed sitemap served by `api/catalog.js`.
+- `/sitemap.xml` - one Redis-backed URL sitemap served by `api/catalog.js`:
+  `/`, `/about`, the catalog and release pages in all five locales.
+- `/pages-sitemap.xml` and `/music-sitemap.xml` - compatibility aliases of the
+  same full sitemap, not child maps.
 
 The main app must remain on `/`.
 
@@ -69,7 +70,7 @@ Outputs:
 `scripts/build-public.js` recreates `public/` and copies deployable files:
 
 - `index.html`
-- `robots.txt`, `sitemap.xml`, `pages-sitemap.xml`
+- `robots.txt` (sitemaps are dynamic routes, not static build files)
 - `sw.js`
 - `about/`
 - `admin/`
@@ -90,7 +91,10 @@ The catalog and its sitemap use strict Redis reads: a storage failure returns
 `503`, `Retry-After: 300`, and `Cache-Control: no-store`, not an empty `200` or a
 false record `404`. Background ingestion keeps its existing best-effort reads.
 Search results and records awaiting a tracklist remain `noindex, follow`.
-Only records with a tracklist enter the music sitemap, in all five locales.
+Only records with a tracklist enter the unified sitemap, in all five locales.
+`robots.txt` advertises only `/sitemap.xml`. The two old sitemap paths remain
+rewrites to the same function so already-submitted URLs keep working. Do not
+reintroduce static XML files in `public/` that can shadow these routes.
 Sitemap dates come from stored release timestamps, not the time of the request.
 Release HTML includes the track table without JavaScript, source attribution,
 an update date, and linked WebPage, MusicAlbum and BreadcrumbList structured data.

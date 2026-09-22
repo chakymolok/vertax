@@ -584,17 +584,24 @@ async function renderSitemap() {
     image: safeHttpUrl(release.cover_url, null),
     imageTitle: release.artist + ' — ' + release.title,
   })));
-  const urls = pages.flatMap((page) => LOCALES.map((locale) => ({ ...page, locale })));
+  const urls = [
+    { url: SITE_URL + '/' },
+    { url: SITE_URL + '/about' },
+  ].concat(pages.flatMap((page) => LOCALES.map((locale) => ({
+    ...page,
+    locale,
+    url: localizedUrl(locale, page.path),
+  }))));
   return (
     '<?xml version="1.0" encoding="UTF-8"?>' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">' +
       urls.map((item) =>
-        '<url><loc>' + escapeXml(localizedUrl(item.locale, item.path)) + '</loc>' +
+        '<url><loc>' + escapeXml(item.url) + '</loc>' +
         (item.lastmod ? '<lastmod>' + escapeXml(item.lastmod) + '</lastmod>' : '') +
-        LOCALES.map((alternateLocale) =>
+        (item.locale ? LOCALES.map((alternateLocale) =>
           '<xhtml:link rel="alternate" hreflang="' + escapeXml(getLocaleConfig(alternateLocale).hreflang) + '" href="' + escapeXml(localizedUrl(alternateLocale, item.path)) + '"/>'
         ).join('') +
-        '<xhtml:link rel="alternate" hreflang="x-default" href="' + escapeXml(localizedUrl('ru', item.path)) + '"/>' +
+        '<xhtml:link rel="alternate" hreflang="x-default" href="' + escapeXml(localizedUrl('ru', item.path)) + '"/>' : '') +
         (item.image
           ? '<image:image><image:loc>' + escapeXml(item.image) + '</image:loc><image:title>' + escapeXml(item.imageTitle) + '</image:title></image:image>'
           : '') +
