@@ -297,6 +297,13 @@ function durationToIso(value) {
   return undefined;
 }
 
+function releaseUpdatedAt(release) {
+  const dates = [release.updated_at, release.ingested_at]
+    .map((value) => Date.parse(value || ''))
+    .filter((value) => Number.isFinite(value) && value <= Date.now());
+  return dates.length ? new Date(Math.max(...dates)).toISOString() : null;
+}
+
 function renderReleasePage(release, requestedLocale) {
   const locale = normalizeLocale(requestedLocale);
   const hasTracklist = Boolean(release.tracks && release.tracks.length);
@@ -315,6 +322,7 @@ function renderReleasePage(release, requestedLocale) {
   );
   const coverUrl = safeHttpUrl(release.cover_url, null);
   const genres = (release.genres || []).concat(release.styles || []);
+  const updatedAt = releaseUpdatedAt(release);
   const body =
     '<nav class="music-breadcrumbs" aria-label="' + escapeHtml(translate(locale, 'breadcrumbsAria')) + '">' +
       '<a href="/">VERTAX</a><span>/</span><a href="' + escapeHtml(localizedPath(locale, '/music')) + '">' + escapeHtml(translate(locale, 'catalog')) + '</a><span>/</span><span>' + escapeHtml(release.title) + '</span>' +
@@ -342,6 +350,7 @@ function renderReleasePage(release, requestedLocale) {
           '</div>' +
         '</div>' +
       '</section>' +
+      (hasTracklist ? '<p class="music-source">' + escapeHtml(description) + '</p>' : '') +
       '<section class="music-tracklist" aria-labelledby="tracklist-title">' +
         '<div class="music-section-head">' +
           '<div><p class="music-eyebrow">TRACKLIST</p><h2 id="tracklist-title">' + escapeHtml(translate(locale, 'tracksTitle')) + '</h2></div>' +
@@ -362,11 +371,13 @@ function renderReleasePage(release, requestedLocale) {
         '<a href="' + escapeHtml(aboutPath(locale)) + '">' + escapeHtml(translate(locale, 'aboutLink')) + '</a>' +
       '</aside>' +
       '<p class="music-source">' + escapeHtml(translate(locale, 'sourceBefore')) + ' <a href="' + escapeHtml(discogsUrl) + '" target="_blank" rel="noopener noreferrer">Discogs</a>. ' + escapeHtml(translate(locale, 'sourceAfter')) + '</p>' +
+      (updatedAt ? '<p class="music-source">' + escapeHtml(translate(locale, 'dataUpdated')) + ' <time datetime="' + updatedAt + '">' +
+        escapeHtml(new Intl.DateTimeFormat(getLocaleConfig(locale).html, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(updatedAt))) + '</time></p>' : '') +
     '</article>';
 
   const albumSchema = {
-    '@context': 'https://schema.org',
     '@type': 'MusicAlbum',
+    '@id': canonical + '#release',
     inLanguage: getLocaleConfig(locale).html,
     name: release.title,
     url: canonical,
@@ -376,11 +387,20 @@ function renderReleasePage(release, requestedLocale) {
       '@type': 'MusicGroup',
       name: release.artist,
     },
-    recordLabel: release.label || undefined,
+    recordLabel: release.label ? { '@type': 'Organization', name: release.label } : undefined,
     genre: genres.length ? genres : undefined,
     numTracks: (release.tracks || []).length,
     track: (release.tracks || []).map((track) => musicRecordingSchema(release, track)),
     sameAs: [discogsUrl],
+  };
+  const breadcrumbs = {
+    '@type': 'BreadcrumbList',
+    '@id': canonical + '#breadcrumbs',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'VERTAX', item: SITE_URL + '/' },
+      { '@type': 'ListItem', position: 2, name: translate(locale, 'catalog'), item: localizedUrl(locale, '/music') },
+      { '@type': 'ListItem', position: 3, name: release.title, item: canonical },
+    ],
   };
 
   return documentShell({
@@ -392,7 +412,24 @@ function renderReleasePage(release, requestedLocale) {
     image: coverUrl,
     ogType: 'music.album',
     robots: hasTracklist ? 'index, follow' : 'noindex, follow',
-    jsonLd: albumSchema,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'WebPage',
+          '@id': canonical + '#page',
+          url: canonical,
+          name: title,
+          description,
+          inLanguage: getLocaleConfig(locale).html,
+          dateModified: updatedAt || undefined,
+          mainEntity: { '@id': canonical + '#release' },
+          breadcrumb: { '@id': canonical + '#breadcrumbs' },
+        },
+        albumSchema,
+        breadcrumbs,
+      ],
+    },
     body,
   });
 }
@@ -536,14 +573,15 @@ function extractReleaseId(pathname) {
 }
 
 async function renderSitemap() {
-  const releases = await listAllPublicReleases();
+  const releases = await listAllPublicReleases({ strict: true });
+  const updatedDates = releases.map(releaseUpdatedAt).filter(Boolean).sort();
   const pages = [{
     path: '/music',
-    lastmod: new Date().toISOString().slice(0, 10),
+    lastmod: updatedDates[updatedDates.length - 1],
   }].concat(releases.map((release) => ({
     path: '/music/' + encodeURIComponent(release.slug || releaseSlug(release)),
-    lastmod: String(release.updated_at || release.ingested_at || new Date().toISOString()).slice(0, 10),
-    image: release.cover_url || null,
+    lastmod: releaseUpdatedAt(release),
+    image: safeHttpUrl(release.cover_url, null),
     imageTitle: release.artist + ' — ' + release.title,
   })));
   const urls = pages.flatMap((page) => LOCALES.map((locale) => ({ ...page, locale })));
@@ -552,7 +590,7 @@ async function renderSitemap() {
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">' +
       urls.map((item) =>
         '<url><loc>' + escapeXml(localizedUrl(item.locale, item.path)) + '</loc>' +
-        '<lastmod>' + escapeXml(item.lastmod) + '</lastmod>' +
+        (item.lastmod ? '<lastmod>' + escapeXml(item.lastmod) + '</lastmod>' : '') +
         LOCALES.map((alternateLocale) =>
           '<xhtml:link rel="alternate" hreflang="' + escapeXml(getLocaleConfig(alternateLocale).hreflang) + '" href="' + escapeXml(localizedUrl(alternateLocale, item.path)) + '"/>'
         ).join('') +
@@ -627,7 +665,7 @@ async function catalogHandler(req, res) {
   if (!path) {
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const q = url.searchParams.get('q') || '';
-    const result = await listPublicReleases({ page, limit: 24, q });
+    const result = await listPublicReleases({ page, limit: 24, q, strict: true });
     if (page > result.page_count && result.total) {
       redirect(res, localizedPath(locale, '/music') + '?page=' + result.page_count);
       return;
@@ -650,7 +688,7 @@ async function catalogHandler(req, res) {
   }
 
   const releaseId = extractReleaseId(path);
-  const release = releaseId ? await getPublicRelease(releaseId) : null;
+  const release = releaseId ? await getPublicRelease(releaseId, { strict: true }) : null;
   if (!release) {
     sendHtml(res, 404, renderNotFoundPage(locale), 'no-store');
     return;
@@ -678,10 +716,11 @@ module.exports = async function handler(req, res) {
     await catalogHandler(req, res);
   } catch (error) {
     console.error('Public catalog failed:', error && error.message ? error.message : error);
+    res.setHeader('Retry-After', '300');
     sendHtml(
       res,
       503,
-      documentShell({
+      req.method === 'HEAD' ? '' : documentShell({
         locale,
         pagePath: '/music',
         title: translate(locale, 'unavailableTitle'),

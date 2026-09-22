@@ -1,14 +1,12 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const catalog = require('./api/catalog');
 const discogsIngest = require('./api/discogs-ingest');
 const { mergeDiscogsPayload } = require('./lib/redis-cache');
-const {
-  normalizePublicRelease,
-  releaseSlug,
-} = require('./lib/public-catalog');
+const { normalizePublicRelease, releaseSlug } = require('./lib/public-catalog');
 
 const release = normalizePublicRelease(
   {
@@ -41,25 +39,59 @@ assert.equal(release.discogs_id, '5675416');
 assert.equal(release.tracks[0].bpm, 174);
 assert.equal(release.tracks[0].camelot, '9A');
 release.slug = releaseSlug(release);
+release.updated_at = '2026-05-19T12:00:00.000Z';
+release.ingested_at = '2026-05-01T12:00:00.000Z';
 
 const detailHtml = catalog.renderReleasePage(release);
 assert.match(detailHtml, /Calibre — Bellamee: BPM и Camelot треков/);
-assert.match(detailHtml, /<link rel="canonical" href="https:\/\/vertax\.live\/music\/calibre-bellamee-5675416">/);
+assert.match(
+  detailHtml,
+  /<link rel="canonical" href="https:\/\/vertax\.live\/music\/calibre-bellamee-5675416">/
+);
 assert.match(detailHtml, /"@type":"MusicAlbum"/);
 assert.match(detailHtml, /174/);
 assert.match(detailHtml, /9A/);
 assert.match(detailHtml, /Открыть VERTAX/);
 assert.match(detailHtml, /Запустить в Telegram/);
 assert.match(detailHtml, /Discogs/);
-assert.match(detailHtml, /hreflang="en" href="https:\/\/vertax\.live\/en\/music\/calibre-bellamee-5675416"/);
-assert.match(detailHtml, /hreflang="es" href="https:\/\/vertax\.live\/es\/music\/calibre-bellamee-5675416"/);
-assert.match(detailHtml, /hreflang="ja" href="https:\/\/vertax\.live\/ja\/music\/calibre-bellamee-5675416"/);
-assert.match(detailHtml, /hreflang="zh-Hans" href="https:\/\/vertax\.live\/zh\/music\/calibre-bellamee-5675416"/);
+assert.match(detailHtml, /<time datetime="2026-05-19T12:00:00.000Z">/);
+const structured = JSON.parse(
+  detailHtml.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]
+);
+assert.equal(structured['@graph'][0].dateModified, release.updated_at);
+assert.equal(structured['@graph'][1].track[0].duration, 'PT5M12S');
+assert.equal(structured['@graph'][2]['@type'], 'BreadcrumbList');
+assert.equal(
+  structured['@graph'][2].itemListElement[2].item,
+  'https://vertax.live/music/' + release.slug
+);
+assert.ok(
+  detailHtml.includes('<p class="music-source">' + structured['@graph'][0].description + '</p>')
+);
+assert.match(
+  detailHtml,
+  /hreflang="en" href="https:\/\/vertax\.live\/en\/music\/calibre-bellamee-5675416"/
+);
+assert.match(
+  detailHtml,
+  /hreflang="es" href="https:\/\/vertax\.live\/es\/music\/calibre-bellamee-5675416"/
+);
+assert.match(
+  detailHtml,
+  /hreflang="ja" href="https:\/\/vertax\.live\/ja\/music\/calibre-bellamee-5675416"/
+);
+assert.match(
+  detailHtml,
+  /hreflang="zh-Hans" href="https:\/\/vertax\.live\/zh\/music\/calibre-bellamee-5675416"/
+);
 
 const englishDetailHtml = catalog.renderReleasePage(release, 'en');
 assert.match(englishDetailHtml, /<html lang="en">/);
 assert.match(englishDetailHtml, /Calibre — Bellamee: track BPM and Camelot/);
-assert.match(englishDetailHtml, /canonical" href="https:\/\/vertax\.live\/en\/music\/calibre-bellamee-5675416"/);
+assert.match(
+  englishDetailHtml,
+  /canonical" href="https:\/\/vertax\.live\/en\/music\/calibre-bellamee-5675416"/
+);
 assert.match(englishDetailHtml, /Record tracklist/);
 
 const spanishDetailHtml = catalog.renderReleasePage(release, 'es');
@@ -73,10 +105,12 @@ assert.match(japaneseDetailHtml, /トラックリスト/);
 const chineseDetailHtml = catalog.renderReleasePage(release, 'zh');
 assert.match(chineseDetailHtml, /<html lang="zh-CN">/);
 assert.match(chineseDetailHtml, /唱片曲目表/);
-const unsafeHtml = catalog.renderReleasePage(Object.assign({}, release, {
-  cover_url: 'javascript:alert(1)',
-  discogs_url: 'javascript:alert(2)',
-}));
+const unsafeHtml = catalog.renderReleasePage(
+  Object.assign({}, release, {
+    cover_url: 'javascript:alert(1)',
+    discogs_url: 'javascript:alert(2)',
+  })
+);
 assert.doesNotMatch(unsafeHtml, /javascript:/);
 
 const queuedRelease = normalizePublicRelease(
@@ -109,14 +143,17 @@ assert.match(catalogHtml, /Добавить публичную коллекци�
 assert.match(catalogHtml, /src="\/js\/music-import\.js"/);
 assert.match(catalogHtml, /index, follow/);
 
-const englishCatalogHtml = catalog.renderCatalogPage({
-  page: 1,
-  limit: 24,
-  q: '',
-  total: 1,
-  page_count: 1,
-  releases: [release],
-}, 'en');
+const englishCatalogHtml = catalog.renderCatalogPage(
+  {
+    page: 1,
+    limit: 24,
+    q: '',
+    total: 1,
+    page_count: 1,
+    releases: [release],
+  },
+  'en'
+);
 assert.match(englishCatalogHtml, /Vinyl records, BPM and Camelot/);
 assert.match(englishCatalogHtml, /action="\/en\/music"/);
 assert.match(englishCatalogHtml, /href="\/en\/music\/calibre-bellamee-5675416"/);
@@ -135,14 +172,18 @@ const notFoundHtml = catalog.renderNotFoundPage();
 assert.match(notFoundHtml, /Пластинка не найдена/);
 assert.match(notFoundHtml, /noindex, follow/);
 
-const sitemap = await catalog.renderSitemap();
-assert.match(sitemap, /<loc>https:\/\/vertax\.live\/music<\/loc>/);
-assert.match(sitemap, /<loc>https:\/\/vertax\.live\/en\/music<\/loc>/);
-assert.match(sitemap, /<loc>https:\/\/vertax\.live\/es\/music<\/loc>/);
-assert.match(sitemap, /<loc>https:\/\/vertax\.live\/ja\/music<\/loc>/);
-assert.match(sitemap, /<loc>https:\/\/vertax\.live\/zh\/music<\/loc>/);
-assert.match(sitemap, /xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
-assert.match(sitemap, /hreflang="x-default"/);
+const sitemapIndex = readFileSync(new URL('./sitemap.xml', import.meta.url), 'utf8');
+const pagesSitemap = readFileSync(new URL('./pages-sitemap.xml', import.meta.url), 'utf8');
+assert.match(sitemapIndex, /<sitemapindex /);
+assert.match(sitemapIndex, /<loc>https:\/\/vertax.live\/music-sitemap.xml<\/loc>/);
+assert.match(sitemapIndex, /<loc>https:\/\/vertax.live\/pages-sitemap.xml<\/loc>/);
+assert.match(pagesSitemap, /<loc>https:\/\/vertax.live\/about<\/loc>/);
+assert.doesNotMatch(pagesSitemap, /<lastmod>/, 'Do not invent static page modification dates');
+assert.ok(
+  readFileSync(new URL('./scripts/build-public.js', import.meta.url), 'utf8').includes(
+    "'pages-sitemap.xml'"
+  )
+);
 
 function mockResponse() {
   return {
@@ -158,44 +199,161 @@ function mockResponse() {
   };
 }
 
-const catalogResponse = mockResponse();
-await catalog({ method: 'GET', url: '/api/catalog', query: {} }, catalogResponse);
-assert.equal(catalogResponse.statusCode, 200);
-assert.match(catalogResponse.headers['content-type'], /text\/html/);
-assert.match(catalogResponse.body, /Пластинки, BPM и Camelot/);
+// Exercise the HTTP handler without contacting or mutating production Redis.
+const originalFetch = globalThis.fetch;
+const redisEnvKeys = [
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'KV_REST_API_URL',
+  'KV_REST_API_TOKEN',
+];
+const originalRedisEnv = Object.fromEntries(redisEnvKeys.map((key) => [key, process.env[key]]));
+process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
+process.env.UPSTASH_REDIS_REST_TOKEN = 'test-only';
+const records = new Map([
+  ['vertax:public:release:' + release.discogs_id, JSON.stringify(release)],
+  ['vertax:release:' + queuedRelease.discogs_id, JSON.stringify(queuedRelease)],
+]);
+const sets = {
+  'vertax:public:releases': [release.discogs_id],
+  'vertax:candidates:all': [queuedRelease.discogs_id],
+};
+let brokenCommand = '';
+globalThis.fetch = async (url, options) => {
+  assert.equal(url, 'https://redis.test');
+  const [command, ...args] = JSON.parse(options.body);
+  if (command === brokenCommand) return new Response('', { status: 503 });
+  let result;
+  if (command === 'SMEMBERS') result = sets[args[0]] || [];
+  else if (command === 'MGET') result = args.map((key) => records.get(key) || null);
+  else throw new Error('Unexpected catalog command: ' + command);
+  return new Response(JSON.stringify({ result }));
+};
 
-const englishCatalogResponse = mockResponse();
-await catalog(
-  { method: 'GET', url: '/api/catalog?lang=en', query: { lang: 'en' } },
-  englishCatalogResponse
-);
-assert.equal(englishCatalogResponse.statusCode, 200);
-assert.match(englishCatalogResponse.body, /<html lang="en">/);
-assert.match(englishCatalogResponse.body, /Vinyl records, BPM and Camelot/);
+try {
+  const sitemap = await catalog.renderSitemap();
+  assert.equal(
+    (sitemap.match(/<url>/g) || []).length,
+    10,
+    'Five locales for catalog and hydrated release only'
+  );
+  assert.match(sitemap, /<loc>https:\/\/vertax\.live\/music<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/vertax\.live\/en\/music<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/vertax\.live\/es\/music<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/vertax\.live\/ja\/music<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/vertax\.live\/zh\/music<\/loc>/);
+  assert.match(sitemap, /xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
+  assert.match(sitemap, /hreflang="x-default"/);
+  assert.match(sitemap, /<lastmod>2026-05-19T12:00:00.000Z<\/lastmod>/);
+  assert.doesNotMatch(sitemap, /queued-release/, 'Pending pages must not enter the sitemap');
+  records.set(
+    'vertax:public:release:' + release.discogs_id,
+    JSON.stringify({ ...release, updated_at: 'invalid', ingested_at: null })
+  );
+  assert.doesNotMatch(
+    await catalog.renderSitemap(),
+    /<lastmod>/,
+    'Unknown dates must not become today'
+  );
+  records.set('vertax:public:release:' + release.discogs_id, JSON.stringify(release));
 
-const missingResponse = mockResponse();
-await catalog(
-  {
-    method: 'GET',
-    url: '/api/catalog?path=missing-release-999999',
-    query: { path: 'missing-release-999999' },
-  },
-  missingResponse
-);
-assert.equal(missingResponse.statusCode, 404);
-assert.match(missingResponse.body, /Пластинка не найдена/);
+  const catalogResponse = mockResponse();
+  await catalog({ method: 'GET', url: '/api/catalog', query: {} }, catalogResponse);
+  assert.equal(catalogResponse.statusCode, 200);
+  assert.match(catalogResponse.headers['content-type'], /text\/html/);
+  assert.match(catalogResponse.body, /Пластинки, BPM и Camelot/);
 
-const sitemapResponse = mockResponse();
-await catalog(
-  {
-    method: 'GET',
-    url: '/api/catalog?format=sitemap',
-    query: { format: 'sitemap' },
-  },
-  sitemapResponse
-);
-assert.equal(sitemapResponse.statusCode, 200);
-assert.match(sitemapResponse.headers['content-type'], /application\/xml/);
+  const englishCatalogResponse = mockResponse();
+  await catalog(
+    { method: 'GET', url: '/api/catalog?lang=en', query: { lang: 'en' } },
+    englishCatalogResponse
+  );
+  assert.equal(englishCatalogResponse.statusCode, 200);
+  assert.match(englishCatalogResponse.body, /<html lang="en">/);
+  assert.match(englishCatalogResponse.body, /Vinyl records, BPM and Camelot/);
+
+  const missingResponse = mockResponse();
+  await catalog(
+    {
+      method: 'GET',
+      url: '/api/catalog?path=missing-release-999999',
+      query: { path: 'missing-release-999999' },
+    },
+    missingResponse
+  );
+  assert.equal(missingResponse.statusCode, 404);
+  assert.match(missingResponse.body, /Пластинка не найдена/);
+
+  const sitemapResponse = mockResponse();
+  await catalog(
+    {
+      method: 'GET',
+      url: '/api/catalog?format=sitemap',
+      query: { format: 'sitemap' },
+    },
+    sitemapResponse
+  );
+  assert.equal(sitemapResponse.statusCode, 200);
+  assert.match(sitemapResponse.headers['content-type'], /application\/xml/);
+
+  const detailResponse = mockResponse();
+  await catalog({ method: 'GET', url: '/api/catalog?path=' + release.slug }, detailResponse);
+  assert.equal(detailResponse.statusCode, 200);
+  assert.match(
+    detailResponse.body,
+    /<tbody>.*174.*9A/s,
+    'Track data must be present without executing JavaScript'
+  );
+
+  const aliasResponse = mockResponse();
+  await catalog(
+    { method: 'GET', url: '/api/catalog?path=old-name-' + release.discogs_id },
+    aliasResponse
+  );
+  assert.equal(aliasResponse.statusCode, 308);
+  assert.equal(aliasResponse.headers.location, '/music/' + release.slug);
+
+  for (const command of ['SMEMBERS', 'MGET']) {
+    brokenCommand = command;
+    for (const path of [
+      '/api/catalog',
+      '/api/catalog?format=sitemap',
+      ...(command === 'MGET' ? ['/api/catalog?path=' + release.slug] : []),
+    ]) {
+      for (const method of ['GET', 'HEAD']) {
+        const outage = mockResponse();
+        await catalog({ method, url: path }, outage);
+        assert.equal(
+          outage.statusCode,
+          503,
+          `${path} must not return an empty 200 or false 404 on ${command} failure`
+        );
+        assert.equal(outage.headers['cache-control'], 'no-store');
+        assert.equal(outage.headers['retry-after'], '300');
+        if (method === 'HEAD') assert.equal(outage.body, '');
+      }
+    }
+  }
+  brokenCommand = '';
+  // An actually empty, healthy database still returns a valid catalog and sitemap.
+  sets['vertax:public:releases'] = [];
+  sets['vertax:candidates:all'] = [];
+  const emptyResponse = mockResponse();
+  await catalog({ method: 'GET', url: '/api/catalog' }, emptyResponse);
+  assert.equal(emptyResponse.statusCode, 200);
+  assert.equal((await catalog.renderSitemap()).match(/<url>/g).length, 5);
+
+  for (const key of redisEnvKeys) delete process.env[key];
+  const unconfigured = mockResponse();
+  await catalog({ method: 'GET', url: '/api/catalog?format=sitemap' }, unconfigured);
+  assert.equal(unconfigured.statusCode, 503);
+} finally {
+  globalThis.fetch = originalFetch;
+  for (const key of redisEnvKeys) {
+    if (originalRedisEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = originalRedisEnv[key];
+  }
+}
 
 const statsResponse = mockResponse();
 await catalog(

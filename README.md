@@ -42,6 +42,10 @@ The project is deployed as a static site plus Vercel Serverless Functions.
 
 The build creates minified assets in `dist/` and copies deployable static files into `public/`.
 
+For Google/Yandex ownership, sitemap submission and indexability checks, see
+[Search Indexing](docs/search-indexing.md). Ownership verification requires DNS
+access; deploying application code alone cannot verify a Domain property.
+
 ## Environment Variables
 
 Required for `api/discogs.js`:

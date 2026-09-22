@@ -17,6 +17,11 @@
 - `/about` - SEO landing page.
 - `/admin` - private static admin dashboard.
 - `/vk` - future VK Mini App placeholder.
+- `/music` and `/{en,es,ja,zh}/music` - server-rendered public catalog.
+- `/music/:slug` and localized equivalents - server-rendered release pages.
+- `/sitemap.xml` - sitemap index linking static pages and the live music sitemap.
+- `/pages-sitemap.xml` - static URLs (`/` and `/about`).
+- `/music-sitemap.xml` - Redis-backed sitemap served by `api/catalog.js`.
 
 The main app must remain on `/`.
 
@@ -64,6 +69,7 @@ Outputs:
 `scripts/build-public.js` recreates `public/` and copies deployable files:
 
 - `index.html`
+- `robots.txt`, `sitemap.xml`, `pages-sitemap.xml`
 - `sw.js`
 - `about/`
 - `admin/`
@@ -77,6 +83,19 @@ Outputs:
 - `css/admin.css` as `/admin.css`
 
 Raw `css/` is intentionally not copied to `public/`.
+
+## Public Catalog Indexability
+
+The catalog and its sitemap use strict Redis reads: a storage failure returns
+`503`, `Retry-After: 300`, and `Cache-Control: no-store`, not an empty `200` or a
+false record `404`. Background ingestion keeps its existing best-effort reads.
+Search results and records awaiting a tracklist remain `noindex, follow`.
+Only records with a tracklist enter the music sitemap, in all five locales.
+Sitemap dates come from stored release timestamps, not the time of the request.
+Release HTML includes the track table without JavaScript, source attribution,
+an update date, and linked WebPage, MusicAlbum and BreadcrumbList structured data.
+
+Deployment and search-engine ownership checks: [Search Indexing](search-indexing.md).
 
 ## Admin Dashboard
 
