@@ -28,7 +28,7 @@ public struct RootView: View {
     public init() {}
 
     public var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             VxColor.bg.ignoresSafeArea()
 
             // active tab content
@@ -40,7 +40,9 @@ public struct RootView: View {
                     }
                 case .find:
                     NavigationStack(path: $router.findPath) {
-                        FindView().navigationDestination(for: Record.self) { ReleaseView(record: $0) }
+                        FindView()
+                            .navigationDestination(for: Record.self) { ReleaseView(record: $0) }
+                            .navigationDestination(for: FindRoute.self) { _ in DiscogsSearchView() }
                     }
                 case .build:
                     NavigationStack(path: $router.buildPath) {
@@ -51,22 +53,23 @@ public struct RootView: View {
                         DigView().navigationDestination(for: Record.self) { ReleaseView(record: $0) }
                     }
                 case .wishlist:
-                    NavigationStack {
+                    NavigationStack(path: $router.wishlistPath) {
                         WishlistView().navigationDestination(for: Record.self) { ReleaseView(record: $0) }
                     }
                 case .settings:
                     SettingsScreen()
                 }
             }
-            .padding(.bottom, VxSize.tabBar)   // keep content above the bar
-
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             VxTabBar(selection: $router.tab)
         }
         // contextual action sheets
         .sheet(item: $router.sheet) { sheet in
             switch sheet {
             case .recordActions(let r): RecordActionsSheet(record: r).presentationDetents([.medium])
-            case .editRecord(let r):    EditRecordSheet(record: r).presentationDetents([.medium])
+            case .editRecord(let r):    EditRecordSheet(record: r)
+            case .addRecord:            EditRecordSheet(record: nil)
             case .discogsImport:        ImportSheet()
             case .settings:             SettingsSheet().presentationDetents([.medium, .large])
             }

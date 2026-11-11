@@ -138,6 +138,7 @@ public struct VxVerdictPill: View {
     @EnvironmentObject var theme: VertaxTheme
     @Environment(\.colorScheme) var scheme
     let verdict: AnalyzeResult.Verdict
+    @AppStorage("vx_lang") private var lang = "en"
     public init(_ verdict: AnalyzeResult.Verdict) { self.verdict = verdict }
     public var body: some View {
         HStack(spacing: 7) {
@@ -148,7 +149,13 @@ public struct VxVerdictPill: View {
         .background(tint).clipShape(Capsule())
         .overlay(Capsule().strokeBorder(color.opacity(0.34), lineWidth: 1))
     }
-    private var label: String { switch verdict { case .strong: "Strong fit"; case .partial: "Partial fit"; case .weak: "Weak fit" } }
+    private var label: String {
+        switch verdict {
+        case .strong: L.t("dig.strong", lang)
+        case .partial: L.t("dig.partial", lang)
+        case .weak: L.t("dig.weak", lang)
+        }
+    }
     private var color: Color { switch verdict { case .strong: theme.accentText(scheme); case .partial: VxColor.amber; case .weak: VxColor.textSecondary } }
     private var tint: Color { switch verdict { case .strong: theme.accentDim; case .partial: VxColor.amber.opacity(0.14); case .weak: VxColor.cardElevated } }
 }
@@ -160,12 +167,27 @@ public struct VxRecordRow: View {
     var onTap: (() -> Void)? = nil
     public init(_ record: Record, onTap: (() -> Void)? = nil) { self.record = record; self.onTap = onTap }
     public var body: some View {
-        Button { onTap?() } label: {
+        VStack(alignment: .leading, spacing: 0) {
+            if let onTap {
+                Button(action: onTap) { row }.buttonStyle(.plain)
+            } else {
+                row
+            }
+            if let url = record.discogsURL {
+                DiscogsAttribution(url: url)
+                    .padding(.bottom, VxSpace.s)
+            }
+        }
+    }
+    private var row: some View {
             HStack(spacing: 13) {
                 VxCover(seed: record.coverSeed, catalog: record.catalog, size: VxSize.rowCover)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(record.artist) — \(record.title)").font(VxFont.body).foregroundStyle(VxColor.text).lineLimit(1)
-                    Text("\(record.label) · \(record.catalog) · \(record.genre)").font(VxFont.caption).foregroundStyle(VxColor.textSecondary).lineLimit(1)
+                    let meta = [record.label, record.catalog, record.genre].filter { !$0.isEmpty }.joined(separator: " · ")
+                    if !meta.isEmpty {
+                        Text(meta).font(VxFont.caption).foregroundStyle(VxColor.textSecondary).lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 8)
                 VxBpmText(record.bpm, size: 15, unit: false)
@@ -173,7 +195,17 @@ public struct VxRecordRow: View {
             }
             .padding(.vertical, theme.metrics.rowPaddingV)
             .contentShape(Rectangle())
-        }.buttonStyle(.plain)
+    }
+}
+
+struct DiscogsAttribution: View {
+    let url: URL
+    var body: some View {
+        Link("Data provided by Discogs.", destination: url)
+            .font(VxFont.caption)
+            .foregroundStyle(VxColor.textSecondary)
+            .underline()
+            .accessibilityIdentifier("discogs.attribution.\(url.lastPathComponent)")
     }
 }
 

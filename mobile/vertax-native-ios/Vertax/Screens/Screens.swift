@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Screen skeletons
 // These are STRUCTURAL ports of the prototype: correct state machines, data
@@ -11,6 +12,8 @@ import SwiftUI
 // =====================================================================
 public struct CrateView: View {
     @EnvironmentObject var crate: CrateStore
+    @EnvironmentObject private var set: SetStore
+    @EnvironmentObject private var live: LiveSession
     @EnvironmentObject var router: AppRouter
     @AppStorage("vx_lang") private var lang = "en"
     @State private var query = ""
@@ -34,9 +37,15 @@ public struct CrateView: View {
                 }
                 Spacer()
                 HStack(spacing: VxSpace.s) {
-                    MiniIconButton(system: "play.fill", highlighted: true) { router.showLiveSet = true }
+                    MiniIconButton(system: "play.fill", highlighted: true) {
+                        router.showLiveSet = live.open(set: set, crate: crate)
+                    }
+                    .disabled(live.progress == nil && !crate.records.contains(where: \.canBuildSet))
+                    .accessibilityLabel(L.t(live.progress == nil ? "build.start_live" : "live.resume", lang))
+                    .accessibilityIdentifier("crate.live")
                     MiniIconButton(system: "gearshape") { router.sheet = .settings }
-                    MiniIconButton(system: "plus") { router.sheet = .discogsImport }
+                    MiniIconButton(system: "plus") { router.sheet = .addRecord }
+                        .accessibilityLabel(L.t("record.add_manual", lang))
                 }
             }
             .padding(.horizontal, VxSpace.xl)
@@ -49,13 +58,18 @@ public struct CrateView: View {
                     HStack(spacing: 7) {
                         Button { chips.removeAll() } label: { VxChip(L.t("filter.all", lang), active: chips.isEmpty) }.buttonStyle(.plain)
                         ForEach(CrateFilter.all) { f in
-                            Button { toggle(f) } label: { VxChip(f.label, active: chips.contains(f), mono: true) }.buttonStyle(.plain)
+                            Button { toggle(f) } label: {
+                                VxChip(f.id == "unpl" ? L.t("crate.unplayed", lang) : f.label, active: chips.contains(f), mono: true)
+                            }.buttonStyle(.plain)
                         }
                     }
                 }
             }.padding(.horizontal, VxSpace.xl)
 
-            if records.isEmpty {
+            if !crate.records.isEmpty && records.isEmpty {
+                VxEmptyState(system: "magnifyingglass", title: L.t("crate.empty_title", lang),
+                             message: L.t("crate.no_matches", lang))
+            } else if records.isEmpty {
                 VStack(spacing: VxSpace.m) {
                     VxEmptyState(system: "square.stack.3d.down.right", title: L.t("crate.empty_title", lang),
                                  message: L.t("crate.empty_body", lang))
@@ -73,6 +87,7 @@ public struct CrateView: View {
             } else {
                 ScrollView {
                     SectionHead(title: L.t("crate.sorted", lang), count: "\(records.count) \(L.t("common.shown", lang))")
+                        .padding(.horizontal, VxSpace.xl)
                     LazyVStack(spacing: 0) {
                         ForEach(records) { r in
                             VxRecordRow(r) { router.openRelease(r) }
@@ -92,77 +107,73 @@ public struct CrateView: View {
 public enum FindState: Equatable {
     case idle, loading
     case result(BpmKeyLookup)
-    case notFound(String)
-}
-public struct BpmKeyLookup: Equatable, Hashable {
-    public let artist, title, label, catalog, key, musicalKey, genre, source: String
-    public let bpm, confidence: Int
-
-    public var crateID: String {
-        let raw = "\(artist)-\(title)-\(catalog)"
-            .lowercased()
-            .map { $0.isLetter || $0.isNumber ? String($0) : "-" }
-            .joined()
-            .replacingOccurrences(of: "--+", with: "-", options: .regularExpression)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return "lookup-\(raw.isEmpty ? UUID().uuidString : raw)"
-    }
-
-    public func asRecord() -> Record {
-        Record(
-            id: crateID,
-            artist: artist,
-            title: title,
-            label: label.isEmpty ? source : label,
-            catalog: catalog.isEmpty ? source.uppercased() : catalog,
-            year: "",
-            bpm: bpm,
-            keyCode: key.isEmpty ? "1A" : key,
-            side: "A1",
-            genre: genre.isEmpty ? "Unknown" : genre,
-            rating: max(0, min(5, Double(confidence) / 20)),
-            played: false,
-            coverSeed: "\(artist)-\(title)",
-            notes: "Imported from Vertax \(source) lookup."
-        )
-    }
+    case notFound, failed
 }
 public struct FindView: View {
     @State private var query = ""
     @State private var state: FindState = .idle
+    @State private var request: Task<Void, Never>?
+    @AppStorage("vx_find_recent") private var recent = ""
+    @EnvironmentObject var router: AppRouter
     @AppStorage("vx_lang") private var lang = "en"
     private let api = VertaxAPI()
     public init() {}
     public var body: some View {
         VStack(spacing: 0) {
-            VxScreenHeader(kicker: "FIND · BPM / KEY", title: L.t("find.title", lang))
+            VxScreenHeader(kicker: L.t("find.kicker", lang), title: L.t("find.title", lang))
             VxSearchField(text: $query, placeholder: L.t("search.find", lang), onSubmit: run)
                 .padding(.horizontal, VxSpace.xl)
+            NavigationLink(value: FindRoute.editions) {
+                Label(L.t("find.discogs_editions", lang), systemImage: "opticaldisc")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .padding(.horizontal, VxSpace.xl)
+            .accessibilityIdentifier("discogs.editions")
             ScrollView {
                 switch state {
-                case .idle:        FindIdle(onPick: { query = $0; run() })
+                case .idle:
+                    FindIdle(onPick: { query = $0; run() }, recent: recent.components(separatedBy: "\n").filter { !$0.isEmpty })
                 case .loading:     FindLoading()
-                case .notFound: VxEmptyState(system: "magnifyingglass", title: L.t("find.not_found", lang),
-                                             message: L.t("find.not_found_body", lang))
+                case .notFound:
+                    VxEmptyState(system: "magnifyingglass", title: L.t("find.not_found", lang),
+                                 message: L.t("find.not_found_body", lang))
+                    VxButton(L.t("record.add_manual", lang), icon: "plus") { router.sheet = .addRecord }
+                        .padding(.horizontal, VxSpace.xl)
+                case .failed:
+                    VxEmptyState(system: "wifi.slash", title: L.t("network.title", lang),
+                                 message: L.t("network.retry", lang))
+                    VxButton(L.t("import.retry", lang), icon: "arrow.clockwise", action: run)
+                        .padding(.horizontal, VxSpace.xl)
                 case .result(let r): FindResult(lookup: r) { state = .idle; query = "" }
                 }
             }.padding(.top, VxSpace.l)
         }
+        .onDisappear {
+            request?.cancel()
+            request = nil
+            if state == .loading { state = .idle }
+        }
     }
     private func run() {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        let parsed = Self.parseLookup(value)
+        request?.cancel()
         state = .loading
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            let parsed = Self.parseLookup(query)
-            Task {
-                do {
-                    let hit = try await api.lookupBeatport(artist: parsed.artist, title: parsed.title)
-                    await MainActor.run { state = .result(hit) }
-                } catch {
-                    await MainActor.run {
-                        state = .notFound(query)
-                    }
-                }
+        request = Task {
+            do {
+                let hit = try await api.lookupBeatport(artist: parsed.artist, title: parsed.title)
+                try Task.checkCancellation()
+                state = .result(hit)
+                let entry = "\(hit.artist) — \(hit.title)".replacingOccurrences(of: "\n", with: " ")
+                let previous = recent.components(separatedBy: "\n").filter { !$0.isEmpty && $0 != entry }
+                recent = ([entry] + previous).prefix(5).joined(separator: "\n")
+            } catch {
+                guard !Task.isCancelled else { return }
+                if case VertaxAPIError.notFound = error { state = .notFound }
+                else { state = .failed }
             }
         }
     }
@@ -190,30 +201,87 @@ public struct BuildView: View {
     @EnvironmentObject var crate: CrateStore
     @EnvironmentObject var set: SetStore
     @EnvironmentObject var router: AppRouter
+    @EnvironmentObject private var live: LiveSession
     @AppStorage("vx_lang") private var lang = "en"
-    @State private var source: BuildSource = .auto
+    @State private var showTrackPicker = false
+    @State private var showSavedSets = false
+    @State private var showSetName = false
+    @State private var showTarget = false
+    @State private var showSetExport = false
+    @State private var confirmQuickBuild = false
+    @State private var confirmClearDraft = false
+    @State private var exportFailed = false
+    @State private var setName = ""
     public init() {}
     public var body: some View {
         let records = set.records(in: crate)
+        let canPlay = live.progress != nil || !records.isEmpty
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: VxSpace.m) {
                 HStack {
-                    VxScreenHeader(kicker: "SET · \(records.count) \(L.t("common.records", lang)) · ~\(records.count*4) MIN", title: L.t("build.title", lang))
+                    VxScreenHeader(kicker: "\(L.t("build.entries", lang)) \(records.count)", title: L.t("build.title", lang))
                     Spacer()
-                    VxButton(L.t("build.start_live", lang), icon: "play.fill", style: records.isEmpty ? .dark : .primary) {
-                        if !records.isEmpty { router.showLiveSet = true }
+                    VxButton(L.t(live.progress == nil ? "build.start_live" : "live.resume", lang),
+                             icon: "play.fill", style: canPlay ? .primary : .dark) {
+                        router.showLiveSet = live.open(set: set, crate: crate)
                     }
-                    .disabled(records.isEmpty)
-                    .opacity(records.isEmpty ? 0.45 : 1)
-                        .frame(width: 130)
+                    .disabled(!canPlay)
+                    .opacity(canPlay ? 1 : 0.45)
+                    .accessibilityIdentifier("build.live")
                 }
-                VxSegmented(selection: $source, options: [(.auto, L.t("build.auto", lang)), (.manual, L.t("build.manual", lang))])
-                HStack(spacing: VxSpace.s) {
-                    VxButton(L.t("build.from_crate", lang), icon: "sparkles") {
-                        set.autoBuild(from: crate.records)
-                        source = .auto
+                HStack(spacing: VxSpace.m) {
+                    Button {
+                        showSavedSets = true
+                    } label: {
+                        Label(L.t("build.saved", lang), systemImage: "list.bullet.rectangle")
+                            .frame(minHeight: 44)
                     }
-                    VxButton(L.t("build.clear", lang), icon: "trash", style: .dark) { set.clear() }
+                    Spacer()
+                    Menu {
+                        Button { showTarget = true } label: { Label(L.t("plan.title", lang), systemImage: "timer") }
+                            .disabled(!crate.records.contains { !$0.isRelease && $0.canBuildSet })
+                        if !records.isEmpty {
+                            Button { showSetExport = true } label: { Label(L.t("plan.export", lang), systemImage: "doc.text") }
+                            ShareLink(item: setText(records)) {
+                                Label(L.t("plan.share", lang), systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle").font(.title3)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .accessibilityLabel(L.t("plan.actions", lang))
+                    .accessibilityIdentifier("set.actions")
+                    if !records.isEmpty {
+                        Button {
+                            setName = ""
+                            showSetName = true
+                        } label: {
+                            Label(L.t("build.save_named", lang), systemImage: "square.and.arrow.down")
+                                .frame(minHeight: 44)
+                        }
+                    }
+                }
+                if !records.isEmpty {
+                    HStack(spacing: VxSpace.s) {
+                        VxButton(L.t("build.from_crate", lang), icon: "sparkles") {
+                            confirmQuickBuild = true
+                        }
+                        VxButton(L.t("build.clear", lang), icon: "trash", style: .dark) { confirmClearDraft = true }
+                            .accessibilityIdentifier("set.clear")
+                    }
+                    HStack(spacing: VxSpace.s) {
+                        VxButton(L.t("build.source", lang), icon: "music.note.list", style: .dark) { showTrackPicker = true }
+                            .accessibilityIdentifier("set.source")
+                        Menu {
+                            Button("BPM") { set.sort(in: crate, byCamelot: false) }
+                            Button("Camelot") { set.sort(in: crate, byCamelot: true) }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .frame(width: VxSize.iconButton, height: VxSize.iconButton)
+                        }
+                        .accessibilityLabel(L.t("build.sort", lang))
+                    }
                 }
             }
             .padding(.horizontal, VxSpace.xl)
@@ -237,8 +305,11 @@ public struct BuildView: View {
                         } else {
                             VxButton(L.t("build.from_crate", lang), icon: "sparkles") {
                                 set.autoBuild(from: crate.records)
-                                source = .auto
                             }
+                            VxButton(L.t("build.source", lang), icon: "music.note.list", style: .dark) {
+                                showTrackPicker = true
+                            }
+                            .accessibilityIdentifier("set.source")
                         }
                     }
                     .padding(.horizontal, VxSpace.xl)
@@ -246,12 +317,12 @@ public struct BuildView: View {
             } else {
                 List {
                     ForEach(Array(records.enumerated()), id: \.element.id) { i, r in
-                        BuildRow(index: i, record: r, transition: i > 0 ? SetTransition(from: records[i-1], to: r) : nil)
+                        BuildRow(index: i, record: r, transition: i > 0 ? SetTransition(from: records[i-1], to: r, lang: lang) : nil)
                             .listRowInsets(EdgeInsets(top: 5, leading: VxSpace.xl, bottom: 5, trailing: VxSpace.xl))
                             .listRowBackground(Color.clear).listRowSeparator(.hidden)
                             .onTapGesture { router.openRelease(r) }
                     }
-                    .onMove { set.move(from: $0, to: $1) }   // native drag-to-reorder
+                    .onMove { set.move(from: $0, to: $1, in: crate) }
                     .onDelete { offsets in
                         for offset in offsets {
                             guard records.indices.contains(offset) else { continue }
@@ -263,20 +334,165 @@ public struct BuildView: View {
                 .scrollContentBackground(.hidden)
             }
         }
+        .sheet(isPresented: $showTrackPicker) { SetTrackPicker() }
+        .sheet(isPresented: $showSavedSets) { SavedSetsView() }
+        .sheet(isPresented: $showTarget) { TargetSetView() }
+        .fileExporter(isPresented: $showSetExport, document: SetTextDocument(text: setText(records)),
+                      contentType: .plainText, defaultFilename: setExportName) {
+            if case .failure = $0 { exportFailed = true }
+        }
+        .alert(L.t("plan.export_failed", lang), isPresented: $exportFailed) {
+            Button("OK", role: .cancel) {}
+        }
+        .confirmationDialog(L.t("plan.replace", lang), isPresented: $confirmQuickBuild, titleVisibility: .visible) {
+            Button(L.t("plan.replace", lang)) { set.autoBuild(from: crate.records) }
+            Button(L.t("action.cancel", lang), role: .cancel) {}
+        }
+        .alert(L.t("build.clear_title", lang), isPresented: $confirmClearDraft) {
+            Button(L.t("build.clear", lang), role: .destructive) { set.clear() }
+                .accessibilityIdentifier("set.clear.confirm")
+            Button(L.t("action.cancel", lang), role: .cancel) {}
+        } message: {
+            Text(L.t("build.clear_body", lang))
+        }
+        .alert(L.t("build.save_named", lang), isPresented: $showSetName) {
+            TextField(L.t("build.name", lang), text: $setName)
+            Button(L.t("action.save", lang)) { set.saveNamed(setName, in: crate) }
+            Button(L.t("action.cancel", lang), role: .cancel) {}
+        }
+    }
+
+    private func setText(_ records: [Record]) -> String {
+        SetPlanner.export(records, heading: L.t("plan.export_title", lang), unknown: L.t("plan.unknown", lang))
+    }
+
+    private var setExportName: String {
+        VertaxLocalStore.testNamespace.map { "vertax-qa-set-\($0.prefix(8))" } ?? "vertax-set"
     }
 }
 
-public enum BuildSource: Hashable { case auto, manual }
+private struct SetTrackPicker: View {
+    @EnvironmentObject var crate: CrateStore
+    @EnvironmentObject var set: SetStore
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("vx_lang") private var lang = "en"
+    @State private var search = ""
+    @State private var mode: Record.Kind = .track
+    @State private var selected: [String] = []
+
+    var body: some View {
+        let releases = mode == .release
+        let tracks = crate.filtered(query: search, chips: []).filter { $0.isRelease == releases && $0.canBuildSet }
+        let current = Set(selected)
+        let releaseMap = releases ? Record.releaseSelectionMap(in: crate.records) : [:]
+        let visibleIDs = Set(tracks.flatMap { releases ? releaseMap[$0.id] ?? [] : [$0.id] })
+        let hiddenCount = current.subtracting(visibleIDs).count
+        NavigationStack {
+          VStack(spacing: 0) {
+            Picker(L.t("build.source", lang), selection: $mode) {
+                Text(L.t("build.source_tracks", lang)).tag(Record.Kind.track)
+                Text(L.t("build.source_releases", lang)).tag(Record.Kind.release)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, VxSpace.l)
+            .padding(.bottom, VxSpace.s)
+            VxSearchField(text: $search, placeholder: L.t(releases ? "search.crate" : "build.track_search", lang))
+                .accessibilityIdentifier("set.track.search")
+                .padding(.horizontal, VxSpace.l)
+                .padding(.bottom, VxSpace.s)
+            List {
+                if tracks.isEmpty {
+                    Text(L.t(search.isEmpty ? (releases ? "build.no_releases" : "build.no_tracks") : "crate.no_matches", lang))
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(tracks) { track in
+                    let ids = releases ? releaseMap[track.id] ?? [] : [track.id]
+                    let all = !ids.isEmpty && ids.allSatisfy(current.contains)
+                    let partial = !all && ids.contains(where: current.contains)
+                    HStack(spacing: VxSpace.s) {
+                        Image(systemName: all ? "checkmark.circle.fill" : partial ? "minus.circle" : "circle")
+                            .foregroundStyle(all || partial ? Color.accentColor : VxColor.textTertiary)
+                            .accessibilityHidden(true)
+                        VxRecordRow(track) {
+                            selected = all ? selected.filter { !ids.contains($0) } : SetPlanner.selection(selected, adding: ids)
+                        }
+                        .accessibilityAddTraits(all ? .isSelected : [])
+                        .accessibilityValue(partial ? L.t("plan.part_selected", lang) : "")
+                        .accessibilityIdentifier("set.track.\(track.id)")
+                    }
+                    .listRowBackground(VxColor.card)
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+          }
+            .navigationTitle(L.t("build.source", lang))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(L.t("action.cancel", lang)) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("action.save", lang) + " (\(selected.count))") {
+                        set.orderedIDs = selected
+                        dismiss()
+                    }
+                    .disabled(selected.isEmpty)
+                    .accessibilityIdentifier("set.track.save")
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if hiddenCount > 0 {
+                        Text(String(format: L.t("plan.hidden_count", lang), hiddenCount))
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .accessibilityIdentifier("set.selection.hidden")
+                    }
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            selectShown(tracks, releases: releases, map: releaseMap)
+                            Spacer()
+                            deselectAll
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            selectShown(tracks, releases: releases, map: releaseMap)
+                            deselectAll
+                        }
+                    }
+                }
+                .padding(VxSpace.l)
+                .background(.bar)
+            }
+        }
+        .onAppear {
+            selected = set.orderedIDs
+            let current = set.records(in: crate)
+            if !current.isEmpty, current.allSatisfy(\.isRelease) { mode = .release }
+        }
+    }
+
+    private func selectShown(_ tracks: [Record], releases: Bool, map: [String: [String]]) -> some View {
+        Button(L.t("build.select_all", lang)) {
+            selected = SetPlanner.selection(selected, adding: tracks.flatMap { releases ? map[$0.id] ?? [] : [$0.id] })
+        }.disabled(tracks.isEmpty).frame(minHeight: 44)
+    }
+
+    private var deselectAll: some View {
+        Button(L.t("build.clear_selection", lang)) { selected = [] }
+            .disabled(selected.isEmpty).frame(minHeight: 44)
+    }
+}
 
 // =====================================================================
 // DIG — Analyze (state machine) + Gaps
 // =====================================================================
 public enum DigMode: Hashable { case analyze, gaps }
 public enum AnalyzeState: Equatable {
-    case idle, loading(step: Int)
+    case idle, loading, noMatch, missingMetadata, failed
     case result(AnalyzeResult)
     public static func == (l: AnalyzeState, r: AnalyzeState) -> Bool {
-        switch (l, r) { case (.idle,.idle): true; case let (.loading(a),.loading(b)): a==b; case (.result,.result): true; default: false }
+        switch (l, r) {
+        case (.idle,.idle), (.loading,.loading), (.noMatch,.noMatch),
+             (.missingMetadata,.missingMetadata), (.failed,.failed), (.result,.result): true
+        default: false
+        }
     }
 }
 public struct DigView: View {
@@ -284,27 +500,58 @@ public struct DigView: View {
     @AppStorage("vx_lang") private var lang = "en"
     @State private var mode: DigMode = .analyze
     @State private var state: AnalyzeState = .idle
-    static let steps = ["Fetching Discogs release","Reading tracklist & key","Matching against your crate","Scoring harmonic fit"]
+    @State private var query = ""
+    @State private var request: Task<Void, Never>?
     public init() {}
     public var body: some View {
         VStack(spacing: 0) {
-            VxScreenHeader(kicker: mode == .analyze ? "DIG · WORTH IT?" : "DIG · WHAT TO DIG", title: L.t("dig.title", lang))
+            VxScreenHeader(kicker: "", title: L.t("dig.title", lang))
             VxSegmented(selection: $mode, options: [(.analyze,L.t("dig.analyze", lang)),(.gaps,L.t("dig.gaps", lang))]).padding(.horizontal, VxSpace.xl)
             ScrollView {
-                if mode == .analyze { AnalyzeBody(targets: Array(crate.records.prefix(6)), state: $state, run: runAnalyze) }
-                else { GapsBody() }
+                if mode == .analyze {
+                    VStack(spacing: VxSpace.l) {
+                        NavigationLink { ReleaseFitSearch() } label: {
+                            HStack {
+                                Label(L.t("fit.title", lang), systemImage: "opticaldisc")
+                                Spacer(minLength: VxSpace.s)
+                                Image(systemName: "chevron.right").accessibilityHidden(true)
+                            }
+                            .font(.body.weight(.semibold))
+                            .padding(VxSpace.m)
+                            .frame(minHeight: 48)
+                            .background(VxColor.card, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        .accessibilityIdentifier("release-fit.open")
+                        .padding(.horizontal, VxSpace.xl)
+                        AnalyzeBody(query: $query, state: state, canAnalyze: CrateDig.tracks(crate.records).contains(where: \.hasMixMetadata), run: runAnalyze)
+                    }
+                } else { CrateGapsView() }
             }.padding(.top, VxSpace.l)
         }
+        .onDisappear { cancelTrackLookup() }
+        .onChange(of: mode) { _ in cancelTrackLookup() }
     }
-    private func runAnalyze(_ target: Record) {
-        state = .loading(step: 0)
-        for s in 1...Self.steps.count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(s) * VxMotion.analyzeStepInterval) {
-                if case .loading = state { state = .loading(step: s) }
+    private func cancelTrackLookup() {
+        request?.cancel()
+        if state == .loading { state = .idle }
+    }
+    private func runAnalyze() {
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        let parsed = FindView.parseLookup(value)
+        request?.cancel()
+        state = .loading
+        request = Task {
+            do {
+                let hit = try await VertaxAPI().lookupBeatport(artist: parsed.artist, title: parsed.title)
+                try Task.checkCancellation()
+                state = AnalyzeEngine.analyze(target: hit.asRecord(), against: CrateDig.tracks(crate.records))
+                    .map(AnalyzeState.result) ?? .missingMetadata
+            } catch {
+                guard !Task.isCancelled else { return }
+                if case VertaxAPIError.notFound = error { state = .noMatch }
+                else { state = .failed }
             }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.25) {
-            state = .result(AnalyzeEngine.analyze(target: target, against: crate.records))
         }
     }
 }
@@ -317,12 +564,25 @@ public struct ReleaseView: View {
     @EnvironmentObject var set: SetStore
     @EnvironmentObject var router: AppRouter
     @AppStorage("vx_lang") private var lang = "en"
+    @State private var tracklist: [DiscogsTrack] = []
+    @State private var tracklistLoaded = false
+    @State private var tracklistFailed = false
+    @State private var tracklistAttempt = 0
     let record: Record
     public init(record: Record) { self.record = record }
     public var body: some View {
         let record = crate.records.first { $0.id == self.record.id } ?? self.record
-        let fitCount = crate.records.filter { $0.id != record.id && record.camelot.relation(to: $0.camelot) != nil }.count
-        let tracks = releaseTracks(for: record)
+        let neighbours = harmonicNeighbours(for: record, in: crate.records)
+        let fitCount = neighbours.reduce(0) { $0 + $1.count }
+        let discogsID = record.discogsID
+        let savedIDs = Set(crate.records.map(\.id))
+        let savedTracks = record.isRelease ? crate.records.filter { $0.containingReleaseID == record.id } : []
+        let savedPositions = Set(savedTracks.filter { !$0.side.isEmpty }.map { "\($0.side.uppercased())|\($0.title.lowercased())" })
+        let onlineTracks = tracklist.enumerated().filter { index, track in
+            let position = track.position ?? ""
+            return !savedIDs.contains(trackEntry(track, index: index, release: record).id)
+                && (position.isEmpty || !savedPositions.contains("\(position.uppercased())|\(track.title.lowercased())"))
+        }
         ScrollView {
             VStack(alignment: .leading, spacing: VxSpace.l) {
                 // header
@@ -332,10 +592,17 @@ public struct ReleaseView: View {
                 Text(record.artist).font(VxFont.caption).foregroundStyle(VxColor.textSecondary)
                         Text(record.title).font(VxFont.title).foregroundStyle(VxColor.text)
                         HStack(spacing: 6) {
-                            VxChip(record.genre, mono: true)
-                            VxChip(record.year, mono: true)
-                            VxChip("★ \(String(format: "%.1f", record.rating))", mono: true)
+                            if !record.genre.isEmpty { VxChip(record.genre, mono: true) }
+                            if !record.year.isEmpty { VxChip(record.year, mono: true) }
+                            if record.rating > 0 { VxChip("★ \(String(format: "%.1f", record.rating))", mono: true) }
                         }
+                    }
+                }
+                if let url = record.discogsURL { DiscogsAttribution(url: url) }
+                if let discogsID, let id = Int(discogsID), record.isRelease {
+                    NavigationLink { ReleaseFitView(releaseID: id) } label: {
+                        Label(L.t("fit.title", lang), systemImage: "opticaldisc")
+                            .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
                     }
                 }
                 // technical block
@@ -343,38 +610,83 @@ public struct ReleaseView: View {
                     HStack {
                         techCell(label: L.t("release.tempo", lang)) { VxBpmText(record.bpm, size: 30) }
                         Divider().frame(height: 40).overlay(VxColor.hairline)
-                        techCell(label: record.camelot.musicalKey) { Text(record.keyCode).font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
+                        techCell(label: "Camelot") { Text(record.validCamelot?.code ?? "–").font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
                         Divider().frame(height: 40).overlay(VxColor.hairline)
-                        techCell(label: record.side) { Text("\(fitCount)").font(VxFont.bpm(30)).foregroundStyle(VxColor.text) }
+                        techCell(label: L.t("edit.side", lang)) { Text(record.side.isEmpty ? "–" : record.side).font(VxFont.bpm(26)).foregroundStyle(VxColor.text) }
                     }
                 }
                 .onTapGesture { router.sheet = .editRecord(record) }
-                // cue preview
-                VxCard { VxWaveform(bars: 54, seed: 11, height: 30, lime: true, playhead: 19) }
-                SectionHead(title: L.t("release.tracklist", lang), count: "\(tracks.count) \(L.t("release.tracks", lang))")
-                VxCard(padding: 0) {
-                    VStack(spacing: 0) {
-                        ForEach(tracks) { track in
-                            ReleaseTrackRow(track: track, highlightedKey: record.keyCode)
-                            if track.id != tracks.last?.id {
-                                Divider().overlay(VxColor.hairline)
-                            }
+                if !savedTracks.isEmpty {
+                    SectionHead(title: L.t("release.saved_tracks", lang), count: String(savedTracks.count))
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(savedTracks) { track in
+                            VxRecordRow(track) { router.openRelease(track) }
+                            Divider()
                         }
                     }
                 }
-                SectionHead(title: L.t("release.mixes_well", lang), count: "\(fitCount) \(L.t("release.in_crate", lang))")
-                HStack(spacing: VxSpace.s) {
-                    ForEach(harmonicNeighbours(for: record, in: crate.records)) { item in
-                        HarmonicNeighbourCell(item: item)
+                if discogsID != nil {
+                    SectionHead(title: L.t("release.tracklist", lang),
+                                count: tracklistLoaded && !tracklist.isEmpty ? "\(tracklist.count)" : nil)
+                    if tracklistFailed {
+                        VxButton(L.t("import.retry", lang), icon: "arrow.clockwise", style: .dark) { tracklistAttempt += 1 }
+                    } else if !tracklistLoaded {
+                        ProgressView()
+                    } else if tracklist.isEmpty {
+                        Text(L.t("release.no_tracklist", lang)).foregroundStyle(VxColor.textSecondary)
+                    } else if !onlineTracks.isEmpty {
+                        VxCard(padding: 0) {
+                            LazyVStack(spacing: 0) {
+                                ForEach(onlineTracks, id: \.offset) { index, track in
+                                    HStack(spacing: VxSpace.xs) {
+                                        ReleaseTrackRow(track: track)
+                                        let entry = trackEntry(track, index: index, release: record)
+                                        let saved = savedIDs.contains(entry.id)
+                                        Button {
+                                            crate.add(entry)
+                                        } label: {
+                                            Image(systemName: saved ? "checkmark" : "plus.circle")
+                                                .frame(width: VxSize.iconButton, height: VxSize.iconButton)
+                                        }
+                                        .accessibilityLabel(L.t(saved ? "find.saved_crate" : "find.save_crate", lang))
+                                        .disabled(saved)
+                                        .padding(.trailing, VxSpace.s)
+                                    }
+                                    if index != onlineTracks.last?.offset { Divider().overlay(VxColor.hairline) }
+                                }
+                            }
+                        }
+                    } else {
+                        Text(L.t("release.all_tracks_saved", lang)).foregroundStyle(VxColor.textSecondary)
+                    }
+                    if let url = record.discogsURL { DiscogsAttribution(url: url) }
+                }
+                if !neighbours.isEmpty {
+                    SectionHead(title: L.t("release.mixes_well", lang), count: "\(fitCount) \(L.t("release.in_crate", lang))")
+                    HStack(spacing: VxSpace.s) {
+                        ForEach(neighbours) { item in HarmonicNeighbourCell(item: item) }
                     }
                 }
-                // notes
-                SectionHead(title: L.t("release.notes", lang))
-                VxCard { Text(record.notes).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary) }
+                if !record.notes.isEmpty {
+                    SectionHead(title: L.t("release.notes", lang))
+                    VxCard { Text(record.notes).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary) }
+                }
             }
             .padding(VxSpace.xl)
         }
         .background(VxColor.bg)
+        .task(id: tracklistAttempt) {
+            guard let discogsID else { return }
+            tracklistFailed = false
+            do {
+                let tracks = try await VertaxAPI().discogsTracklist(releaseID: discogsID)
+                try Task.checkCancellation()
+                tracklist = tracks
+                tracklistLoaded = true
+            } catch {
+                if !Task.isCancelled { tracklistFailed = true }
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 10) {
                 VxButton(set.orderedIDs.contains(record.id) ? L.t("record.in_set", lang) : L.t("record.add_to_set", lang),
@@ -383,29 +695,38 @@ public struct ReleaseView: View {
             }.padding(.horizontal, VxSpace.xl).padding(.vertical, 12).background(.ultraThinMaterial)
         }
         .navigationTitle("").navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) {
-            Button { router.sheet = .editRecord(record) } label: { Image(systemName: "slider.horizontal.3") }
-            Button { router.sheet = .recordActions(record) } label: { Image(systemName: "ellipsis") }
-        } }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { router.sheet = .editRecord(record) } label: { Image(systemName: "slider.horizontal.3") }
+                    .accessibilityLabel(L.t("record.edit_meta", lang))
+                    .accessibilityIdentifier("record.edit-meta")
+                Button { router.sheet = .recordActions(record) } label: { Image(systemName: "ellipsis") }
+                    .accessibilityLabel(L.t("record.actions", lang))
+            }
+        }
     }
     @ViewBuilder private func techCell<C: View>(label: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(spacing: 6) { content(); Text(label).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary) }
             .frame(maxWidth: .infinity)
     }
-    private func releaseTracks(for record: Record) -> [ReleaseTrack] {
-        [
-            .init(position: "A1", title: record.title, bpm: record.bpm, key: record.keyCode),
-            .init(position: "A2", title: "\(record.title) — Reprise", bpm: record.bpm, key: record.keyCode),
-            .init(position: "B1", title: "Undertow", bpm: max(1, record.bpm - 2), key: record.camelot.stepped(by: -1).code),
-            .init(position: "B2", title: "Undertow — Dub", bpm: max(1, record.bpm / 2), key: record.camelot.stepped(by: -1).code),
-        ]
+    private func trackEntry(_ track: DiscogsTrack, index: Int, release: Record) -> Record {
+        let artists = track.artists?.map(\.cleanName).filter { !$0.isEmpty } ?? []
+        let position = track.position ?? ""
+        let identity = position.isEmpty ? String(index) : position
+        return Record(id: "\(release.id)-track-\(identity)-\(track.title)",
+                      artist: artists.isEmpty ? release.artist : artists.joined(separator: ", "),
+                      title: track.title, label: release.label, catalog: release.catalog, year: release.year,
+                      bpm: 0, keyCode: "", side: position, genre: release.genre, rating: 0,
+                      played: false, coverSeed: release.coverSeed, notes: "", parentDiscogsID: release.discogsID,
+                      kind: .track, parentReleaseID: release.id, durationSeconds: Record.parseDuration(track.duration))
     }
     private func harmonicNeighbours(for record: Record, in crate: [Record]) -> [HarmonicNeighbour] {
+        guard let camelot = record.validCamelot else { return [] }
         let keys: [(String, String)] = [
-            (record.keyCode, "same"),
-            (record.camelot.stepped(by: 1).code, "+1"),
-            (record.camelot.stepped(by: -1).code, "−1"),
-            (record.camelot.relative.code, "rel"),
+            (camelot.code, "="),
+            (camelot.stepped(by: 1).code, "+1"),
+            (camelot.stepped(by: -1).code, "−1"),
+            (camelot.relative.code, "A/B"),
         ]
         return keys.map { key, label in
             HarmonicNeighbour(key: key, relation: label, count: crate.filter { $0.keyCode == key && $0.id != record.id }.count)
@@ -424,7 +745,9 @@ struct VxScreenHeader: View {
     var body: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(kicker).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                if !kicker.isEmpty {
+                    Text(kicker).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                }
                 Text(title).font(VxFont.largeTitle).tracking(VxTracking.largeTitle).foregroundStyle(VxColor.text)
             }
             Spacer()
@@ -475,33 +798,23 @@ struct SectionHead: View {
     }
 }
 
-struct ReleaseTrack: Identifiable, Equatable {
-    let id = UUID()
-    let position: String
-    let title: String
-    let bpm: Int
-    let key: String
-}
-
 struct ReleaseTrackRow: View {
-    let track: ReleaseTrack
-    let highlightedKey: String
+    let track: DiscogsTrack
     var body: some View {
         HStack(spacing: VxSpace.m) {
-            Text(track.position)
+            Text(track.position ?? "")
                 .font(VxFont.labelMono)
                 .tracking(VxTracking.labelMono)
                 .foregroundStyle(VxColor.textTertiary)
-                .frame(width: 24, alignment: .leading)
+                .frame(minWidth: 24, alignment: .leading)
             Text(track.title)
                 .font(VxFont.subhead)
                 .foregroundStyle(VxColor.text)
-                .lineLimit(1)
+                .lineLimit(2)
             Spacer()
-            Text("\(track.bpm)")
-                .font(VxFont.bpm(14))
-                .foregroundStyle(VxColor.text)
-            VxKeyBadge(track.key, highlighted: track.key == highlightedKey)
+            if let duration = track.duration, !duration.isEmpty {
+                Text(duration).font(VxFont.bpm(14)).foregroundStyle(VxColor.textSecondary)
+            }
         }
         .padding(.horizontal, VxSpace.m)
         .padding(.vertical, VxSpace.s)
@@ -522,7 +835,7 @@ struct HarmonicNeighbourCell: View {
             VStack(spacing: VxSpace.xs) {
                 Text(item.key)
                     .font(VxFont.bpm(17))
-                    .foregroundStyle(item.relation == "same" ? VxColor.lime : VxColor.cyan)
+                    .foregroundStyle(item.relation == "=" ? VxColor.lime : VxColor.cyan)
                 Text("\(item.relation) · \(item.count)")
                     .font(VxFont.caption)
                     .foregroundStyle(VxColor.textTertiary)
@@ -597,16 +910,24 @@ struct VxSearchField: View {
     @Binding var text: String
     var placeholder: String
     var onSubmit: (() -> Void)? = nil
+    var dismissKeyboard = false
+    @FocusState private var focused: Bool
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: "magnifyingglass").foregroundStyle(VxColor.textTertiary)
-            TextField(placeholder, text: $text).font(.system(size: 16)).onSubmit { onSubmit?() }
+            TextField(placeholder, text: $text)
+                .font(.system(size: 16))
+                .focused($focused)
+                .autocorrectionDisabled()
+                .submitLabel(onSubmit == nil ? .done : .search)
+                .onSubmit { focused = false; onSubmit?() }
             if !text.isEmpty { Button { text = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(VxColor.textTertiary) }.buttonStyle(.plain) }
         }
         .padding(.horizontal, 12).frame(height: 40)
         .background(VxColor.card)
         .clipShape(RoundedRectangle(cornerRadius: VxRadius.control, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: VxRadius.control, style: .continuous).strokeBorder(VxColor.hairline, lineWidth: 1))
+        .onChange(of: dismissKeyboard) { if $0 { focused = false } }
     }
 }
 
@@ -634,11 +955,10 @@ struct FindIdle: View {
     @EnvironmentObject var router: AppRouter
     @AppStorage("vx_lang") private var lang = "en"
     var onPick: (String) -> Void
-    // RECENT lookups + an "Import from Discogs" card (router.sheet = .discogsImport).
-    // No label-scan entry — that feature does not exist in Vertax.
-    private let recent = ["Komatic Northwall", "Dovetail Undertow", "Senan Driftwood Dub"]
+    let recent: [String]
     var body: some View {
         VStack(alignment: .leading, spacing: VxSpace.m) {
+            if !recent.isEmpty {
             SectionHead(title: L.t("find.recent", lang))
             VxCard(padding: 0) {
                 VStack(spacing: 0) {
@@ -651,7 +971,7 @@ struct FindIdle: View {
                                     .background(VxColor.cardElevated)
                                     .clipShape(RoundedRectangle(cornerRadius: VxRadius.control, style: .continuous))
                                 VStack(alignment: .leading, spacing: VxSpace.xs) {
-                                    Text(item.replacingOccurrences(of: " ", with: " — ", options: [], range: item.range(of: " ")))
+                                    Text(item)
                                         .font(VxFont.body)
                                         .foregroundStyle(VxColor.text)
                                         .lineLimit(1)
@@ -669,6 +989,7 @@ struct FindIdle: View {
                         if item != recent.last { Divider().overlay(VxColor.hairline) }
                     }
                 }
+            }
             }
             Button { router.sheet = .discogsImport } label: {
                 VxCard {
@@ -749,7 +1070,15 @@ struct FindResult: View { let lookup: BpmKeyLookup; var onReset: () -> Void
                             .font(VxFont.caption)
                             .foregroundStyle(VxColor.textTertiary)
                         Spacer()
-                        VxChip(lookup.source, mono: true)
+                        if let url = lookup.sourceURL {
+                            Link(destination: url) {
+                                Label("Beatport", systemImage: "arrow.up.right")
+                                    .font(.footnote)
+                                    .frame(minHeight: 44)
+                            }
+                        } else {
+                            VxChip(lookup.source, mono: true)
+                        }
                     }
                     HStack {
                         Text(L.t("find.label_cat", lang))
@@ -798,10 +1127,13 @@ struct BuildRow: View {
                 Text("\(index+1)").font(VxFont.bpm(13)).foregroundStyle(VxColor.textTertiary).frame(width: 15)
                 VxCover(seed: record.coverSeed, catalog: record.catalog, size: 42)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(record.artist) — \(record.title)").font(VxFont.body).foregroundStyle(VxColor.text).lineLimit(1)
+                    Text("\(record.artist) — \(record.title)").font(.body).foregroundStyle(VxColor.text)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(transition?.text ?? L.t("build.opener", lang))
                         .font(VxFont.caption)
                         .foregroundStyle(transition.map { $0.tone == .warn ? VxColor.amber : theme.accentText(scheme) } ?? VxColor.textSecondary)
+                    Text(SetPlanner.length(record).map(SetPlanner.clock) ?? L.t("plan.unknown_duration", lang))
+                        .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 6)
                 VxBpmText(record.bpm, size: 14, unit: false)
@@ -815,150 +1147,57 @@ struct BuildRow: View {
 struct AnalyzeBody: View {
     @EnvironmentObject var theme: VertaxTheme
     @AppStorage("vx_lang") private var lang = "en"
-    let targets: [Record]
-    @Binding var state: AnalyzeState
-    var run: (Record) -> Void
+    @Binding var query: String
+    let state: AnalyzeState
+    let canAnalyze: Bool
+    var run: () -> Void
     var body: some View {
         VStack(spacing: 12) {
+            if canAnalyze {
+                VxSearchField(text: $query, placeholder: L.t("search.find", lang), onSubmit: run, dismissKeyboard: state == .loading)
+                VxButton(L.t("dig.check_track", lang), icon: "magnifyingglass", action: run)
+                    .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state == .loading)
+            }
             switch state {
             case .idle:
-                if targets.isEmpty {
+                if !canAnalyze {
                     VxEmptyState(system: "square.stack.3d.down.right", title: L.t("dig.empty_title", lang),
-                                 message: L.t("dig.empty_body", lang))
-                } else {
-                    ForEach(targets) { t in
-                        Button { run(t) } label: { VxRecordRow(t) }.buttonStyle(.plain)
-                    }
+                                 message: L.t("dig.need_metadata", lang))
                 }
-            case .loading(let step):
-                VxCard { VStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array(DigView.steps.enumerated()), id: \.offset) { i, s in
-                        HStack(spacing: 11) {
-                            ZStack {
-                                Circle().strokeBorder(i < step ? .clear : VxColor.hairlineStrong, lineWidth: 1.5)
-                                    .background(Circle().fill(i < step ? theme.accent : .clear)).frame(width: 22, height: 22)
-                                if i < step { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(VxColor.limeInk) }
-                                else if i == step { ProgressView().scaleEffect(0.6) }
-                            }.frame(width: 22, height: 22)
-                            Text(s).font(VxFont.subhead).foregroundStyle(i <= step ? VxColor.text : VxColor.textTertiary)
-                        }
-                    }
-                } }
+            case .loading:
+                ProgressView(L.t("find.loading", lang))
+            case .noMatch:
+                Text(L.t("find.not_found", lang)).foregroundStyle(VxColor.textSecondary)
+            case .missingMetadata:
+                Text(L.t("dig.need_metadata", lang)).foregroundStyle(VxColor.textSecondary)
+            case .failed:
+                Text(L.t("network.retry", lang)).foregroundStyle(VxColor.textSecondary)
             case .result(let res):
                 VxCard { HStack(spacing: 16) {
                     VxScoreRing(value: res.score, color: res.verdict == .strong ? theme.accent : res.verdict == .partial ? VxColor.amber : VxColor.textTertiary)
                     VStack(alignment: .leading, spacing: 10) {
                         VxVerdictPill(res.verdict)
-                        Text(res.verdictText).font(VxFont.bodyStrong).foregroundStyle(VxColor.text)
+                        Text("\(res.target.artist) — \(res.target.title)").font(VxFont.bodyStrong).foregroundStyle(VxColor.text)
+                        Text(L.t("dig.best_pair", lang)).font(VxFont.caption).foregroundStyle(VxColor.textSecondary)
                     }
                 } }
                 VxCard { VStack(spacing: 16) {
                     ForEach(res.bars) { f in
                         VStack(spacing: 7) {
-                            HStack { Text(f.title).font(VxFont.subhead).foregroundStyle(VxColor.text); Text(f.subtitle).font(VxFont.caption).foregroundStyle(VxColor.textSecondary); Spacer(); Text("\(f.value)").font(VxFont.bpm(12.5)).foregroundStyle(VxColor.textSecondary) }
+                            HStack { Text(L.t(f.title, lang)).font(VxFont.subhead).foregroundStyle(VxColor.text); Spacer(); Text("\(f.value)%").font(VxFont.bpm(12.5)).foregroundStyle(VxColor.textSecondary) }
                             VxBar(value: f.value, accent: f.accent)
                         }
                     }
                 } }
+                if !res.matches.isEmpty {
+                    SectionHead(title: L.t("release.mixes_well", lang))
+                    ForEach(res.matches) { VxRecordRow($0) }
+                }
             }
         }.padding(.horizontal, VxSpace.xl)
     }
 }
 
-struct GapsBody: View {
-    @EnvironmentObject var theme: VertaxTheme
-    @EnvironmentObject var crate: CrateStore
-    @AppStorage("vx_lang") private var lang = "en"
-    private let buckets: [(String, ClosedRange<Int>)] = [
-        ("84–90", 84...90), ("160–166", 160...166), ("166–170", 166...170),
-        ("170–174", 170...174), ("174–178", 174...178), ("178+", 178...220),
-    ]
-    var body: some View {
-        VStack(alignment: .leading, spacing: VxSpace.m) {
-            VxCard {
-                VStack(alignment: .leading, spacing: VxSpace.l) {
-                    HStack {
-                        Text(L.t("dig.tempo_coverage", lang))
-                            .font(VxFont.bodyStrong)
-                            .foregroundStyle(VxColor.text)
-                        Spacer()
-                        Text(L.t("dig.records_bpm", lang))
-                            .font(VxFont.labelMono)
-                            .tracking(VxTracking.labelMono)
-                            .foregroundStyle(VxColor.textTertiary)
-                    }
-                    HStack(alignment: .bottom, spacing: VxSpace.s) {
-                        ForEach(bucketData(), id: \.label) { item in
-                            VStack(spacing: VxSpace.s) {
-                                GeometryReader { proxy in
-                                    VStack {
-                                        Spacer()
-                                        RoundedRectangle(cornerRadius: VxRadius.key, style: .continuous)
-                                            .fill(item.isCore ? theme.accent : VxColor.cardElevated)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: VxRadius.key, style: .continuous)
-                                                    .strokeBorder(item.isGap ? theme.accentLine : VxColor.hairline, style: StrokeStyle(lineWidth: item.isGap ? 1.5 : 1, dash: item.isGap ? [4, 4] : []))
-                                            )
-                                            .frame(height: max(8, proxy.size.height * CGFloat(item.height) / 100))
-                                    }
-                                }
-                                .frame(height: 92)
-                                Text(item.label)
-                                    .font(VxFont.mono(8.5))
-                                    .foregroundStyle(item.isGap ? theme.accent : VxColor.textTertiary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                }
-            }
-            VxCard {
-                VStack(alignment: .leading, spacing: VxSpace.m) {
-                    HStack {
-                        Text(L.t("dig.camelot_map", lang))
-                            .font(VxFont.bodyStrong)
-                            .foregroundStyle(VxColor.text)
-                        Spacer()
-                        Text(L.t("dig.minor_row", lang))
-                            .font(VxFont.labelMono)
-                            .tracking(VxTracking.labelMono)
-                            .foregroundStyle(VxColor.textTertiary)
-                    }
-                    HStack(spacing: VxSpace.xs) {
-                        ForEach(1...12, id: \.self) { n in
-                            let key = "\(n)A"
-                            let count = crate.records.filter { $0.keyCode == key }.count
-                            VStack(spacing: VxSpace.xs) {
-                                RoundedRectangle(cornerRadius: VxRadius.key, style: .continuous)
-                                    .fill(count == 0 ? .clear : theme.accent.opacity(min(0.9, 0.18 + Double(count) * 0.18)))
-                                    .overlay(RoundedRectangle(cornerRadius: VxRadius.key, style: .continuous).strokeBorder(count == 0 ? theme.accentLine : VxColor.hairline, style: StrokeStyle(lineWidth: count == 0 ? 1.5 : 1, dash: count == 0 ? [4, 4] : [])))
-                                    .frame(height: 30)
-                                Text(key)
-                                    .font(VxFont.mono(8))
-                                    .foregroundStyle(VxColor.textTertiary)
-                            }
-                        }
-                    }
-                }
-            }
-            SectionHead(title: L.t("dig.next", lang))
-            VStack(spacing: VxSpace.s) {
-                DigSuggestion(title: L.t("dig.suggestion_1_title", lang), subtitle: L.t("dig.suggestion_1_body", lang))
-                DigSuggestion(title: L.t("dig.suggestion_2_title", lang), subtitle: L.t("dig.suggestion_2_body", lang))
-                DigSuggestion(title: L.t("dig.suggestion_3_title", lang), subtitle: L.t("dig.suggestion_3_body", lang))
-            }
-        }
-        .padding(.horizontal, VxSpace.xl)
-    }
-    private func bucketData() -> [(label: String, height: Int, isCore: Bool, isGap: Bool)] {
-        let counts = buckets.map { label, range in (label, crate.records.filter { range.contains($0.bpm) }.count) }
-        let maxCount = max(1, counts.map(\.1).max() ?? 1)
-        return counts.map { label, count in
-            let height = count == 0 ? 8 : max(18, Int(Double(count) / Double(maxCount) * 100))
-            return (label, height, label == "170–174", count == 0)
-        }
-    }
-}
 
 // — Sheets & onboarding (skeletons) —
 struct RecordActionsSheet: View {
@@ -985,7 +1224,6 @@ struct RecordActionsSheet: View {
                 set.add(record.id)
                 dismiss()
             }
-            VxButton(L.t("record.find_similar", lang), icon: "flame", style: .dark) { dismiss() }
             VxButton(L.t("record.edit_meta", lang), icon: "slider.horizontal.3", style: .dark) {
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.sheet = .editRecord(record) }
@@ -1003,29 +1241,46 @@ struct RecordActionsSheet: View {
 struct EditRecordSheet: View {
     @EnvironmentObject var crate: CrateStore
     @Environment(\.dismiss) var dismiss
-    let record: Record
+    let record: Record?
+    @State private var artist: String
+    @State private var title: String
     @State private var bpm: String
     @State private var keyCode: String
     @State private var side: String
+    @State private var kind: Record.Kind = .track
     @AppStorage("vx_lang") private var lang = "en"
 
-    init(record: Record) {
+    init(record: Record?) {
         self.record = record
-        _bpm = State(initialValue: "\(record.bpm)")
-        _keyCode = State(initialValue: record.keyCode)
-        _side = State(initialValue: record.side)
+        _artist = State(initialValue: record?.artist ?? "")
+        _title = State(initialValue: record?.title ?? "")
+        _bpm = State(initialValue: record.flatMap { $0.bpm > 0 ? String($0.bpm) : nil } ?? "")
+        _keyCode = State(initialValue: record?.keyCode ?? "")
+        _side = State(initialValue: record?.side ?? "")
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section(L.t("edit.section", lang)) {
+                    if record == nil {
+                        Picker(L.t("edit.kind", lang), selection: $kind) {
+                            Text(L.t("build.source_tracks", lang)).tag(Record.Kind.track)
+                            Text(L.t("build.source_releases", lang)).tag(Record.Kind.release)
+                        }
+                        TextField(L.t("edit.artist", lang), text: $artist)
+                        TextField(L.t("edit.track_title", lang), text: $title)
+                    }
                     TextField("BPM", text: $bpm)
                         .keyboardType(.numberPad)
+                    TempoScaleControls(text: $bpm, lang: lang)
                     TextField("Camelot", text: $keyCode)
                         .textInputAutocapitalization(.characters)
-                    TextField("Side / position", text: $side)
+                    TextField(L.t("edit.side", lang), text: $side)
                         .textInputAutocapitalization(.characters)
+                    if let invalidKey {
+                        Text(L.t(invalidKey, lang)).foregroundStyle(VxColor.amber)
+                    }
                 }
                 Section {
                     Text(L.t("edit.note", lang))
@@ -1033,24 +1288,36 @@ struct EditRecordSheet: View {
                         .foregroundStyle(VxColor.textSecondary)
                 }
             }
-            .navigationTitle(L.t("edit.title", lang))
+            .navigationTitle(L.t(record == nil ? "record.add_manual" : "edit.title", lang))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(L.t("action.cancel", lang)) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button(L.t("action.save", lang)) { save() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("action.save", lang)) { save() }
+                        .disabled(invalidKey != nil || (record == nil && (clean(artist).isEmpty || clean(title).isEmpty)))
+                }
             }
         }
     }
 
+    private func clean(_ value: String) -> String { value.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var invalidKey: String? {
+        if !clean(bpm).isEmpty, Int(clean(bpm)).map(TempoValue.valid.contains) != true { return "edit.invalid_bpm" }
+        if !clean(keyCode).isEmpty, Camelot(clean(keyCode)) == nil { return "edit.invalid_camelot" }
+        return nil
+    }
+
     private func save() {
-        var next = record
-        if let parsed = Int(bpm.trimmingCharacters(in: .whitespaces)), (40...250).contains(parsed) {
-            next.bpm = parsed
-        }
-        let normalizedKey = keyCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        if Camelot(normalizedKey) != nil { next.keyCode = normalizedKey }
-        let normalizedSide = side.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        if !normalizedSide.isEmpty { next.side = normalizedSide }
-        crate.update(next)
+        guard invalidKey == nil else { return }
+        var next = record ?? Record(id: "manual-\(UUID().uuidString)", artist: clean(artist), title: clean(title),
+                                    label: "", catalog: "", year: "", bpm: 0, keyCode: "", side: "", genre: "",
+                                    rating: 0, played: false, coverSeed: clean(title), notes: "", kind: kind)
+        next.bpm = Int(clean(bpm)) ?? 0
+        next.keyCode = Camelot(clean(keyCode))?.code ?? ""
+        next.side = clean(side).uppercased()
+        if record?.bpm != next.bpm, next.bpm > 0 { next.bpmSource = "manual" }
+        if record?.keyCode != next.keyCode { next.keySource = next.keyCode.isEmpty ? nil : "manual" }
+        if record == nil { crate.add(next) } else { crate.update(next) }
         dismiss()
     }
 }
@@ -1105,15 +1372,18 @@ struct OnboardingView: View {
                         .tracking(VxTracking.labelMono)
                         .foregroundStyle(VxColor.textTertiary)
                 }
-                Spacer()
                 TabView(selection: $step) {
-                    onboardingContent(for: 0).tag(0)
-                    onboardingContent(for: 1).tag(1)
-                    onboardingContent(for: 2).tag(2)
+                    ForEach(0..<3, id: \.self) { page in
+                        GeometryReader { geometry in
+                            ScrollView {
+                                onboardingContent(for: page)
+                                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                            }
+                        }
+                        .tag(page)
+                    }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(minHeight: 500)
-                Spacer()
                 HStack(spacing: VxSpace.s) {
                     ForEach(0..<3, id: \.self) { i in
                         Capsule()

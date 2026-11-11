@@ -4,90 +4,104 @@ import SwiftUI
 // Club-readable performance screen. List-first (NOW/NEXT + setlist), not a
 // turntable emulator. Port of vertax-app-liveset.jsx.
 
-public enum LiveMode: String, CaseIterable, Identifiable { case set, freestyle; public var id: String { rawValue } }
-
 // Traffic-light compatibility between the current and a candidate next record.
 public struct LiveCompat {
-    public enum Level { case green, yellow, red }
+    public enum Level { case green, yellow, red, unknown }
     public let level: Level
     public let label: String
     public let bpmText: String
     public let bpmDelta: Int
 
-    public init(from a: Record, to b: Record) {
-        let rel = a.camelot.relation(to: b.camelot)
+    public init(from a: Record, to b: Record, lang: String = "en") {
+        guard a.hasMixMetadata, b.hasMixMetadata, let from = a.validCamelot, let to = b.validCamelot else {
+            level = .unknown
+            label = L.t("mix.missing", lang)
+            bpmDelta = 0
+            bpmText = "–"
+            return
+        }
+        let rel = from.relation(to: to)
         let db = b.bpm - a.bpm
         let pct = Double(db) / Double(a.bpm) * 100
         let lvl: Level; let lab: String
         if rel != nil && abs(db) <= 3 {
             lvl = .green
             switch rel! {
-            case .same: lab = "Same key"
-            case .adjacent: lab = b.camelot.number > a.camelot.number ? "+1 neighbour" : "−1 neighbour"
-            case .relative: lab = "Relative key"
+            case .same: lab = L.t("mix.same", lang)
+            case .adjacent: lab = from.stepped(by: 1) == to ? "+1 Camelot" : "−1 Camelot"
+            case .relative: lab = L.t("mix.relative", lang)
             }
         } else if rel != nil || abs(db) <= 6 {
-            lvl = .yellow; lab = rel != nil ? "Harmonic · tempo jump" : "Workable blend"
-        } else { lvl = .red; lab = "Risky — key clash" }
+            lvl = .yellow; lab = rel != nil ? L.t("mix.tempo", lang) : L.t("mix.clash", lang)
+        } else { lvl = .red; lab = L.t("mix.clash", lang) }
         self.level = lvl; self.label = lab; self.bpmDelta = db
         self.bpmText = (db > 0 ? "+" : db < 0 ? "" : "±") + "\(db) BPM · " + (pct > 0 ? "+" : "") + String(format: "%.1f%%", pct)
     }
 }
 
-// Physical sleeve position (A/B side + track), keyed by record id. Replace with
-// real per-record data when available.
-public enum Sleeve {
-    static let map: [String: String] = ["r1":"A1","r2":"B2","r3":"A2","r4":"B1","r5":"A1","r6":"AA","r7":"B1","r8":"A3","r9":"B2","r10":"A1","r11":"B1","r12":"A2"]
-    public static func position(_ id: String) -> String { map[id] ?? "A1" }
-}
+final class LiveSession: ObservableObject {
+    private static let storageKey = "vertax.native.live.progress.v1"
+    @Published private(set) var progress: LiveProgress?
 
-// Live session state — owns playback position, played history and elapsed time.
-public final class LiveSession: ObservableObject {
-    @Published public var mode: LiveMode
-    @Published public var index: Int = 0          // NOW within order
-    @Published public var playedIDs: [String] = []
-    @Published public var elapsed: Int = 0         // seconds
-    @Published public var finished: Bool = false
+    init() { progress = VertaxLocalStore.load(LiveProgress.self, key: Self.storageKey) }
 
-    public init(mode: LiveMode = .set) { self.mode = mode }
-
-    public func order(set: SetStore, crate: CrateStore) -> [Record] {
-        mode == .set ? set.records(in: crate) : crate.records
-    }
-
-    public func tick() { elapsed += 1 }
-
-    public func advance(in order: [Record]) {
-        guard !order.isEmpty else { return }
-        guard index < order.count - 1 else {
-            if !playedIDs.contains(order[index].id) { playedIDs.append(order[index].id) }
-            finished = true
-            return
+    @discardableResult
+    func open(set: SetStore, crate: CrateStore, at now: Date = .now) -> Bool {
+        let available = Set(crate.records.map(\.id))
+        if var restored = progress {
+            restored.retain(available, at: now)
+            if !restored.queue.ids.isEmpty {
+                restored.resume(at: now)
+                store(restored)
+                return true
+            }
+            end()
         }
-        playedIDs.append(order[index].id)
-        index += 1
-    }
-    public func previous() {
-        guard index > 0 else { return }
-        finished = false
-        index -= 1; if !playedIDs.isEmpty { playedIDs.removeLast() }
-    }
-    public func undo() {
-        guard !playedIDs.isEmpty else { return }
-        finished = false
-        index = max(0, index - 1); playedIDs.removeLast()
+        let setIDs = set.orderedIDs.filter(available.contains)
+        let releaseMap = Record.releaseSelectionMap(in: crate.records)
+        let freeIDs = crate.records.filter {
+            $0.canBuildSet && (!$0.isRelease || releaseMap[$0.id] == [$0.id])
+        }.map(\.id)
+        guard !setIDs.isEmpty || !freeIDs.isEmpty else { return false }
+        store(LiveProgress(setIDs: setIDs, freestyleIDs: freeIDs, at: now))
+        return true
     }
 
-    /// Compatible candidates from the crate (green/yellow only), best first.
-    public func suggestions(now: Record?, order: [Record], crate: CrateStore) -> [(Record, LiveCompat)] {
-        guard let now else { return [] }
-        let upcomingIDs = order.indices.contains(index)
-            ? Set(order[index...].map(\.id))
-            : Set<String>()
+    func order(in crate: CrateStore) -> [Record] {
+        let byID = Dictionary(crate.records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return progress?.queue.ids.compactMap { byID[$0] } ?? []
+    }
+
+    func pause() { change { $0.pause(at: .now) } }
+    func select(_ mode: LiveMode) { change { $0.select(mode, at: .now) } }
+    func advance() { change { $0.advance(at: .now) } }
+    func undo() { change { $0.undo(at: .now) } }
+    func append(_ id: String) { change { $0.appendToSet(id, at: .now) } }
+
+    func end() {
+        progress = nil
+        VertaxLocalStore.defaults.removeObject(forKey: Self.storageKey)
+    }
+
+    private func change(_ mutate: (inout LiveProgress) -> Void) {
+        guard var next = progress else { return }
+        mutate(&next)
+        store(next)
+    }
+
+    private func store(_ next: LiveProgress) {
+        guard next != progress else { return }
+        VertaxLocalStore.save(next, key: Self.storageKey)
+        progress = next
+    }
+
+    func suggestions(now: Record?, crate: CrateStore, lang: String) -> [(Record, LiveCompat)] {
+        guard let now, let progress, progress.mode == .set else { return [] }
+        let queued = Set(progress.queue.ids)
         var candidates: [(Record, LiveCompat)] = []
-        for record in crate.records where !upcomingIDs.contains(record.id) {
-            let compatibility = LiveCompat(from: now, to: record)
-            if compatibility.level != .red {
+        for record in crate.records where record.canBuildSet && !record.isRelease && !queued.contains(record.id) {
+            let compatibility = LiveCompat(from: now, to: record, lang: lang)
+            if compatibility.level == .green || compatibility.level == .yellow {
                 candidates.append((record, compatibility))
             }
         }
@@ -95,7 +109,7 @@ public final class LiveSession: ObservableObject {
             let leftLevel = left.1.level == .green ? 0 : 1
             let rightLevel = right.1.level == .green ? 0 : 1
             if leftLevel != rightLevel { return leftLevel < rightLevel }
-            return abs(left.1.bpmDelta) < abs(right.1.bpmDelta)
+            return (abs(left.1.bpmDelta), left.0.id) < (abs(right.1.bpmDelta), right.0.id)
         }
         return Array(candidates.prefix(4))
     }
@@ -108,6 +122,11 @@ public final class LiveSession: ObservableObject {
 
 public extension Color {
     static func liveLevel(_ level: LiveCompat.Level, accent: Color) -> Color {
-        switch level { case .green: accent; case .yellow: VxColor.amber; case .red: Color(rgb: 0xE8736A) }
+        switch level {
+        case .green: accent
+        case .yellow: VxColor.amber
+        case .red: Color(rgb: 0xE8736A)
+        case .unknown: VxColor.textTertiary
+        }
     }
 }

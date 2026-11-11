@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Animated compatibility ring
 public struct VxScoreRing: View {
     @EnvironmentObject var theme: VertaxTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let value: Int            // 0...100 (final)
     var size: CGFloat = 92
     var stroke: CGFloat = 8
@@ -28,8 +29,10 @@ public struct VxScoreRing: View {
             }
         }
         .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(value) / 100"))
         .onAppear {
-            withAnimation(.easeOut(duration: VxMotion.scoreCountUp)) { shown = Double(value) }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: VxMotion.scoreCountUp)) { shown = Double(value) }
         }
     }
 }

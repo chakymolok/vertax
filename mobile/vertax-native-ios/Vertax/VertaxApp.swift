@@ -7,6 +7,7 @@ struct VertaxApp: App {
     @StateObject private var setS = SetStore()
     @StateObject private var wishlist = WishlistStore()
     @StateObject private var router = AppRouter()
+    @StateObject private var live = LiveSession()
 
     var body: some Scene {
         WindowGroup {
@@ -16,6 +17,8 @@ struct VertaxApp: App {
                 .environmentObject(setS)
                 .environmentObject(wishlist)
                 .environmentObject(router)
+                .environmentObject(live)
+                .defaultAppStorage(VertaxLocalStore.defaults)
                 .preferredColorScheme(theme.preferredScheme)
                 .tint(theme.accent)
         }

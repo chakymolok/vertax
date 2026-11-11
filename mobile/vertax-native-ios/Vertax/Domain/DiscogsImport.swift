@@ -23,67 +23,64 @@ public enum ImportState: Equatable {
 }
 
 public enum DiscogsImport {
-    public static let steps = ["Fetching Discogs profile", "Reading collection", "Matching BPM & Key", "Building your crate"]
-    public static func steps(lang: String) -> [String] {
-        [
-            L.t("import.step_profile", lang),
-            L.t("import.step_collection", lang),
-            L.t("import.step_matching", lang),
-            L.t("import.step_crate", lang)
-        ]
-    }
-
     /// Extract a username from a pasted profile URL, @handle, or bare username.
     public static func parseHandle(_ raw: String) -> String {
-        let s = raw.trimmingCharacters(in: .whitespaces)
-        guard !s.isEmpty else { return "" }
-        if let r = s.range(of: #"discogs\.com/(?:user/)?([A-Za-z0-9_\-.]+)"#, options: [.regularExpression, .caseInsensitive]) {
-            let match = String(s[r])
-            return match.split(separator: "/").last.map(String.init) ?? s
+        let input = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let username: String
+        if input.contains("/") {
+            let address = input.contains("://") ? input : "https://\(input)"
+            guard let url = URL(string: address),
+                  ["discogs.com", "www.discogs.com"].contains(url.host?.lowercased() ?? "") else { return "" }
+            let parts = url.path.split(separator: "/")
+            guard parts.count >= 2, parts[0] == "user" else { return "" }
+            username = String(parts[1])
+        } else {
+            username = input.hasPrefix("@") ? String(input.dropFirst()) : input
         }
-        return s.replacingOccurrences(of: "@", with: "").split(whereSeparator: { "/ ?".contains($0) }).first.map(String.init) ?? s
+        return username.range(of: #"^[A-Za-z0-9_.-]{1,64}$"#, options: .regularExpression) == nil ? "" : username
     }
 }
 
-public final class DiscogsImporter: ObservableObject {
+@MainActor public final class DiscogsImporter: ObservableObject {
     @Published public var url = ""
     @Published public var state: ImportState = .idle
     private let api = VertaxAPI()
+    private var task: Task<Void, Never>?
 
     public init() {}
     public var handle: String { DiscogsImport.parseHandle(url) }
 
-    /// Kicks off the staged import; on completion replaces the crate's records.
     public func run(into crate: CrateStore, lang: String = "en") {
-        guard !handle.isEmpty else { return }
-        cancel()
-        state = .loading(step: 0)
-        Task { await runImport(into: crate, lang: lang) }
-    }
-
-    @MainActor
-    private func runImport(into crate: CrateStore, lang: String) async {
         let username = handle
         guard !username.isEmpty else { return }
-
-        for step in 1..<DiscogsImport.steps.count {
-            try? await Task.sleep(nanoseconds: 360_000_000)
-            if case .loading = state { state = .loading(step: step) }
-        }
-
-        do {
-            let recs = try await api.importDiscogsCollection(username: username)
-            if case .loading = state { state = .loading(step: DiscogsImport.steps.count) }
-            guard !recs.isEmpty else {
-                state = .failed(L.t("import.empty", lang))
-                return
+        cancel()
+        state = .loading(step: 0)
+        task = Task {
+            do {
+                let recs = try await api.importDiscogsCollection(username: username)
+                try Task.checkCancellation()
+                guard !recs.isEmpty else {
+                    state = .failed(L.t("import.empty", lang))
+                    return
+                }
+                let added = crate.merge(recs)
+                let labels = Set(recs.map(\.label)).count
+                state = .done(ImportSummary(records: added, labels: labels, handle: username))
+            } catch {
+                guard !Task.isCancelled else { return }
+                let key: String
+                switch error {
+                case VertaxAPIError.http(401), VertaxAPIError.http(403): key = "import.private"
+                case VertaxAPIError.http(404): key = "import.missing"
+                default: key = "network.retry"
+                }
+                state = .failed(L.t(key, lang))
             }
-            crate.records = recs
-            let labels = Set(recs.map { $0.label }).count
-            state = .done(ImportSummary(records: recs.count, labels: labels, handle: username))
-        } catch {
-            state = .failed(error.localizedDescription)
         }
     }
-    public func cancel() {}
+    public func cancel() {
+        task?.cancel()
+        task = nil
+        if case .loading = state { state = .idle }
+    }
 }

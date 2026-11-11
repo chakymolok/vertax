@@ -8,46 +8,59 @@ import SwiftUI
 public struct LiveSetView: View {
     @EnvironmentObject var theme: VertaxTheme
     @EnvironmentObject var crate: CrateStore
-    @EnvironmentObject var set: SetStore
     @EnvironmentObject var router: AppRouter
+    @EnvironmentObject private var session: LiveSession
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("vx_lang") private var lang = "en"
-    @StateObject private var session: LiveSession
     @State private var dragX: CGFloat = 0
+    @State private var confirmEnd = false
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let nearBlack = Color(rgb: 0x060807)
 
-    public init(mode: LiveMode = .set) { _session = StateObject(wrappedValue: LiveSession(mode: mode)) }
+    public init() {}
 
     public var body: some View {
-        let order = session.order(set: set, crate: crate)
-        let now = order.indices.contains(session.index) ? order[session.index] : nil
-
         ZStack {
             nearBlack.ignoresSafeArea()
-            // darkened cover glow
-            if let now { coverGlow(seed: now.coverSeed) }
+            if let progress = session.progress {
+                let queue = progress.queue
+                let order = session.order(in: crate)
+                let now = order.indices.contains(queue.index) ? order[queue.index] : nil
+                let suggestions = session.suggestions(now: now, crate: crate, lang: lang)
+                if let now { coverGlow(seed: now.coverSeed).accessibilityHidden(true) }
 
-            VStack(spacing: 0) {
-                header
-                ScrollView {
-                    VStack(spacing: 0) {
-                        nowBlock(now: now, count: order.count)
-                            .offset(x: dragX)
-                            .gesture(swipe(order: order))
-                        affordance
-                        setlist(order: order)
-                        suggestionList(now: now, order: order)
-                    }.padding(.horizontal, 16)
+                VStack(spacing: 0) {
+                    header(progress)
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            nowBlock(now: now, queue: queue)
+                                .offset(x: dragX)
+                                .simultaneousGesture(swipe)
+                            affordance
+                            setlist(order: order, queue: queue, mode: progress.mode)
+                            if !suggestions.isEmpty { suggestionList(items: suggestions, now: now) }
+                        }.padding(.horizontal, VxSpace.l)
+                    }
+                    .accessibilityIdentifier("live.queue")
+                    .id(progress.mode)
+                    controls(queue: queue)
                 }
-                controls(order: order)
-            }
-            if session.finished {
-                finishOverlay(now: now, order: order)
+                .accessibilityHidden(queue.finished)
+                .allowsHitTesting(!queue.finished)
+                if queue.finished {
+                    Color.black.opacity(0.7).ignoresSafeArea().accessibilityHidden(true)
+                    finishOverlay(suggestion: suggestions.first?.0)
+                }
             }
         }
         .preferredColorScheme(.dark)
-        .onReceive(timer) { _ in session.tick() }
+        .interactiveDismissDisabled()
+        .alert(L.t("live.end_confirm", lang), isPresented: $confirmEnd) {
+            Button(L.t("live.end", lang), role: .destructive, action: end)
+            Button(L.t("action.cancel", lang), role: .cancel) {}
+        } message: {
+            Text(L.t("live.end_body", lang))
+        }
     }
 
     // MARK: swipe / advance affordance
@@ -60,53 +73,77 @@ public struct LiveSetView: View {
     }
 
     // MARK: header
-    private var header: some View {
-        HStack {
-            Button { router.showLiveSet = false } label: {
-                Label(L.t("live.end", lang), systemImage: "stop.fill").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color(rgb: 0xE8736A))
+    private func header(_ progress: LiveProgress) -> some View {
+        HStack(spacing: VxSpace.xs) {
+            headerButton("chevron.down", label: "live.pause", color: .white) { pause() }
+            headerButton("stop.fill", label: "live.end", color: .liveLevel(.red, accent: theme.accent)) {
+                confirmEnd = true
             }
-            Spacer()
-            VStack(spacing: 1) {
-                Text(LiveSession.clock(session.elapsed)).font(VxFont.bpm(17)).foregroundStyle(.white)
-                Text(L.t("live.time", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
-            }
-            Spacer()
-            // mode toggle
-            HStack(spacing: 2) {
-                ForEach(LiveMode.allCases) { m in
-                    Button { session.mode = m; session.index = 0; session.playedIDs = [] } label: {
-                        Text(m == .set ? L.t("live.set_mode", lang) : L.t("live.free_mode", lang)).font(VxFont.mono(11, .medium))
-                            .foregroundStyle(session.mode == m ? .white : VxColor.textTertiary)
-                            .padding(.horizontal, 9).padding(.vertical, 5)
-                            .background(session.mode == m ? Color.white.opacity(0.13) : .clear)
-                            .clipShape(RoundedRectangle(cornerRadius: 7))
-                    }.buttonStyle(.plain)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                VStack(spacing: 1) {
+                    Text(LiveSession.clock(progress.seconds(at: context.date)))
+                        .font(VxFont.bpm(17)).foregroundStyle(.white)
+                        .accessibilityIdentifier("live.elapsed")
+                    Text(L.t("live.time", lang)).font(VxFont.labelMono).foregroundStyle(VxColor.textSecondary)
                 }
-            }.padding(2).background(Color.white.opacity(0.07)).clipShape(RoundedRectangle(cornerRadius: 9))
-        }.padding(.horizontal, 18).padding(.top, 2).padding(.bottom, 12)
+                .frame(maxWidth: .infinity)
+            }
+            HStack(spacing: VxSpace.xs) {
+                if !progress.set.ids.isEmpty { modeButton(.set, active: progress.mode == .set) }
+                if !progress.freestyle.ids.isEmpty { modeButton(.freestyle, active: progress.mode == .freestyle) }
+            }
+        }.padding(.horizontal, VxSpace.l).padding(.bottom, VxSpace.m)
+    }
+
+    private func headerButton(_ symbol: String, label: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.subheadline.weight(.semibold)).foregroundStyle(color)
+                .frame(width: VxSize.hitTarget, height: VxSize.hitTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t(label, lang))
+        .accessibilityIdentifier(label)
+    }
+
+    private func modeButton(_ mode: LiveMode, active: Bool) -> some View {
+        Button { session.select(mode) } label: {
+            Text(L.t(mode == .set ? "live.set_mode" : "live.free_mode", lang))
+                .font(VxFont.mono(11, .medium)).foregroundStyle(active ? .white : VxColor.textSecondary)
+                .padding(.horizontal, VxSpace.xs)
+                .frame(minWidth: VxSize.hitTarget, minHeight: VxSize.hitTarget)
+                .background(active ? Color.white.opacity(0.13) : .clear, in: RoundedRectangle(cornerRadius: VxRadius.chip))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
+        .accessibilityIdentifier("live.mode.\(mode.rawValue)")
     }
 
     // MARK: NOW PLAYING
-    @ViewBuilder private func nowBlock(now: Record?, count: Int) -> some View {
+    @ViewBuilder private func nowBlock(now: Record?, queue: LiveQueue) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Circle().fill(theme.accent).frame(width: 8, height: 8).shadow(color: theme.accent, radius: 5)
                 Text(L.t("live.now", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(theme.accent)
                 Spacer()
-                Text("\(session.index + 1) / \(count)").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text("\(queue.ids.isEmpty ? 0 : queue.index + 1) / \(queue.ids.count)")
+                    .font(VxFont.labelMono).foregroundStyle(VxColor.textSecondary)
+                    .accessibilityIdentifier("live.position")
             }.padding(.bottom, 10)
             if let now {
                 HStack(spacing: 14) {
                     VxCover(seed: now.coverSeed, catalog: now.catalog, size: 64, radius: 13)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(now.artist).font(VxFont.caption).foregroundStyle(VxColor.textSecondary)
-                        Text(now.title).font(.system(size: 25, weight: .bold)).foregroundStyle(.white).lineLimit(1)
+                        Text(now.title).font(.title2.bold()).foregroundStyle(.white).lineLimit(2)
+                            .accessibilityIdentifier("live.now.track")
                     }
                 }
                 HStack(alignment: .bottom, spacing: 0) {
-                    bigStat("\(now.bpm)", "BPM", .white, align: .leading)
-                    bigStat(now.keyCode, now.camelot.musicalKey.uppercased(), theme.accent, align: .center)
-                    bigStat(now.side, L.t("live.sleeve", lang), .white, align: .trailing)
+                    bigStat(now.bpm > 0 ? "\(now.bpm)" : "–", "BPM", .white, align: .leading)
+                    bigStat(now.validCamelot?.code ?? "–", "CAMELOT", theme.accent, align: .center)
+                    bigStat(now.side.isEmpty ? "–" : now.side, L.t("live.sleeve", lang), .white, align: .trailing)
                 }.padding(.top, 20)
             }
         }
@@ -119,17 +156,18 @@ public struct LiveSetView: View {
     }
 
     // MARK: setlist
-    private func setlist(order: [Record]) -> some View {
-        VStack(spacing: 2) {
+    @ViewBuilder private func setlist(order: [Record], queue: LiveQueue, mode: LiveMode) -> some View {
             HStack {
-                Text(session.mode == .set ? L.t("live.setlist", lang) : L.t("live.crate_queue", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                Text(mode == .set ? L.t("live.setlist", lang) : L.t("live.crate_queue", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
                 Spacer()
-                Text("\(session.playedIDs.count) \(L.t("live.played", lang))").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
-            }.padding(.vertical, 10)
-            ForEach(Array(order.enumerated()), id: \.offset) { i, r in
-                let state = i < session.index ? 2 : (i == session.index ? 1 : 0) // 2 played,1 now,0 up
-                let isNext = state == 0 && i == session.index + 1
-                let rc: LiveCompat? = (isNext && session.index < order.count) ? LiveCompat(from: order[session.index], to: r) : nil
+                Text("\(queue.playedCount) \(L.t("live.played", lang))").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
+                    .accessibilityIdentifier("live.played.count")
+            }.padding(.top, VxSpace.xl).padding(.bottom, VxSpace.s)
+            ForEach(order.indices, id: \.self) { i in
+                let r = order[i]
+                let state = i < queue.playedCount ? 2 : (i == queue.index ? 1 : 0) // played, now, upcoming
+                let isNext = state == 0 && i == queue.index + 1
+                let rc: LiveCompat? = isNext ? LiveCompat(from: order[queue.index], to: r, lang: lang) : nil
                 let rcColor = rc.map { Color.liveLevel($0.level, accent: theme.accent) }
                 HStack(spacing: 11) {
                     Group {
@@ -150,7 +188,7 @@ public struct LiveSetView: View {
                         }
                     }
                     Spacer(minLength: 6)
-                    Text("\(r.bpm)").font(VxFont.bpm(13)).foregroundStyle(.white)
+                    Text(r.bpm > 0 ? "\(r.bpm)" : "–").font(VxFont.bpm(13)).foregroundStyle(.white)
                     VxKeyBadge(r.keyCode, highlighted: state == 1)
                 }
                 .padding(.horizontal, 11).padding(.vertical, 9)
@@ -159,13 +197,11 @@ public struct LiveSetView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(state == 1 ? theme.accentLine : (isNext ? VxColor.hairlineStrong : .clear), lineWidth: 1))
                 .opacity(state == 2 ? 0.42 : 1)
             }
-        }.padding(.top, 14)
     }
 
     // MARK: suggestions
-    private func suggestionList(now: Record?, order: [Record]) -> some View {
-        let items = session.suggestions(now: now, order: order, crate: crate)
-        return VStack(spacing: 8) {
+    private func suggestionList(items: [(Record, LiveCompat)], now: Record?) -> some View {
+        VStack(spacing: 8) {
             HStack {
                 Text(L.t("live.suggested", lang)).font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
                 Spacer()
@@ -180,11 +216,12 @@ public struct LiveSetView: View {
                         Text("\(r.bpm) · \(r.keyCode) · \(c.bpmText)").font(VxFont.mono(10.5)).foregroundStyle(col)
                     }
                     Spacer(minLength: 6)
-                    Button { set.add(r.id) } label: {
+                    Button { session.append(r.id) } label: {
                         Image(systemName: "plus").font(.system(size: 16)).foregroundStyle(.white)
-                            .frame(width: 34, height: 34).background(VxColor.cardElevated)
+                            .frame(width: VxSize.hitTarget, height: VxSize.hitTarget).background(VxColor.cardElevated)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }.buttonStyle(.plain)
+                        .accessibilityLabel("\(L.t("live.add_more", lang)): \(r.title)")
                 }
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .background(Color.white.opacity(0.02))
@@ -194,66 +231,96 @@ public struct LiveSetView: View {
         }.padding(.top, 14).padding(.bottom, 8)
     }
 
-    private func finishOverlay(now: Record?, order: [Record]) -> some View {
+    private func finishOverlay(suggestion: Record?) -> some View {
+        ViewThatFits(in: .vertical) {
+            finishContent(suggestion: suggestion)
+            ScrollView { finishContent(suggestion: suggestion) }
+        }
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: VxRadius.sheet, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: VxRadius.sheet).strokeBorder(VxColor.hairlineStrong))
+        .padding(VxSpace.xl)
+    }
+
+    private func finishContent(suggestion: Record?) -> some View {
         VStack(spacing: VxSpace.l) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48, weight: .bold))
+                .font(.largeTitle.bold())
                 .foregroundStyle(theme.accent)
+                .accessibilityHidden(true)
             Text(L.t("live.complete_title", lang))
-                .font(VxFont.largeTitle)
+                .font(.largeTitle.bold())
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text(L.t("live.complete_body", lang))
-                .font(VxFont.subhead)
-                .foregroundStyle(VxColor.textSecondary)
-                .multilineTextAlignment(.center)
-            HStack(spacing: VxSpace.s) {
-                VxButton(L.t("live.add_more", lang), icon: "plus", style: .dark) { session.finished = false }
-                VxButton(L.t("live.end", lang), icon: "stop.fill") { router.showLiveSet = false }
+                .accessibilityAddTraits(.isHeader)
+            if let suggestion {
+                Text("\(suggestion.artist) / \(suggestion.title)")
+                    .font(.subheadline).foregroundStyle(VxColor.textSecondary).multilineTextAlignment(.center)
+                VxButton(L.t("live.add_more", lang), icon: "plus", style: .dark) { session.append(suggestion.id) }
+                    .accessibilityIdentifier("live.finish.add")
             }
+            VxButton(L.t("live.undo", lang), icon: "arrow.uturn.backward", style: .dark) { session.undo() }
+                .accessibilityIdentifier("live.finish.undo")
+            VxButton(L.t("live.end", lang), icon: "stop.fill", action: end)
+                .accessibilityIdentifier("live.finish")
         }
         .padding(VxSpace.xl)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(VxColor.hairlineStrong, lineWidth: 1))
-        .padding(.horizontal, VxSpace.xl)
     }
 
     // MARK: controls
-    private func controls(order: [Record]) -> some View {
+    private func controls(queue: LiveQueue) -> some View {
         HStack(spacing: 12) {
-            ctlButton(system: "backward.fill", enabled: session.index > 0) { session.previous() }
-            Button { session.advance(in: order) } label: {
-                HStack(spacing: 9) { Image(systemName: "checkmark").font(.system(size: 21, weight: .bold)); Text(L.t("live.mark_next", lang)).font(.system(size: 17, weight: .bold)) }
-                    .frame(maxWidth: .infinity).frame(height: 56)
+            ctlButton(system: "arrow.uturn.backward", label: "live.undo", enabled: queue.playedCount > 0) { session.undo() }
+            Button { session.advance() } label: {
+                Label(L.t("live.mark_next", lang), systemImage: "checkmark").font(.body.bold())
+                    .multilineTextAlignment(.center)
+                    .padding(VxSpace.s)
+                    .frame(maxWidth: .infinity, minHeight: VxSize.tabBar)
                     .foregroundStyle(VxColor.limeInk).background(theme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }.buttonStyle(.plain).vxPressable()
-            ctlButton(system: "arrow.uturn.backward", enabled: !session.playedIDs.isEmpty) { session.undo() }
+                .disabled(queue.ids.isEmpty || queue.finished)
+                .accessibilityIdentifier("live.advance")
         }
         .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 24)
         .background(.ultraThinMaterial)
         .overlay(Rectangle().frame(height: 1).foregroundStyle(VxColor.hairline), alignment: .top)
     }
-    private func ctlButton(system: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func ctlButton(system: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: system).font(.system(size: 20))
                 .foregroundStyle(enabled ? .white : VxColor.textTertiary)
                 .frame(width: 52, height: 56).background(Color.white.opacity(0.05))
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(VxColor.hairline, lineWidth: 1))
-        }.buttonStyle(.plain)
+        }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(L.t(label, lang))
     }
 
     // MARK: swipe + cover glow
-    private func swipe(order: [Record]) -> some Gesture {
+    private var swipe: some Gesture {
         DragGesture(minimumDistance: 12)
-            .onChanged { dragX = max(-90, min(90, $0.translation.width)) }
-            .onEnded { v in
-                if v.translation.width < -56 { session.advance(in: order) }
-                else if v.translation.width > 56 { session.previous() }
-                withAnimation(VxMotion.nav) { dragX = 0 }
+            .onChanged {
+                if !reduceMotion && abs($0.translation.width) > abs($0.translation.height) {
+                    dragX = max(-90, min(90, $0.translation.width))
+                }
             }
+            .onEnded { v in
+                if abs(v.translation.width) > abs(v.translation.height) {
+                    if v.translation.width < -56 { session.advance() }
+                    else if v.translation.width > 56 { session.undo() }
+                }
+                withAnimation(reduceMotion ? nil : VxMotion.nav) { dragX = 0 }
+            }
+    }
+
+    private func pause() {
+        session.pause()
+        router.showLiveSet = false
+    }
+
+    private func end() {
+        router.showLiveSet = false
+        session.end()
     }
     private func coverGlow(seed: String) -> some View {
         let (bg, _) = VxCover(seed: seed).previewTint

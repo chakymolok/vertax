@@ -14,20 +14,19 @@ public struct ImportSheet: View {
     var onFinished: (() -> Void)? = nil
     public init(onFinished: (() -> Void)? = nil) { self.onFinished = onFinished }
 
-    private let examples = ["discogs.com/user/selectordub", "@crate_digger"]
-
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             switch importer.state {
             case .idle:           idle
-            case .loading(let s): loading(step: s)
+            case .loading:        loading
             case .done(let sum):  done(sum)
             case .failed(let message): failed(message)
             }
         }
         .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 26)
         .presentationDetents([.medium, .large])
+        .onDisappear { importer.cancel() }
     }
 
     private var header: some View {
@@ -50,6 +49,8 @@ public struct ImportSheet: View {
             HStack(spacing: 8) {
                 Text("@").font(VxFont.mono(13)).foregroundStyle(VxColor.textTertiary)
                 TextField(L.t("import.placeholder", lang), text: $importer.url).font(.system(size: 16))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
             }
             .padding(.horizontal, 14).frame(height: 46)
             .background(VxColor.card).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -57,12 +58,6 @@ public struct ImportSheet: View {
 
             if !importer.handle.isEmpty {
                 Text("→ discogs.com/user/\(importer.handle)").font(VxFont.mono(11.5)).foregroundStyle(theme.accentText(scheme)).padding(.top, 9)
-            } else {
-                HStack(spacing: 7) {
-                    ForEach(examples, id: \.self) { ex in
-                        Button { importer.url = ex } label: { VxChip(ex, mono: true) }.buttonStyle(.plain)
-                    }
-                }.padding(.top, 11)
             }
 
             Text(L.t("import.body", lang))
@@ -70,11 +65,12 @@ public struct ImportSheet: View {
 
             VxButton(L.t("import.button", lang), icon: "square.and.arrow.down",
                      style: importer.handle.isEmpty ? .dark : .primary) { importer.run(into: crate, lang: lang) }
+                .disabled(importer.handle.isEmpty)
                 .opacity(importer.handle.isEmpty ? 0.55 : 1).padding(.top, 18)
         }
     }
 
-    private func loading(step: Int) -> some View {
+    private var loading: some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Image(systemName: "person.fill").foregroundStyle(theme.accentText(scheme))
@@ -86,20 +82,12 @@ public struct ImportSheet: View {
                 Spacer()
             }.padding(14).background(VxColor.card).clipShape(RoundedRectangle(cornerRadius: theme.cornerRadius, style: .continuous))
             VxCard {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array(DiscogsImport.steps(lang: lang).enumerated()), id: \.offset) { i, s in
-                        HStack(spacing: 11) {
-                            ZStack {
-                                Circle().strokeBorder(i < step ? .clear : VxColor.hairlineStrong, lineWidth: 1.5)
-                                    .background(Circle().fill(i < step ? theme.accent : .clear)).frame(width: 22, height: 22)
-                                if i < step { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(VxColor.limeInk) }
-                                else if i == step { ProgressView().scaleEffect(0.6) }
-                            }.frame(width: 22, height: 22)
-                            Text(s).font(VxFont.subhead).foregroundStyle(i <= step ? VxColor.text : VxColor.textTertiary)
-                        }
-                    }
+                HStack(spacing: VxSpace.m) {
+                    ProgressView()
+                    Text(L.t("import.step_collection", lang)).font(VxFont.subhead)
                 }
             }
+            VxButton(L.t("action.cancel", lang), style: .ghost) { importer.cancel() }
         }
     }
 
@@ -112,11 +100,9 @@ public struct ImportSheet: View {
                 .padding(.bottom, 16)
             Text(L.t("import.done", lang)).font(.system(size: 19, weight: .bold)).foregroundStyle(VxColor.text)
             HStack(spacing: 0) {
-                stat("\(sum.records)", L.t("common.records", lang), VxColor.text)
+                stat("\(sum.records)", L.t("import.added", lang), VxColor.text)
                 Divider().frame(height: 36).overlay(VxColor.hairline)
                 stat("\(sum.labels)", L.t("common.labels", lang), VxColor.text)
-                Divider().frame(height: 36).overlay(VxColor.hairline)
-                stat("\(sum.records)", L.t("common.analyzed", lang), theme.accentText(scheme))
             }.padding(.vertical, 18)
             VxButton(L.t("import.go_crate", lang)) {
                 router.tab = .crate; router.showOnboarding = false; router.sheet = nil; onFinished?()
@@ -139,9 +125,7 @@ public struct ImportSheet: View {
                 .foregroundStyle(VxColor.textTertiary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
-            VxButton(L.t("import.retry", lang), icon: "arrow.clockwise") {
-                importer.run(into: crate, lang: lang)
-            }
+            VxButton(L.t("import.retry", lang), icon: "arrow.clockwise") { importer.state = .idle }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)

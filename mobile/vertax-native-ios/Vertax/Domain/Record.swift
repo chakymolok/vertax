@@ -3,6 +3,7 @@ import Foundation
 // MARK: - Record model
 
 public struct Record: Identifiable, Hashable, Codable {
+    enum Kind: String, Codable { case release, track }
     public let id: String
     public var artist: String
     public var title: String
@@ -17,8 +18,70 @@ public struct Record: Identifiable, Hashable, Codable {
     public var played: Bool
     public var coverSeed: String        // deterministic sleeve generation
     public var notes: String
+    var parentDiscogsID: String? = nil
+    var kind: Kind? = nil
+    var parentReleaseID: String? = nil
+    var durationSeconds: Int? = nil
+    var originalBPM: Double? = nil
+    var bpmSource: String? = nil
+    var keySource: String? = nil
+    var musicalKey: String? = nil
+    var excludedFromSets: Bool? = nil
+    var linkedWebTrackIDs: [String]? = nil
 
-    public var camelot: Camelot { Camelot(keyCode) ?? Camelot(number: 1, letter: .A) }
+    public var validCamelot: Camelot? { Camelot(keyCode) }
+    public var hasMixMetadata: Bool { (40...250).contains(bpm) && validCamelot != nil }
+    var discogsID: String? {
+        guard id.hasPrefix("discogs-") else { return nil }
+        let value = String(id.dropFirst("discogs-".count))
+        guard let number = Int(value), number > 0 else { return nil }
+        return value
+    }
+    var discogsURL: URL? {
+        guard let id = discogsID ?? parentDiscogsID, let number = Int(id), number > 0 else { return nil }
+        return URL(string: "https://www.discogs.com/release/\(number)")
+    }
+    var isRelease: Bool { kind.map { $0 == .release } ?? (discogsID != nil) }
+    var containingReleaseID: String? { parentReleaseID ?? parentDiscogsID.map { "discogs-\($0)" } }
+    var canBuildSet: Bool { excludedFromSets != true }
+
+    static func expandReleaseSelection(_ releaseIDs: [String], in library: [Record]) -> [String] {
+        let map = releaseSelectionMap(in: library)
+        var seen = Set<String>()
+        return releaseIDs.flatMap { map[$0] ?? [] }.filter { seen.insert($0).inserted }
+    }
+
+    static func releaseSelectionMap(in library: [Record]) -> [String: [String]] {
+        let allowed = library.filter(\.canBuildSet)
+        let releases = Set(allowed.lazy.filter(\.isRelease).map(\.id))
+        let tracksByRelease = Dictionary(grouping: allowed.filter { !$0.isRelease && $0.containingReleaseID != nil },
+                                         by: \.containingReleaseID)
+        return Dictionary(uniqueKeysWithValues: releases.map { releaseID in
+            let tracks = (tracksByRelease[releaseID] ?? []).sorted {
+                if $0.side.isEmpty != $1.side.isEmpty { return !$0.side.isEmpty }
+                return $0.side.localizedStandardCompare($1.side) == .orderedAscending
+            }
+            return (releaseID, tracks.isEmpty ? [releaseID] : tracks.map(\.id))
+        })
+    }
+
+    static func parseDuration(_ value: String?) -> Int? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
+        if let seconds = Double(value) {
+            guard seconds.isFinite, seconds > 0, seconds <= 86_400 else { return nil }
+            return Int(exactly: seconds.rounded()).flatMap { $0 > 0 ? $0 : nil }
+        }
+        guard value.count <= 10 else { return nil }
+        let parts = value.split(separator: ":", omittingEmptySubsequences: false)
+        guard (2...3).contains(parts.count), parts.allSatisfy({ !$0.isEmpty && $0.count <= 3 }),
+              parts.dropFirst().allSatisfy({ Int($0).map { (0..<60).contains($0) } == true }) else { return nil }
+        var total = 0
+        for part in parts {
+            guard let value = Int(part), value >= 0 else { return nil }
+            total = total * 60 + value
+        }
+        return total > 0 ? total : nil
+    }
 }
 
 public extension Record {

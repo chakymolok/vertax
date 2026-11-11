@@ -24,11 +24,12 @@ public enum VxMotion {
 // Tap-scale modifier (use on every tappable card/row/button).
 public struct VxPressable: ViewModifier {
     @State private var pressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     public func body(content: Content) -> some View {
         content
-            .scaleEffect(pressed ? 0.965 : 1)
+            .scaleEffect(pressed && !reduceMotion ? 0.965 : 1)
             .opacity(pressed ? 0.9 : 1)
-            .animation(VxMotion.tap, value: pressed)
+            .animation(reduceMotion ? nil : VxMotion.tap, value: pressed)
             .simultaneousGesture(DragGesture(minimumDistance: 0)
                 .onChanged { _ in pressed = true }
                 .onEnded { _ in pressed = false })

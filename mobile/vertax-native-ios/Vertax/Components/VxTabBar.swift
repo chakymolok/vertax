@@ -29,14 +29,13 @@ public struct VxTabBar: View {
                     }
                     .foregroundStyle(selection == tab ? theme.accentText(scheme) : VxColor.textTertiary)
                     .frame(maxWidth: .infinity)
-                }.buttonStyle(.plain)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(label)
             }
         }
-        .padding(.top, 7)
-        .padding(.bottom, 0)
-        .frame(height: VxSize.tabBar, alignment: .top)
+        .frame(height: VxSize.tabBar)
         .background(.ultraThinMaterial)
         .overlay(Rectangle().frame(height: 1).foregroundStyle(VxColor.hairline), alignment: .top)
-        .ignoresSafeArea(.container, edges: .bottom)
     }
 }

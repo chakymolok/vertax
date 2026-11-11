@@ -8,14 +8,13 @@ public struct AnalyzeResult {
     public enum Verdict { case strong, partial, weak }
     public let score: Int                 // 0...100
     public let verdict: Verdict
-    public let verdictText: String
+    public let target: Record
     public let bars: [Factor]
     public let matches: [Record]
 
     public struct Factor: Identifiable {
         public let id = UUID()
         public let title: String
-        public let subtitle: String
         public let value: Int             // 0...100
         public let accent: FactorAccent
     }
@@ -23,42 +22,33 @@ public struct AnalyzeResult {
 }
 
 public enum AnalyzeEngine {
-    public static func analyze(target t: Record, against crate: [Record]) -> AnalyzeResult {
-        let minDiff = crate.map { abs($0.bpm - t.bpm) }.min() ?? 99
-        let tempo = max(8, min(98, 100 - minDiff * 7))
+    public static func analyze(target: Record, against crate: [Record]) -> AnalyzeResult? {
+        guard target.hasMixMetadata, let targetKey = target.validCamelot else { return nil }
+        let eligible = crate.filter { $0.id != target.id && $0.hasMixMetadata }
+        guard !eligible.isEmpty else { return nil }
 
-        let harmCount = crate.filter { t.camelot.relation(to: $0.camelot) != nil }.count
-        let harmonic = max(10, min(96, 30 + harmCount * 7))
-
-        let styleCount = crate.filter { $0.genre == t.genre }.count
-        let style = max(12, min(92, styleCount * 22))
-
-        let score = Int((Double(tempo) * 0.4 + Double(harmonic) * 0.4 + Double(style) * 0.2).rounded())
-
-        let sameRegion = crate.filter { abs($0.bpm - t.bpm) <= 4 && t.camelot.relation(to: $0.camelot) != nil }.count
-        let opportunity = max(18, min(95, 92 - sameRegion * 16))
-
-        let verdict: AnalyzeResult.Verdict = score >= 72 ? .strong : score >= 45 ? .partial : .weak
-        let verdictText: String = {
-            switch verdict {
-            case .strong:  return "Buy it — strengthens your \(t.bpm) / \(t.camelot.code) core."
-            case .partial: return "Maybe — only partial overlap with how you play."
-            case .weak:    return "Skip for now — barely fits your crate."
+        let pairs = eligible.compactMap { record -> (record: Record, tempo: Int, key: Int, score: Int)? in
+            guard let key = record.validCamelot else { return nil }
+            let harmonic: Int
+            switch targetKey.relation(to: key) {
+            case .some(.same): harmonic = 100
+            case .some(.adjacent): harmonic = 80
+            case .some(.relative): harmonic = 70
+            case .none: harmonic = 0
             }
-        }()
-
-        let matches = crate
-            .filter { t.camelot.relation(to: $0.camelot) != nil && abs($0.bpm - t.bpm) <= 6 }
-            .sorted { abs($0.bpm - t.bpm) < abs($1.bpm - t.bpm) }
-            .prefix(3).map { $0 }
-
+            let direct = abs(Double(record.bpm) / Double(target.bpm) - 1)
+            let ratio = Double(max(record.bpm, target.bpm)) / Double(min(record.bpm, target.bpm))
+            let tempo = direct <= 0.03 ? 100 : direct <= 0.06 ? 70 : abs(ratio / 2 - 1) <= 0.03 ? 60 : 0
+            return (record, tempo, harmonic, tempo * harmonic / 100)
+        }.sorted { $0.score > $1.score }
+        guard let best = pairs.first else { return nil }
+        let score = best.score
+        let verdict: AnalyzeResult.Verdict = score >= 70 ? .strong : score >= 45 ? .partial : .weak
         let bars: [AnalyzeResult.Factor] = [
-            .init(title: "Tempo cluster",      subtitle: "\(t.bpm) vs your core",            value: tempo,       accent: .lime),
-            .init(title: "Harmonic role",      subtitle: "\(t.camelot.code) links \(harmCount) records", value: harmonic, accent: .lime),
-            .init(title: "Style overlap",      subtitle: t.genre,                              value: style,       accent: .cyan),
-            .init(title: "Crate opportunity",  subtitle: sameRegion > 0 ? "Some cover here" : "Open lane", value: opportunity, accent: .amber),
+            .init(title: "release.tempo", value: best.tempo, accent: .cyan),
+            .init(title: "Camelot", value: best.key, accent: .lime)
         ]
-
-        return AnalyzeResult(score: score, verdict: verdict, verdictText: verdictText, bars: bars, matches: matches)
+        return AnalyzeResult(score: score, verdict: verdict, target: target, bars: bars,
+                             matches: Array(pairs.filter { $0.score > 0 }.prefix(3).map(\.record)))
     }
 }

@@ -24,7 +24,7 @@ public enum VxRadius {
 // MARK: - Fixed sizes
 public enum VxSize {
     public static let statusBar: CGFloat = 54
-    public static let tabBar: CGFloat = 84
+    public static let tabBar: CGFloat = 56
     public static let hitTarget: CGFloat = 44   // minimum
     public static let rowCover: CGFloat = 48
     public static let iconButton: CGFloat = 36

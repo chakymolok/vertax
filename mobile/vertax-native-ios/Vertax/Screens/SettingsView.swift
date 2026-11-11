@@ -1,4 +1,21 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+private struct BackupDocument: FileDocument {
+    static let readableContentTypes: [UTType] = [.json]
+    let backup: LibraryBackup
+
+    init(backup: LibraryBackup) { self.backup = backup }
+
+    init(configuration: ReadConfiguration) throws {
+        guard let data = configuration.file.regularFileContents else { throw CocoaError(.fileReadCorruptFile) }
+        backup = try LibraryBackup.decode(data)
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        try FileWrapper(regularFileWithContents: backup.encoded())
+    }
+}
 
 // MARK: - Settings sheet
 // Presented from RootView via AppSheet.settings (gear button in the Crate header).
@@ -11,10 +28,19 @@ public struct SettingsSheet: View {
     @EnvironmentObject var set: SetStore
     @EnvironmentObject var wishlist: WishlistStore
     @EnvironmentObject var router: AppRouter
+    @EnvironmentObject private var live: LiveSession
     @Environment(\.colorScheme) var scheme
     @Environment(\.dismiss) var dismiss
 
     @AppStorage("vx_lang") private var lang = "en"
+    @AppStorage("vx_find_recent") private var recent = ""
+    @State private var confirmClear = false
+    @State private var showExport = false
+    @State private var showRestore = false
+    @State private var confirmRestore = false
+    @State private var pendingBackup: LibraryBackup?
+    @State private var readingBackup = false
+    @State private var backupMessage: String?
     public init() {}
 
     static let accents: [(UInt, String)] = [(0xC8FF2E,"Lime"),(0x67D4E6,"Cyan"),(0xE8B15F,"Amber"),(0xE58FB0,"Rose"),(0x9CA8FF,"Indigo")]
@@ -37,6 +63,55 @@ public struct SettingsSheet: View {
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark") } } }
         }
         .presentationDetents([.large])
+        .fileExporter(isPresented: $showExport, document: BackupDocument(backup: currentBackup),
+                      contentType: .json, defaultFilename: backupFilename) { result in
+            if case .failure = result { backupMessage = L.t("backup.failed", lang) }
+        }
+        .fileImporter(isPresented: $showRestore, allowedContentTypes: [.json]) { result in
+            guard case let .success(url) = result else {
+                if case .failure = result { backupMessage = L.t("backup.failed", lang) }
+                return
+            }
+            readBackup(url)
+        }
+        .confirmationDialog(L.t("backup.restore", lang), isPresented: $confirmRestore, titleVisibility: .visible) {
+            Button(L.t("backup.merge", lang)) {
+                guard let backup = pendingBackup else { return }
+                let current = currentBackup
+                let merged = current.merging(backup)
+                if merged.records != current.records { crate.records = merged.records }
+                if merged.sets != current.sets { set.savedSets = merged.sets }
+                if merged.activeSet != current.activeSet { set.orderedIDs = merged.activeSet }
+                if merged.wishlist != current.wishlist { wishlist.recordIDs = merged.wishlist }
+                pendingBackup = nil
+                backupMessage = backupCounts(records: merged.records.count - current.records.count,
+                                             sets: merged.sets.count - current.sets.count)
+            }
+            Button(L.t("action.cancel", lang), role: .cancel) { pendingBackup = nil }
+        } message: {
+            if let backup = pendingBackup {
+                Text(backupCounts(records: backup.records.count, sets: backup.sets.count) + "\n" + L.t("backup.keep", lang))
+            }
+        }
+        .alert(L.t("settings.data", lang), isPresented: Binding(
+            get: { backupMessage != nil }, set: { if !$0 { backupMessage = nil } }
+        )) {
+            Button("OK") { backupMessage = nil }
+        } message: {
+            Text(backupMessage ?? "")
+        }
+        .confirmationDialog(L.t("settings.clear_local", lang), isPresented: $confirmClear, titleVisibility: .visible) {
+            Button(L.t("common.clear", lang), role: .destructive) {
+                live.end()
+                crate.clear()
+                set.clear()
+                set.savedSets.removeAll()
+                wishlist.clear()
+                recent = ""
+                dismiss()
+            }
+            Button(L.t("action.cancel", lang), role: .cancel) {}
+        }
     }
 
     // APPEARANCE
@@ -50,7 +125,8 @@ public struct SettingsSheet: View {
                             VStack(spacing: 6) {
                                 Circle().fill(Color(rgb: hex)).frame(width: 34, height: 34)
                                     .overlay(Circle().strokeBorder(theme.accentHex == hex ? .white : .clear, lineWidth: 2))
-                                Text(name).font(VxFont.mono(9.5)).foregroundStyle(theme.accentHex == hex ? VxColor.text : VxColor.textTertiary)
+                                Text(L.t("accent." + name.lowercased(), lang)).font(VxFont.mono(9.5))
+                                    .foregroundStyle(theme.accentHex == hex ? VxColor.text : VxColor.textTertiary)
                             }.frame(maxWidth: .infinity)
                         }.buttonStyle(.plain)
                     }
@@ -67,7 +143,9 @@ public struct SettingsSheet: View {
             row(divider: false) {
                 Text(L.t("settings.density", lang)).font(VxFont.body).foregroundStyle(VxColor.text)
             } trailing: {
-                Picker("", selection: $theme.density) { ForEach(VxDensity.allCases) { Text($0.rawValue.capitalized).tag($0) } }
+                Picker("", selection: $theme.density) {
+                    ForEach(VxDensity.allCases) { Text(L.t("density." + $0.rawValue, lang)).tag($0) }
+                }
                     .pickerStyle(.menu).tint(VxColor.textSecondary)
             }
         }
@@ -80,8 +158,6 @@ public struct SettingsSheet: View {
                 langPicker
             } label: { rowLabel("globe", L.t("settings.language", lang), Self.langs.first { $0.0 == lang }?.1 ?? "English", chevron: true) }
             .buttonStyle(.plain)
-            Divider().overlay(VxColor.hairline)
-            rowLabel("metronome", L.t("settings.default_bpm", lang), "168–176 · DnB", chevron: true)
         }
     }
 
@@ -92,13 +168,22 @@ public struct SettingsSheet: View {
                 rowLabel("square.and.arrow.down", L.t("settings.import", lang), L.t("settings.import_hint", lang), chevron: true)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
-            ShareLink(item: exportPayload) { rowLabel("square.and.arrow.up", L.t("settings.export", lang), L.t("settings.export_hint", lang), chevron: true) }
-                .buttonStyle(.plain)
+            Button { showExport = true } label: {
+                rowLabel("square.and.arrow.up", L.t("settings.export", lang), "JSON", chevron: true)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("backup.export")
+            Divider().overlay(VxColor.hairline)
+            Button { showRestore = true } label: {
+                if readingBackup { ProgressView() }
+                else { rowLabel("doc.badge.plus", L.t("backup.restore", lang), "JSON", chevron: true) }
+            }
+            .disabled(readingBackup)
+            .accessibilityIdentifier("backup.restore")
+            .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
             Button {
                 crate.loadDemo()
-                set.clear()
-                wishlist.clear()
                 dismiss()
             } label: {
                 rowLabel("opticaldisc", L.t("settings.demo", lang), nil, chevron: false)
@@ -106,14 +191,12 @@ public struct SettingsSheet: View {
             .buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
             Button(role: .destructive) {
-                crate.clear()
-                set.clear()
-                wishlist.clear()
-                dismiss()
+                confirmClear = true
             } label: {
                 rowLabel("trash", L.t("settings.clear_local", lang), nil, chevron: false, tint: VxColor.amber)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("backup.clear")
         }
     }
 
@@ -121,24 +204,59 @@ public struct SettingsSheet: View {
     private var privacy: some View {
         group(L.t("settings.privacy", lang)) {
             rowLabel("lock.fill", L.t("settings.local_only", lang), L.t("settings.no_cloud", lang), chevron: false)
+            Divider().overlay(VxColor.hairline)
+            NavigationLink {
+                ScrollView {
+                    Text(L.t("settings.privacy_body", lang))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(VxSpace.xl)
+                }
+                .navigationTitle(L.t("settings.privacy_details", lang))
+            } label: {
+                rowLabel("hand.raised", L.t("settings.privacy_details", lang), "", chevron: true)
+            }
+            .buttonStyle(.plain)
         }
     }
 
-    private var exportPayload: String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(crate.records),
-              let text = String(data: data, encoding: .utf8) else {
-            return "[]"
+    private var currentBackup: LibraryBackup {
+        LibraryBackup(records: crate.records, sets: set.savedSets, activeSet: set.orderedIDs, wishlist: wishlist.recordIDs)
+    }
+
+    private var backupFilename: String {
+        VertaxLocalStore.testNamespace.map { "vertax-qa-\($0.prefix(8))" } ?? "vertax-ios-backup"
+    }
+
+    private func backupCounts(records: Int, sets: Int) -> String {
+        "\(L.t("backup.records_count", lang)) \(records) · \(L.t("backup.sets_count", lang)) \(sets)"
+    }
+
+    private func readBackup(_ url: URL) {
+        readingBackup = true
+        Task {
+            defer { readingBackup = false }
+            do {
+                let backup = try await Task.detached(priority: .userInitiated) {
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    let file = try FileHandle(forReadingFrom: url)
+                    defer { try? file.close() }
+                    let data = try file.read(upToCount: LibraryBackup.maxBytes + 1) ?? Data()
+                    return try LibraryBackup.decode(data)
+                }.value
+                pendingBackup = backup
+                confirmRestore = true
+            } catch {
+                backupMessage = L.t("backup.failed", lang)
+            }
         }
-        return text
     }
 
     // SUPPORT
     private var support: some View {
         group(L.t("settings.support", lang)) {
-            Link(destination: URL(string: "https://1994lab.com")!) {
-                rowLabel("heart.fill", L.t("settings.support_author", lang), L.t("settings.support_hint", lang), chevron: true, tint: VxColor.amber)
+            Link(destination: URL(string: "https://vertax.live/about#contact")!) {
+                rowLabel("questionmark.circle", L.t("settings.help", lang), "vertax.live", chevron: true)
             }.buttonStyle(.plain)
             Divider().overlay(VxColor.hairline)
             NavigationLink { aboutView } label: { rowLabel("opticaldisc", L.t("settings.about", lang), L.t("common.version", lang), chevron: true) }.buttonStyle(.plain)
@@ -160,7 +278,10 @@ public struct SettingsSheet: View {
             Text("VERTAX").font(VxFont.mono(16)).tracking(2).foregroundStyle(VxColor.text).padding(.top, 8)
             Text("DIG · PLAY · SHARE").font(VxFont.labelMono).tracking(VxTracking.labelMono).foregroundStyle(VxColor.textTertiary)
             Text(L.t("settings.about_body", lang)).font(VxFont.subhead).foregroundStyle(VxColor.textSecondary).multilineTextAlignment(.center).padding(.horizontal, 40).padding(.top, 12)
-            Text("\(L.t("common.version", lang)) · build 100").font(VxFont.mono(11.5)).foregroundStyle(VxColor.textTertiary).padding(.top, 14)
+            Text(L.t("common.version", lang)).font(VxFont.mono(11.5)).foregroundStyle(VxColor.textTertiary).padding(.top, 14)
+            Text("This application uses Discogs’ API but is not affiliated with, sponsored or endorsed by Discogs. ‘Discogs’ is a trademark of Zink Media, LLC.")
+                .font(VxFont.footnote).foregroundStyle(VxColor.textSecondary)
+                .multilineTextAlignment(.center).padding(.horizontal, VxSpace.xl).padding(.top, VxSpace.l)
             Spacer()
         }.frame(maxWidth: .infinity).background(VxColor.bg).navigationTitle(L.t("settings.about_title", lang)).navigationBarTitleDisplayMode(.inline)
     }
