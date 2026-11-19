@@ -100,6 +100,8 @@ final class MetadataFixture: URLProtocol {
     static var crate: [Record]? {
         guard VertaxLocalStore.testNamespace != nil else { return nil }
         switch ProcessInfo.processInfo.environment["VERTAX_TEST_CRATE"] {
+        case "gaps-small": return gapsCrate(partial: false)
+        case "gaps-partial": return gapsCrate(partial: true)
         case "long-live":
             return (1...120).map { index in
                 Record(id: "fixture-live-\(index)", artist: "Test DJ", title: String(format: "Cue %03d", index),
@@ -109,6 +111,19 @@ final class MetadataFixture: URLProtocol {
         case "timed": return timedCrate
         default: return nil
         }
+    }
+
+    private static func gapsCrate(partial: Bool) -> [Record] {
+        let count = partial ? 10 : 3
+        var rows = Array(Record.sample.prefix(count))
+        for index in rows.indices {
+            rows[index].bpm = index < 5 ? 174 : index < 7 ? 128 : 0
+            rows[index].keyCode = index < 5 ? "9A" : (7...8).contains(index) ? "12B" : ""
+        }
+        let release = Record(id: "fixture-gaps-pressing", artist: "Fixture DJ", title: "Fixture pressing", label: "",
+                             catalog: "", year: "", bpm: 174, keyCode: "9A", side: "", genre: "", rating: 0,
+                             played: false, coverSeed: "fixture", notes: "", kind: .release)
+        return rows + [release]
     }
 
     private static var timedCrate: [Record] {

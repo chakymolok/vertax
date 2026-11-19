@@ -325,8 +325,9 @@ final class ReleaseSmokeTests: XCTestCase {
         tap(app.buttons["Continue with demo crate"])
         tap(app.buttons["tab.dig"])
         tap(app.buttons["Gaps"])
-        XCTAssertTrue(app.staticTexts["BPM + Camelot: 12 of 12 tracks"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.staticTexts["Dig here next"].exists)
+        XCTAssertEqual(app.staticTexts["gaps.coverage"].label, "BPM + Camelot: 12 of 12 tracks (100%)")
+        XCTAssertTrue(app.staticTexts["gaps.targets"].exists)
+        XCTAssertFalse(app.staticTexts["gaps.preliminary"].exists)
         capture("09-crate-gaps", app)
 
         tap(app.buttons["Analyze"])
@@ -364,8 +365,67 @@ final class ReleaseSmokeTests: XCTestCase {
         tap(app.buttons["tab.dig"], timeout: 12)
         tap(app.buttons["不足"])
         XCTAssertTrue(app.staticTexts["比較できる曲がありません"].waitForExistence(timeout: 6))
-        XCTAssertFalse(app.staticTexts["Dig here next"].exists)
+        XCTAssertFalse(app.staticTexts["gaps.targets"].exists)
+        XCTAssertFalse(app.staticTexts["gaps.coverage"].exists)
         capture("11-empty-gaps-ja", app)
+    }
+
+    @MainActor
+    func testGapsSmallCrateShowsCoverageWithoutSuggestions() {
+        continueAfterFailure = false
+        let app = fixtureApp("offline")
+        app.launchEnvironment["VERTAX_TEST_STORE"] = UUID().uuidString
+        app.launchEnvironment["VERTAX_TEST_CRATE"] = "gaps-small"
+        app.launchArguments = ["-vx_lang", "en", "-vertax.native.onboarding.dismissed.v1", "YES"]
+        app.launch()
+        tap(app.buttons["tab.dig"], timeout: 12)
+        tap(app.buttons["Gaps"])
+        let coverage = app.staticTexts["gaps.coverage"]
+        XCTAssertTrue(coverage.waitForExistence(timeout: 6))
+        XCTAssertEqual(coverage.label, "BPM + Camelot: 3 of 3 tracks (100%)")
+        let limited = app.staticTexts["gaps.limited"].label
+        XCTAssertTrue(limited.contains("at least half") && limited.contains("at least five"))
+        XCTAssertFalse(app.staticTexts["gaps.targets"].exists)
+        XCTAssertFalse(app.staticTexts["gaps.preliminary"].exists)
+        XCTAssertEqual(app.staticTexts["gaps.camelot_scope"].label, "The map counts only tracks with both BPM and Camelot.")
+        XCTAssertTrue(app.staticTexts["gaps.tempo_scope"].label.contains("3 of 3 tracks"))
+        capture("20-gaps-small", app)
+    }
+
+    @MainActor
+    func testGapsPartialCrateLabelsPreliminaryResultsAndChartScopesInRussian() {
+        continueAfterFailure = false
+        let app = fixtureApp("offline")
+        app.launchEnvironment["VERTAX_TEST_STORE"] = UUID().uuidString
+        app.launchEnvironment["VERTAX_TEST_CRATE"] = "gaps-partial"
+        app.launchArguments = ["-vx_lang", "ru", "-vertax.native.onboarding.dismissed.v1", "YES"]
+        app.launch()
+        tap(app.buttons["tab.dig"], timeout: 12)
+        tap(app.buttons["Пробелы"])
+        let coverage = app.staticTexts["gaps.coverage"]
+        XCTAssertTrue(coverage.waitForExistence(timeout: 6))
+        let percent = 0.5.formatted(.percent.locale(Locale(identifier: "ru")))
+        XCTAssertEqual(coverage.label, "Треки с BPM и Camelot: 5 из 10 (\(percent))")
+        let heading = app.staticTexts["gaps.targets"]
+        XCTAssertEqual(heading.label, "Куда копать дальше")
+        let preliminary = app.staticTexts["gaps.preliminary"]
+        XCTAssertTrue(preliminary.label.contains("предварительный анализ"))
+        XCTAssertTrue(preliminary.isHittable)
+        XCTAssertGreaterThan(preliminary.frame.minY, heading.frame.minY)
+        let target = app.staticTexts["8A · 170–179 BPM"]
+        XCTAssertTrue(target.exists)
+        XCTAssertLessThan(preliminary.frame.maxY, target.frame.minY)
+        XCTAssertFalse(app.staticTexts["gaps.limited"].exists)
+        capture("21-gaps-partial-ru", app)
+        let map = app.staticTexts["gaps.camelot_scope"]
+        let tempo = app.staticTexts["gaps.tempo_scope"]
+        reveal(tempo, in: app)
+        XCTAssertTrue(tempo.isHittable)
+        XCTAssertEqual(map.label, "На карте только треки, у которых известны и BPM, и Camelot.")
+        XCTAssertTrue(tempo.label.contains("7 из 10 треков"))
+        XCTAssertTrue(tempo.label.contains("самого заполненного диапазона"))
+        XCTAssertTrue(app.staticTexts["gaps.tempo"].exists)
+        capture("22-gaps-chart-scopes-ru", app)
     }
 
     @MainActor

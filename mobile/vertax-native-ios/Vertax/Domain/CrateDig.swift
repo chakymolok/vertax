@@ -192,6 +192,10 @@ enum CrateDig {
         let targets: [KeyTarget]
         let tempoGaps: [Band]
         let enoughForTargets: Bool
+
+        var tempoKnown: Int { bands.reduce(0) { $0 + $1.count } }
+        var coverage: Double { total > 0 ? Double(known) / Double(total) : 0 }
+        var isPreliminary: Bool { enoughForTargets && known < total }
     }
 
     static func gaps(_ crate: [Record]) -> Gaps {

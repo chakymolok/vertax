@@ -54,9 +54,28 @@ enum CrateDigTests {
         let unknown = makeTrack("partial", bpm: 89, key: "")
         let gaps = CrateDig.gaps(core + slower + [release, unknown])
         precondition(gaps.total == 10 && gaps.known == 9 && gaps.bands.first { $0.range.contains(89) }?.count == 1)
+        precondition(gaps.tempoKnown == 10 && gaps.coverage == 0.9 && gaps.isPreliminary)
         precondition(gaps.tempoGaps.map(\.label) == ["160–169"])
         precondition(gaps.targets.contains { $0.key.code == "8A" && $0.band.range.contains(174) })
         precondition(!gaps.tempoGaps.contains { $0.range.contains(130) })
+
+        let small = CrateDig.gaps(Array(core.prefix(3)) + [release])
+        precondition(small.total == 3 && small.known == 3 && small.coverage == 1)
+        precondition(!small.enoughForTargets && !small.isPreliminary && small.targets.isEmpty)
+        let complete = CrateDig.gaps(Array(core.prefix(5)))
+        precondition(complete.enoughForTargets && !complete.isPreliminary && !complete.targets.isEmpty)
+        let incompleteTracks = [unknown, makeTrack("bpm-only", bpm: 128, key: ""),
+                                makeTrack("key-only-1", bpm: 0, key: "12B"), makeTrack("key-only-2", bpm: 0, key: "12B"),
+                                makeTrack("no-metadata", bpm: 0, key: "")]
+        let threshold = CrateDig.gaps(Array(core.prefix(5)) + incompleteTracks + [release])
+        precondition(threshold.total == 10 && threshold.known == 5 && threshold.tempoKnown == 7 && threshold.coverage == 0.5)
+        precondition(threshold.enoughForTargets && threshold.isPreliminary && !threshold.targets.isEmpty)
+        precondition(threshold.counts.values.reduce(0, +) == 5 && threshold.counts[Camelot("12B")!] == nil)
+        let below = CrateDig.gaps(Array(core.prefix(5)) + incompleteTracks + [makeTrack("invalid", bpm: 251, key: "8A")])
+        precondition(below.tempoKnown == 7 && below.coverage < 0.5)
+        precondition(!below.enoughForTargets && !below.isPreliminary && below.targets.isEmpty && below.tempoGaps.isEmpty)
+        let noKey = CrateDig.gaps([unknown])
+        precondition(noKey.tempoKnown == 1 && noKey.known == 0 && noKey.counts.isEmpty)
 
         precondition(TempoValue.Scale.double.apply(to: 125) == 250)
         precondition(TempoValue.Scale.double.apply(to: 126) == nil)

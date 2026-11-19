@@ -478,16 +478,20 @@ struct CrateGapsView: View {
                 VxEmptyState(system: "square.stack", title: L.t("gaps.empty", lang),
                              message: L.t("gaps.need_tracks", lang))
             } else {
-                Text(fmt("fit.coverage", gaps.known, gaps.total)).font(.subheadline)
+                let coverage = gaps.coverage.formatted(
+                    .percent.precision(.fractionLength(0)).rounded(rule: .down).locale(Locale(identifier: lang))
+                )
+                Text(fmt("gaps.coverage", gaps.known, gaps.total, coverage)).font(.subheadline)
                     .accessibilityIdentifier("gaps.coverage")
                 if gaps.enoughForTargets {
                     targets(gaps)
                 } else {
-                    Text(L.t("gaps.limited", lang)).font(.subheadline).foregroundStyle(.secondary)
+                    Text(L.t("gaps.limited", lang)).font(.subheadline).foregroundStyle(VxColor.textSecondary)
+                        .accessibilityIdentifier("gaps.limited")
                 }
-                if gaps.known > 0 { camelotGrid(gaps) }
+                if gaps.tempoKnown > 0 { camelotGrid(gaps) }
                 let activeBands = gaps.bands.filter { band in band.count > 0 || gaps.tempoGaps.contains { $0.id == band.id } }
-                if !activeBands.isEmpty { tempoRows(activeBands) }
+                if !activeBands.isEmpty { tempoRows(activeBands, gaps: gaps) }
             }
         }
         .padding(.horizontal, VxSpace.xl)
@@ -496,6 +500,11 @@ struct CrateGapsView: View {
     @ViewBuilder private func targets(_ gaps: CrateDig.Gaps) -> some View {
         VStack(alignment: .leading, spacing: VxSpace.m) {
             Text(L.t("dig.next", lang)).font(.headline).accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("gaps.targets")
+            if gaps.isPreliminary {
+                Text(L.t("gaps.preliminary", lang)).font(.subheadline).foregroundStyle(VxColor.textSecondary)
+                    .accessibilityIdentifier("gaps.preliminary")
+            }
             if gaps.targets.isEmpty && gaps.tempoGaps.isEmpty {
                 Text(L.t("gaps.none", lang)).font(.subheadline).foregroundStyle(.secondary)
             }
@@ -533,34 +542,41 @@ struct CrateGapsView: View {
     private func camelotGrid(_ gaps: CrateDig.Gaps) -> some View {
         VStack(alignment: .leading, spacing: VxSpace.s) {
             Text(L.t("dig.camelot_map", lang)).font(.headline).accessibilityAddTraits(.isHeader)
-            ScrollView(.horizontal) {
-                VStack(alignment: .leading, spacing: VxSpace.xs) {
-                    ForEach([Camelot.Letter.A, .B], id: \.self) { letter in
-                        HStack(spacing: VxSpace.xs) {
-                            ForEach(1...12, id: \.self) { number in
-                                let key = Camelot(number: number, letter: letter)
-                                let count = gaps.counts[key, default: 0]
-                                VStack(spacing: 2) {
-                                    Text(key.code).font(.system(.caption2, design: .monospaced))
-                                    Text(count.formatted()).font(.system(.caption, design: .monospaced).bold())
+            Text(L.t("gaps.camelot_scope", lang)).font(.footnote).foregroundStyle(VxColor.textSecondary)
+                .accessibilityIdentifier("gaps.camelot_scope")
+            if gaps.known > 0 {
+                ScrollView(.horizontal) {
+                    VStack(alignment: .leading, spacing: VxSpace.xs) {
+                        ForEach([Camelot.Letter.A, .B], id: \.self) { letter in
+                            HStack(spacing: VxSpace.xs) {
+                                ForEach(1...12, id: \.self) { number in
+                                    let key = Camelot(number: number, letter: letter)
+                                    let count = gaps.counts[key, default: 0]
+                                    VStack(spacing: 2) {
+                                        Text(key.code).font(.system(.caption2, design: .monospaced))
+                                        Text(count.formatted()).font(.system(.caption, design: .monospaced).bold())
+                                    }
+                                    .padding(.horizontal, VxSpace.xs)
+                                    .frame(minWidth: 40, minHeight: 42)
+                                    .background(count == 0 ? VxColor.card : theme.accent.opacity(min(0.28, 0.09 + Double(count) * 0.025)),
+                                                in: RoundedRectangle(cornerRadius: 6))
+                                    .accessibilityElement(children: .combine)
                                 }
-                                .padding(.horizontal, VxSpace.xs)
-                                .frame(minWidth: 40, minHeight: 42)
-                                .background(count == 0 ? VxColor.card : theme.accent.opacity(min(0.28, 0.09 + Double(count) * 0.025)),
-                                            in: RoundedRectangle(cornerRadius: 6))
-                                .accessibilityElement(children: .combine)
                             }
                         }
-                    }
-                }.padding(.bottom, VxSpace.s)
+                    }.padding(.bottom, VxSpace.s)
+                }
+                .accessibilityIdentifier("gaps.camelot")
             }
-            .accessibilityIdentifier("gaps.camelot")
         }
     }
 
-    private func tempoRows(_ bands: [CrateDig.Band]) -> some View {
+    private func tempoRows(_ bands: [CrateDig.Band], gaps: CrateDig.Gaps) -> some View {
         VStack(alignment: .leading, spacing: VxSpace.s) {
             Text(L.t("dig.tempo_coverage", lang)).font(.headline).accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("gaps.tempo")
+            Text(fmt("gaps.tempo_scope", gaps.tempoKnown, gaps.total)).font(.footnote).foregroundStyle(VxColor.textSecondary)
+                .accessibilityIdentifier("gaps.tempo_scope")
             let maxCount = bands.map(\.count).max() ?? 1
             ForEach(bands) { band in
                 VStack(alignment: .leading, spacing: VxSpace.xs) {
@@ -571,11 +587,11 @@ struct CrateGapsView: View {
                     }
                     if !band.style.isEmpty { Text(band.style).font(.footnote).foregroundStyle(.secondary) }
                     VxBar(value: 100 * band.count / max(1, maxCount), accent: .lime)
+                        .accessibilityHidden(true)
                 }
                 .accessibilityElement(children: .combine)
             }
         }
-        .accessibilityIdentifier("gaps.tempo")
     }
 
     private func fmt(_ key: String, _ args: CVarArg...) -> String {
